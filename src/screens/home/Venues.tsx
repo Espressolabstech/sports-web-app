@@ -283,7 +283,7 @@ const Venues = () => {
         <div className="min-h-screen bg-background pb-10">
             {/* Hero */}
             <div className="relative">
-                <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
+                <div className="h-56 w-full overflow-hidden bg-muted">
                     {facility.venueImages.length > 0 && (
                         <img
                             src={facility.venueImages[0].url}

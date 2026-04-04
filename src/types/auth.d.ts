@@ -13,13 +13,18 @@ declare global {
         phone: string;
     }
 
+    interface UpdateUserName {
+        firstName: string;
+        lastName: string;
+    }
+
     interface AuthUser {
         token: string;
         id: string;
         name: string;
         phone: string;
         role: string;
-        isFirstTimeLogin: boolean;
+        isNewUser: boolean;
     }
 
     interface AuthResponse {

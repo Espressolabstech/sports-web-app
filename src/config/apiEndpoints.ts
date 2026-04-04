@@ -3,6 +3,7 @@ export const endpoints = {
     login: '/user-login',
     verifyOtp: '/verify-otp',
     resendOtp: '/resend-otp',
+    updateName: '/user/update-name',
 
     // Home / Venue Discovery
     venues: '/home/venues',

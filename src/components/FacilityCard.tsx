@@ -12,9 +12,9 @@ export function FacilityCard({ facility }: FacilityCardProps) {
             onClick={() => navigate(`/venue/${facility.id}`)}
         >
             <div className="aspect-[16/10] w-full overflow-hidden bg-muted">
-                {facility.venueImages.length > 0 ? (
+                {facility.venueImages.find((img) => img.type === 'COVER') ? (
                     <img
-                        src={facility.venueImages[0].url}
+                        src={facility.venueImages.find((img) => img.type === 'COVER')!.url}
                         alt={facility.name}
                         className="h-full w-full object-cover"
                         loading="lazy"

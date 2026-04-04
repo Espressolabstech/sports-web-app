@@ -1,9 +1,9 @@
 import { cn } from '../utils/twMerge';
 
 const sports = [
-    { label: 'All', icon: '🏟️' },
-    { label: 'Padel', icon: '🎾' },
-    { label: 'Pickleball', icon: '🏓' },
+    { label: 'All', value: 'All', icon: '🏟️' },
+    { label: 'Padel', value: 'PADEL', icon: '🎾' },
+    { label: 'Pickleball', value: 'PICKELBALL', icon: '🏓' },
 ];
 
 export function SportChips({ selected, onSelect }: SportChipsProps) {
@@ -12,10 +12,10 @@ export function SportChips({ selected, onSelect }: SportChipsProps) {
             {sports.map((sport) => (
                 <button
                     key={sport.label}
-                    onClick={() => onSelect(sport.label)}
+                    onClick={() => onSelect(sport.value)}
                     className={cn(
                         'flex items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors',
-                        selected === sport.label
+                        selected === sport.value
                             ? 'bg-primary text-primary-foreground shadow-sm'
                             : 'bg-card text-muted-foreground border',
                     )}

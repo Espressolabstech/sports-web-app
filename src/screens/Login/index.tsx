@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Phone, ArrowRight, ArrowLeft } from 'lucide-react';
+import { Phone, ArrowRight, ArrowLeft, User } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { Input } from '../../components/ui/input';
 import { Button } from '../../components/ui/button';
-import { userLogin, resendOtp, verifyOtp } from '../../api/adapters/auth';
+import {
+    userLogin,
+    resendOtp,
+    verifyOtp,
+    updateUserName,
+} from '../../api/adapters/auth';
 import { setToken } from '../../utils/cookies.helpers';
 import { toast } from 'sonner';
 import { path } from '../../navigation/commanPaths';
@@ -12,9 +17,11 @@ import { path } from '../../navigation/commanPaths';
 const RESEND_COOLDOWN = 60;
 
 const Login = () => {
-    const [step, setStep] = useState<'phone' | 'otp'>('phone');
+    const [step, setStep] = useState<'phone' | 'otp' | 'name'>('phone');
     const [phone, setPhone] = useState('');
     const [otp, setOtp] = useState('');
+    const [firstName, setFirstName] = useState('');
+    const [lastName, setLastName] = useState('');
     const [resendTimer, setResendTimer] = useState(0);
     const navigate = useNavigate();
 
@@ -43,8 +50,12 @@ const Login = () => {
         mutationFn: (data: VerifyOtp) => verifyOtp(data),
         onSuccess: async (data) => {
             setToken(data.data.token);
-            toast.success('Login successful!');
-            navigate(path.home);
+            if (data.data.isNewUser) {
+                setStep('name');
+            } else {
+                toast.success('Login successful!');
+                navigate(path.home);
+            }
         },
         onError: (error) => {
             toast.error(error.message);
@@ -63,6 +74,17 @@ const Login = () => {
             },
         });
 
+    const { mutate: submitName, isPending: isNamePending } = useMutation({
+        mutationFn: (data: UpdateUserName) => updateUserName(data),
+        onSuccess: () => {
+            toast.success('Welcome to BookEase!');
+            navigate(path.home);
+        },
+        onError: (error) => {
+            toast.error(error.message);
+        },
+    });
+
     const handlePhoneSubmit = () => {
         if (!phone.trim()) return;
         login({ phone });
@@ -76,6 +98,11 @@ const Login = () => {
     const handleResend = () => {
         if (resendTimer > 0 || isResendOtpPending) return;
         resendOtpMutation({ phone });
+    };
+
+    const handleNameSubmit = () => {
+        if (!firstName.trim() || !lastName.trim()) return;
+        submitName({ firstName: firstName.trim(), lastName: lastName.trim() });
     };
 
     return (
@@ -139,7 +166,7 @@ const Login = () => {
                                 and Privacy Policy.
                             </p>
                         </>
-                    ) : (
+                    ) : step === 'otp' ? (
                         <>
                             <div>
                                 <button
@@ -153,7 +180,7 @@ const Login = () => {
                                     Verify your number
                                 </h2>
                                 <p className="mt-1 text-sm text-muted-foreground">
-                                    We sent a 6-digit code to{' '}
+                                    We sent a 4-digit code to{' '}
                                     <span className="font-medium text-foreground">
                                         {phone}
                                     </span>
@@ -169,7 +196,7 @@ const Login = () => {
                                         e.key === 'Enter' && handleOtpSubmit()
                                     }
                                     className="text-center tracking-[0.5em] text-lg font-semibold"
-                                    maxLength={6}
+                                    maxLength={4}
                                     autoFocus
                                     type="number"
                                 />
@@ -218,6 +245,74 @@ const Login = () => {
                                         </>
                                     )}
                                 </button>
+                            </div>
+                        </>
+                    ) : (
+                        /* ── Name step — only shown on first-time login ── */
+                        <>
+                            <div>
+                                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                                    <User className="h-6 w-6 text-primary" />
+                                </div>
+                                <h2 className="text-xl font-semibold text-foreground">
+                                    Welcome! What's your name?
+                                </h2>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    This is how other players and venues will
+                                    see you.
+                                </p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-foreground">
+                                        First Name
+                                    </label>
+                                    <Input
+                                        placeholder="e.g. Rahul"
+                                        value={firstName}
+                                        onChange={(e) =>
+                                            setFirstName(e.target.value)
+                                        }
+                                        onKeyDown={(e) =>
+                                            e.key === 'Enter' &&
+                                            handleNameSubmit()
+                                        }
+                                        autoFocus
+                                        maxLength={50}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-foreground">
+                                        Last Name
+                                    </label>
+                                    <Input
+                                        placeholder="e.g. Sharma"
+                                        value={lastName}
+                                        onChange={(e) =>
+                                            setLastName(e.target.value)
+                                        }
+                                        onKeyDown={(e) =>
+                                            e.key === 'Enter' &&
+                                            handleNameSubmit()
+                                        }
+                                        maxLength={50}
+                                    />
+                                </div>
+
+                                <Button
+                                    onClick={handleNameSubmit}
+                                    className="w-full"
+                                    disabled={
+                                        !firstName.trim() ||
+                                        !lastName.trim() ||
+                                        isNamePending
+                                    }
+                                >
+                                    {isNamePending ? 'Saving...' : "Let's go!"}
+                                    <ArrowRight className="h-4 w-4 ml-2" />
+                                </Button>
                             </div>
                         </>
                     )}

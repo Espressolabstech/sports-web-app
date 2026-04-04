@@ -2,44 +2,61 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getVenues } from '../../api/adapters/venues';
-import { ChevronDown, LogIn, MapPin, Search, User } from 'lucide-react';
+import { ChevronDown, LogIn, MapPin, Search, User, X } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { SportChips } from '../../components/SportChips';
 import { BottomNav } from '../../components/BottomNav';
 import { FacilityCard } from '../../components/FacilityCard';
 import { getToken } from '../../utils/cookies.helpers';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '../../components/ui/dropdown-menu';
+import { Sheet, SheetContent } from '../../components/ui/sheet';
 
-const CITIES = [
-    'Mumbai',
-    'Delhi',
-    'Bangalore',
-    'Hyderabad',
-    'Chennai',
-    'Kolkata',
-    'Pune',
-    'Ahmedabad',
-    'Jaipur',
-    'Surat',
-    'Lucknow',
-    'Kochi',
-    'Chandigarh',
-    'Indore',
-    'Bhopal',
+const POPULAR_CITIES = [
+    'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai',
+    'Kolkata', 'Pune', 'Ahmedabad', 'Jaipur', 'Kochi',
 ];
+
+const ALL_CITIES = [
+    'Agra', 'Ahmedabad', 'Ajmer', 'Aligarh', 'Allahabad', 'Amravati',
+    'Amritsar', 'Aurangabad', 'Bangalore', 'Bareilly', 'Bhopal',
+    'Bhubaneswar', 'Chandigarh', 'Chennai', 'Coimbatore', 'Cuttack',
+    'Dehradun', 'Delhi', 'Dhanbad', 'Durgapur', 'Faridabad', 'Ghaziabad',
+    'Guwahati', 'Gwalior', 'Howrah', 'Hubli', 'Hyderabad', 'Indore',
+    'Jabalpur', 'Jaipur', 'Jalandhar', 'Jammu', 'Jamshedpur', 'Jodhpur',
+    'Kanpur', 'Kochi', 'Kolkata', 'Kota', 'Kozhikode', 'Lucknow',
+    'Ludhiana', 'Madurai', 'Mangalore', 'Meerut', 'Mumbai', 'Mysore',
+    'Nagpur', 'Nashik', 'Navi Mumbai', 'Noida', 'Patna', 'Pune',
+    'Raipur', 'Rajkot', 'Ranchi', 'Srinagar', 'Surat', 'Thane',
+    'Tiruchirappalli', 'Tiruppur', 'Vadodara', 'Varanasi', 'Vijayawada',
+    'Visakhapatnam', 'Warangal',
+].sort();
+
+const CITY_KEY = 'bookease_city';
+
+const getStoredCity = () => localStorage.getItem(CITY_KEY) ?? 'Mumbai';
+const storeCity = (city: string) => localStorage.setItem(CITY_KEY, city);
 
 const Home = () => {
     const [search, setSearch] = useState('');
     const [sport, setSport] = useState('All');
-    const [city, setCity] = useState('Mumbai');
+    const [city, setCity] = useState(getStoredCity);
+    const [cityOpen, setCityOpen] = useState(false);
+    const [citySearch, setCitySearch] = useState('');
     const navigate = useNavigate();
 
     const user = !!getToken();
+
+    const handleCitySelect = (c: string) => {
+        setCity(c);
+        storeCity(c);
+        setCityOpen(false);
+        setCitySearch('');
+    };
+
+    const filteredCities = citySearch.trim()
+        ? ALL_CITIES.filter((c) =>
+              c.toLowerCase().includes(citySearch.trim().toLowerCase()),
+          )
+        : null;
 
     const { data, isLoading, isError } = useQuery({
         queryKey: ['venues', city, sport, search],
@@ -61,24 +78,14 @@ const Home = () => {
                     <div className="flex items-center justify-between">
                         <div>
                             <h1 className="text-xl font-bold">BookEase</h1>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger className="mt-0.5 flex items-center gap-1 text-sm opacity-90 hover:opacity-100">
-                                    <MapPin className="h-3.5 w-3.5" />
-                                    <span>{city}</span>
-                                    <ChevronDown className="h-3 w-3" />
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="start">
-                                    {CITIES.map((c) => (
-                                        <DropdownMenuItem
-                                            key={c}
-                                            onSelect={() => setCity(c)}
-                                            className={c === city ? 'font-medium' : ''}
-                                        >
-                                            {c}
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                            <button
+                                onClick={() => setCityOpen(true)}
+                                className="mt-0.5 flex items-center gap-1 text-sm opacity-90 hover:opacity-100"
+                            >
+                                <MapPin className="h-3.5 w-3.5" />
+                                <span className="font-medium">{city}</span>
+                                <ChevronDown className="h-3 w-3" />
+                            </button>
                         </div>
                         {user ? (
                             <button
@@ -140,6 +147,105 @@ const Home = () => {
             </main>
 
             <BottomNav />
+
+            {/* City picker sheet */}
+            <Sheet open={cityOpen} onOpenChange={setCityOpen}>
+                <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] flex flex-col p-0">
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-4 pt-5 pb-3 shrink-0">
+                        <h2 className="text-base font-bold text-foreground">Select City</h2>
+                        <button
+                            onClick={() => { setCityOpen(false); setCitySearch(''); }}
+                            className="rounded-full p-1 hover:bg-muted transition-colors"
+                        >
+                            <X className="h-5 w-5 text-muted-foreground" />
+                        </button>
+                    </div>
+
+                    {/* Search */}
+                    <div className="px-4 pb-3 shrink-0">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                            <Input
+                                placeholder="Search city..."
+                                value={citySearch}
+                                onChange={(e) => setCitySearch(e.target.value)}
+                                className="pl-9"
+                                autoFocus
+                            />
+                        </div>
+                    </div>
+
+                    <div className="overflow-y-auto flex-1 px-4 pb-8">
+                        {filteredCities ? (
+                            /* Search results */
+                            filteredCities.length === 0 ? (
+                                <p className="py-8 text-center text-sm text-muted-foreground">
+                                    No cities found
+                                </p>
+                            ) : (
+                                <div className="space-y-1">
+                                    {filteredCities.map((c) => (
+                                        <button
+                                            key={c}
+                                            onClick={() => handleCitySelect(c)}
+                                            className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                                                c === city
+                                                    ? 'bg-primary/10 text-primary font-medium'
+                                                    : 'hover:bg-muted text-foreground'
+                                            }`}
+                                        >
+                                            {c}
+                                        </button>
+                                    ))}
+                                </div>
+                            )
+                        ) : (
+                            <>
+                                {/* Popular cities */}
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                                    Popular Cities
+                                </p>
+                                <div className="flex flex-wrap gap-2 mb-5">
+                                    {POPULAR_CITIES.map((c) => (
+                                        <button
+                                            key={c}
+                                            onClick={() => handleCitySelect(c)}
+                                            className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                                                c === city
+                                                    ? 'border-primary bg-primary/10 text-primary'
+                                                    : 'border-border bg-card text-foreground hover:bg-muted'
+                                            }`}
+                                        >
+                                            {c}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* All cities A–Z */}
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                                    All Cities
+                                </p>
+                                <div className="space-y-1">
+                                    {ALL_CITIES.map((c) => (
+                                        <button
+                                            key={c}
+                                            onClick={() => handleCitySelect(c)}
+                                            className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors ${
+                                                c === city
+                                                    ? 'bg-primary/10 text-primary font-medium'
+                                                    : 'hover:bg-muted text-foreground'
+                                            }`}
+                                        >
+                                            {c}
+                                        </button>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </SheetContent>
+            </Sheet>
         </div>
     );
 };

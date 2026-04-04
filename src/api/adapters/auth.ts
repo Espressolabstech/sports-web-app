@@ -12,3 +12,9 @@ export const verifyOtp = async (data: VerifyOtp): Promise<AuthResponse> => {
 export const resendOtp = async (data: ResendOtp) => {
     return apiClient({ url: endpoints.resendOtp, method: 'POST', data });
 };
+
+export const updateUserName = async (
+    data: UpdateUserName,
+): Promise<{ message: string; data: { name: string } }> => {
+    return apiClient({ url: endpoints.updateName, method: 'PATCH', data });
+};
