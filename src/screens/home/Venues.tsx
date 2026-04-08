@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getVenueDetail } from '../../api/adapters/venues';
 import { getVenueTier } from '../../api/adapters/tier';
-import { getCreditPackages } from '../../api/adapters/creditPackages';
 import { sportEmojis } from '../../utils/mockData';
 import {
     ArrowLeft,
@@ -184,15 +183,11 @@ const Venues = () => {
         enabled: !!venueId && !!user,
     });
 
-    const { data: packagesData } = useQuery({
-        queryKey: ['credit-packages'],
-        queryFn: getCreditPackages,
-    });
-
     const facility = venueData?.data?.venue;
     const membership = venueData?.data?.membership;
     const courtsBySport = venueData?.data?.courtsBySport ?? {};
     const allCourts = Object.values(courtsBySport).flat();
+    const creditPackages: CreditPackage[] = (venueData?.data?.creditPackages ?? []) as CreditPackage[];
 
     const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const venueInfo = {
@@ -203,11 +198,6 @@ const Venues = () => {
         })),
         cancellationPolicy: facility?.bookingPolicy?.cancellationPolicy ?? '',
         reschedulingPolicy: '',
-    };
-
-    const creditPackagesData = {
-        packages: packagesData?.data ?? [],
-        enabled: (packagesData?.data?.length ?? 0) > 0,
     };
 
     // Tier display data
@@ -352,19 +342,19 @@ const Venues = () => {
                         onClick={() =>
                             window.open(venueInfo.googleMapsUrl, '_blank')
                         }
-                        className="mt-1 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                        className="mt-1 flex w-full items-start gap-1.5 text-sm text-primary hover:underline text-left"
                     >
-                        <MapPin className="h-3.5 w-3.5" />
-                        <span>{facility.address}, {facility.city}</span>
-                        <ExternalLink className="h-3 w-3 opacity-60" />
+                        <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+                        <span className="min-w-0 flex-1 break-words">{facility.address}, {facility.city}</span>
+                        <ExternalLink className="h-3 w-3 opacity-60 shrink-0 mt-0.5" />
                     </button>
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                         {facility.description}
                     </p>
                 </div>
 
-                {/* ── Features & Perks card ── */}
-                {(() => {
+                {/* ── Features & Perks card — only show if user has booked here ── */}
+                {(membership?.totalBookings ?? 0) > 0 && (() => {
                     const meta = currentTierName
                         ? TIER_META[currentTierName]
                         : null;
@@ -536,49 +526,10 @@ const Venues = () => {
                     </div>
                 </section>
 
-                {/* ── Credit Packages — only show if enabled and packages exist ── */}
-                {creditPackagesData?.enabled &&
-                    creditPackagesData.packages.length > 0 && (
-                        <CreditPackages
-                            packages={creditPackagesData.packages}
-                            venueName={facility.name}
-                            venueId={facility.id}
-                            isLoggedIn={!!user}
-                            onLoginRequired={() => setLoginOpen(true)}
-                        />
-                    )}
-                {/* Fallback: show mock packages if no DB packages found */}
-                {(!creditPackagesData ||
-                    (creditPackagesData.enabled &&
-                        creditPackagesData.packages.length === 0)) && (
+                {/* ── Credit Packages ── */}
+                {creditPackages.length > 0 && (
                     <CreditPackages
-                        packages={[
-                            {
-                                id: 'pkg-1',
-                                name: 'Starter Pack',
-                                cash_amount: 1000,
-                                credit_value: 1200,
-                                description: 'Great for occasional players',
-                                tier_grant: null,
-                            },
-                            {
-                                id: 'pkg-2',
-                                name: 'Intermediate Pack',
-                                cash_amount: 2500,
-                                credit_value: 3200,
-                                description: 'Best value — unlocks Pro tier',
-                                tier_grant: 'pro',
-                            },
-                            {
-                                id: 'pkg-3',
-                                name: 'Advanced Pack',
-                                cash_amount: 5000,
-                                credit_value: 7000,
-                                description:
-                                    'Maximum savings — unlocks Elite tier',
-                                tier_grant: 'elite',
-                            },
-                        ]}
+                        packages={creditPackages}
                         venueName={facility.name}
                         venueId={facility.id}
                         isLoggedIn={!!user}

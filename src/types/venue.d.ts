@@ -2,15 +2,13 @@ declare global {
     interface CreditPackage {
         id: string;
         name: string;
-        cash_amount: number;
-        credit_value: number;
-        description: string | null;
-        tier_grant?: string | null;
+        amount: number;
+        tierUnlock: string | null;
     }
 
     interface CreditPackagesProps {
         packages: CreditPackage[];
-        venueName: string; 
+        venueName: string;
         venueId: string;
         isLoggedIn: boolean;
         onLoginRequired: () => void;

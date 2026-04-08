@@ -5,6 +5,46 @@ declare global {
         data: T;
     }
 
+    interface ApiMyProfileUser {
+        id: string;
+        name: string | null;
+        phone: string;
+        countryCode: string;
+        role: string;
+        createdAt: string;
+    }
+
+    interface ApiMyProfilePurchase {
+        id: string;
+        amountPaid: number;
+        createdAt: string;
+        package: {
+            id: string;
+            name: string;
+            amount: number;
+            tierUnlock: string | null;
+        };
+    }
+
+    interface ApiMyProfileVenueMembership {
+        tier: string | null;
+        totalSpend: number;
+        totalBookings: number;
+        venue: {
+            id: string;
+            name: string;
+            city: string;
+        };
+    }
+
+    interface ApiMyProfile {
+        user: ApiMyProfileUser;
+        wallet: { balance: number };
+        totalBookings: number;
+        purchases: ApiMyProfilePurchase[];
+        venueMemberships: ApiMyProfileVenueMembership[];
+    }
+
     // ── Venues ──────────────────────────────────────────────────────────────
 
     interface ApiVenueImage {
@@ -84,6 +124,17 @@ declare global {
         pricePerSlot: number;
     }
 
+    interface ApiPeakHourPricing {
+        id: string;
+        courtId: string;
+        dayOfWeek: number | null;
+        startTime: string;
+        endTime: string;
+        pricePerSlot: number;
+        label: string | null;
+        isActive: boolean;
+    }
+
     interface ApiCourt {
         id: string;
         name: string;
@@ -91,6 +142,7 @@ declare global {
         environment: string;
         courtImages: ApiCourtImage[];
         courtPricings: ApiCourtPricing[];
+        peakHourPricings?: ApiPeakHourPricing[];
     }
 
     interface ApiTimeSlot {
@@ -274,9 +326,9 @@ declare global {
     }
 
     interface VerifyCreditPaymentBody {
-        razorpay_payment_id: string;
-        razorpay_order_id: string;
-        razorpay_signature: string;
+        razorpayPaymentId: string;
+        razorpayOrderId: string;
+        razorpaySignature: string;
         packageId: string;
     }
 
@@ -304,22 +356,22 @@ declare global {
         otc_enabled: boolean;
         rewards_enabled: boolean;
     }
-}
 
-interface RazorpayOptions {
-    key: string;
-    amount: number;
-    currency: string;
-    order_id: string;
-    name: string;
-    description?: string;
-    handler: (response: {
-        razorpay_payment_id: string;
-        razorpay_order_id: string;
-        razorpay_signature: string;
-    }) => void;
-    modal?: { ondismiss?: () => void };
-    theme?: { color?: string };
+    interface RazorpayOptions {
+        key: string;
+        amount: number;
+        currency: string;
+        order_id: string;
+        name: string;
+        description?: string;
+        handler: (response: {
+            razorpay_payment_id: string;
+            razorpay_order_id: string;
+            razorpay_signature: string;
+        }) => void;
+        modal?: { ondismiss?: () => void };
+        theme?: { color?: string };
+    }
 }
 
 declare class Razorpay {

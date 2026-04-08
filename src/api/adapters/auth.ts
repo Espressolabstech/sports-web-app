@@ -1,6 +1,10 @@
 import { endpoints } from '../../config/apiEndpoints';
 import apiClient from '../client/apiClient';
 
+export const getMe = async (): Promise<ApiResponse<ApiMyProfile>> => {
+    return apiClient({ url: endpoints.me, method: 'GET' });
+};
+
 export const userLogin = async (data: UserLogin) => {
     return apiClient({ url: endpoints.login, method: 'POST', data });
 };

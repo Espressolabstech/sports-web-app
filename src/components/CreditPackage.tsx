@@ -1,6 +1,6 @@
-import { CheckCircle2, ChevronRight, Wallet } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { ChevronRight, Wallet } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -14,6 +14,16 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from './ui/alert-dialog';
+import {
+    purchaseCreditPackage,
+    verifyCreditPayment,
+} from '../api/adapters/creditPackages';
+
+const TIER_COLORS: Record<string, string> = {
+    PRO: 'bg-emerald-500/10 text-emerald-600',
+    ELITE: 'bg-violet-500/10 text-violet-600',
+    CLUB: 'bg-blue-500/10 text-blue-600',
+};
 
 export function CreditPackages({
     packages,
@@ -40,29 +50,52 @@ export function CreditPackages({
         if (!confirmPkg) return;
         setPurchasing(true);
         try {
-            // In production, this would open Razorpay checkout
-            // For now, simulate the purchase flow
-            toast.success(`Purchase initiated for ${confirmPkg.name}`, {
-                description: `₹${confirmPkg.cash_amount} payment via Razorpay`,
-            });
+            const res = await purchaseCreditPackage(confirmPkg.id, { venueId });
+            const { razorpay } = res.data as any;
+
+            const options: RazorpayOptions = {
+                key: razorpay.keyId,
+                amount: razorpay.amount,
+                currency: razorpay.currency,
+                order_id: razorpay.orderId,
+                name: venueName,
+                description: confirmPkg.name,
+                handler: async (response) => {
+                    try {
+                        await verifyCreditPayment({
+                            razorpayPaymentId: response.razorpay_payment_id,
+                            razorpayOrderId: response.razorpay_order_id,
+                            razorpaySignature: response.razorpay_signature,
+                            packageId: confirmPkg.id,
+                        });
+                        toast.success('Credits added to your wallet!', {
+                            description: `₹${Number(confirmPkg.amount).toLocaleString('en-IN')} credits are ready to use at ${venueName}.`,
+                        });
+                    } catch {
+                        toast.error('Payment verification failed', {
+                            description: 'Please contact support with your payment ID.',
+                        });
+                    }
+                },
+                modal: {
+                    ondismiss: () => {
+                        toast.info('Payment cancelled');
+                    },
+                },
+                theme: { color: '#2563eb' },
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.open();
         } catch (err: any) {
-            toast.error('Purchase failed', {
-                description:
-                    err?.message || 'Please try again or contact support.',
+            toast.error('Could not initiate purchase', {
+                description: err?.message || 'Please try again.',
             });
         } finally {
             setPurchasing(false);
             setConfirmPkg(null);
         }
     };
-
-    const bestDiscount = Math.max(
-        ...packages.map((p) =>
-            Math.round(
-                ((p.credit_value - p.cash_amount) / p.credit_value) * 100,
-            ),
-        ),
-    );
 
     return (
         <section className="mb-6">
@@ -80,8 +113,7 @@ export function CreditPackages({
                             Credit Packages
                         </p>
                         <p className="text-xs text-muted-foreground">
-                            Up to {bestDiscount}% extra credits ·{' '}
-                            {packages.length} package
+                            Top up your wallet · {packages.length} package
                             {packages.length !== 1 ? 's' : ''}
                         </p>
                     </div>
@@ -94,56 +126,40 @@ export function CreditPackages({
             {/* Expanded packages */}
             {expanded && (
                 <div className="mt-2 space-y-2">
-                    {packages.map((pkg) => {
-                        const discountPercent = Math.round(
-                            ((pkg.credit_value - pkg.cash_amount) /
-                                pkg.credit_value) *
-                                100,
-                        );
-                        return (
-                            <Card key={pkg.id} className="overflow-hidden">
-                                <CardContent className="p-3">
-                                    <div className="flex items-center justify-between gap-3">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-0.5">
-                                                <p className="font-semibold text-foreground text-sm">
-                                                    {pkg.name}
-                                                </p>
+                    {packages.map((pkg) => (
+                        <Card key={pkg.id} className="overflow-hidden">
+                            <CardContent className="p-3">
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <p className="font-semibold text-foreground text-sm">
+                                                {pkg.name}
+                                            </p>
+                                            {pkg.tierUnlock && (
                                                 <Badge
                                                     variant="secondary"
-                                                    className="text-[10px] bg-success/10 text-success border-0 px-1.5 py-0"
+                                                    className={`text-[10px] px-1.5 py-0 capitalize ${TIER_COLORS[pkg.tierUnlock] ?? ''}`}
                                                 >
-                                                    +{discountPercent}%
+                                                    Unlocks {pkg.tierUnlock.toLowerCase()}
                                                 </Badge>
-                                                {pkg.tier_grant && (
-                                                    <Badge
-                                                        variant="outline"
-                                                        className="text-[10px] px-1.5 py-0 capitalize"
-                                                    >
-                                                        → {pkg.tier_grant} Tier
-                                                    </Badge>
-                                                )}
-                                            </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                Pay ₹{pkg.cash_amount} → Get ₹
-                                                {pkg.credit_value}
-                                                {pkg.tier_grant &&
-                                                    ` + unlock ${pkg.tier_grant} perks`}
-                                            </p>
+                                            )}
                                         </div>
-                                        <Button
-                                            size="sm"
-                                            variant="default"
-                                            onClick={() => handleBuy(pkg)}
-                                            className="shrink-0 h-8 text-xs"
-                                        >
-                                            Buy
-                                        </Button>
+                                        <p className="text-xs text-muted-foreground">
+                                            ₹{Number(pkg.amount).toLocaleString('en-IN')} added to wallet
+                                            {pkg.tierUnlock && ` + unlock ${pkg.tierUnlock.toLowerCase()} perks`}
+                                        </p>
                                     </div>
-                                </CardContent>
-                            </Card>
-                        );
-                    })}
+                                    <Button
+                                        size="sm"
+                                        onClick={() => handleBuy(pkg)}
+                                        className="shrink-0 h-8 text-xs"
+                                    >
+                                        Buy ₹{Number(pkg.amount).toLocaleString('en-IN')}
+                                    </Button>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))}
                 </div>
             )}
 
@@ -154,30 +170,26 @@ export function CreditPackages({
             >
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle className="flex items-center gap-2">
-                            <CheckCircle2 className="h-5 w-5 text-primary" />
-                            Confirm Purchase
-                        </AlertDialogTitle>
+                        <AlertDialogTitle>Confirm Purchase</AlertDialogTitle>
                         <AlertDialogDescription asChild>
-                            <div className="space-y-3">
+                            <div className="space-y-2">
                                 <p>
-                                    You are paying{' '}
+                                    Pay{' '}
                                     <strong className="text-foreground">
-                                        ₹{confirmPkg?.cash_amount}
+                                        ₹{Number(confirmPkg?.amount).toLocaleString('en-IN')}
                                     </strong>{' '}
-                                    and will receive{' '}
+                                    to add{' '}
                                     <strong className="text-foreground">
-                                        ₹{confirmPkg?.credit_value}
+                                        ₹{Number(confirmPkg?.amount).toLocaleString('en-IN')}
                                     </strong>{' '}
-                                    in court credits at{' '}
+                                    in credits at{' '}
                                     <strong className="text-foreground">
                                         {venueName}
                                     </strong>
                                     .
                                 </p>
                                 <p className="text-xs">
-                                    Credits never expire and can be used for any
-                                    booking at this venue.
+                                    Credits never expire and can be used for any booking at this venue.
                                 </p>
                             </div>
                         </AlertDialogDescription>
@@ -190,9 +202,7 @@ export function CreditPackages({
                             onClick={handleConfirmPurchase}
                             disabled={purchasing}
                         >
-                            {purchasing
-                                ? 'Processing...'
-                                : `Pay ₹${confirmPkg?.cash_amount}`}
+                            {purchasing ? 'Processing…' : `Pay ₹${Number(confirmPkg?.amount).toLocaleString('en-IN')}`}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

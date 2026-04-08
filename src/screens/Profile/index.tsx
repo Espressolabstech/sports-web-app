@@ -1,42 +1,63 @@
-import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { DEMO_PURCHASED_PACKAGES } from '../../utils/mockData';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent } from '../../components/ui/card';
-import { Bell, ChevronRight, HelpCircle, LogOut, Phone, Shield, User, Wallet } from 'lucide-react';
-import { PlayerTierStatusWidget } from '../../components/PlayerTierStatusWidget';
+import {
+    Bell,
+    ChevronRight,
+    HelpCircle,
+    LogOut,
+    MapPin,
+    Phone,
+    Shield,
+    Trophy,
+    Wallet,
+} from 'lucide-react';
 import { Switch } from '../../components/ui/switch';
 import { Badge } from '../../components/ui/badge';
+import { Skeleton } from '../../components/ui/skeleton';
 import { format } from 'date-fns';
 import { Button } from '../../components/ui/button';
 import { BottomNav } from '../../components/BottomNav';
+import { getMe } from '../../api/adapters/auth';
+import { clearCookies } from '../../utils/cookies.helpers';
+import { useState } from 'react';
+
+const TIER_COLORS: Record<string, string> = {
+    PRO: 'bg-primary/10 text-primary',
+    ELITE: 'bg-amber-500/10 text-amber-600',
+    CLUB: 'bg-muted text-muted-foreground',
+};
 
 const MyProfile = () => {
     const navigate = useNavigate();
-    const [user, setUser] = useState<{ phone: string; id: string } | null>(
-        null,
-    );
     const [pushNotifications, setPushNotifications] = useState(true);
 
-    const displayUser = user ?? { phone: '+971 50 123 4567', id: 'demo' };
-    const displayPhone = (displayUser as any).phone || '+971 50 123 4567';
+    const { data, isLoading } = useQuery({
+        queryKey: ['me'],
+        queryFn: getMe,
+    });
+
+    const profile = data?.data;
+    const user = profile?.user;
+    const wallet = profile?.wallet;
+    const purchases = profile?.purchases ?? [];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const venueMemberships: Array<{
+        tier: string | null;
+        totalSpend: number;
+        totalBookings: number;
+        venue: { id: string; name: string; city: string };
+    }> = (profile as any)?.venueMemberships ?? [];
+
+    const totalCreditsPurchased = purchases.reduce(
+        (sum, p) => sum + p.package.amount,
+        0,
+    );
+    const totalSpent = purchases.reduce((sum, p) => sum + p.amountPaid, 0);
 
     const handleLogout = () => {
-        // logout();
-        navigate('/');
-    };
-
-    const totalCreditsPurchased = DEMO_PURCHASED_PACKAGES.reduce(
-        (sum, p) => sum + p.credit_value,
-        0,
-    );
-    const totalSpent = DEMO_PURCHASED_PACKAGES.reduce(
-        (sum, p) => sum + p.cash_amount,
-        0,
-    );
-
-    const tierColors: Record<string, string> = {
-        pro: 'bg-primary/10 text-primary',
-        elite: 'bg-amber-500/10 text-amber-600',
+        clearCookies();
+        navigate('/login');
     };
 
     return (
@@ -49,25 +70,67 @@ const MyProfile = () => {
                 {/* Player Info Card */}
                 <Card className="overflow-hidden shadow-md">
                     <CardContent className="p-5">
-                        <div className="flex items-center gap-4">
-                            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground shrink-0">
-                                <User className="h-6 w-6" />
+                        {isLoading ? (
+                            <div className="space-y-2">
+                                <Skeleton className="h-5 w-40" />
+                                <Skeleton className="h-4 w-32" />
                             </div>
-                            <div className="flex-1 min-w-0">
+                        ) : (
+                            <div>
                                 <p className="font-bold text-foreground text-lg">
-                                    Guest User
+                                    {user?.name ?? 'Player'}
                                 </p>
                                 <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-0.5">
                                     <Phone className="h-3.5 w-3.5" />
-                                    <span>{displayPhone}</span>
+                                    <span>
+                                        {user?.countryCode}{' '}
+                                        {user?.phone}
+                                    </span>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </CardContent>
                 </Card>
 
-                {/* Membership Status */}
-                <PlayerTierStatusWidget playerId={displayUser.id} />
+                {/* Wallet & Stats */}
+                {isLoading ? (
+                    <Skeleton className="h-24 w-full rounded-xl" />
+                ) : (
+                    <div className="grid grid-cols-2 gap-3">
+                        <Card>
+                            <CardContent className="p-4">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Wallet className="h-4 w-4 text-primary" />
+                                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                        Wallet
+                                    </span>
+                                </div>
+                                <p className="text-xl font-bold text-foreground">
+                                    ₹{Number(wallet?.balance ?? 0).toLocaleString('en-IN')}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    Available balance
+                                </p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardContent className="p-4">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <Shield className="h-4 w-4 text-primary" />
+                                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                        Bookings
+                                    </span>
+                                </div>
+                                <p className="text-xl font-bold text-foreground">
+                                    {profile?.totalBookings ?? 0}
+                                </p>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    Total sessions
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
 
                 {/* Account Settings */}
                 <div>
@@ -92,7 +155,7 @@ const MyProfile = () => {
                                 <div className="flex items-center gap-3">
                                     <Shield className="h-4 w-4 text-muted-foreground" />
                                     <span className="text-sm text-foreground">
-                                        Privacy & Security
+                                        Privacy &amp; Security
                                     </span>
                                 </div>
                                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -101,7 +164,7 @@ const MyProfile = () => {
                                 <div className="flex items-center gap-3">
                                     <HelpCircle className="h-4 w-4 text-muted-foreground" />
                                     <span className="text-sm text-foreground">
-                                        Help & Support
+                                        Help &amp; Support
                                     </span>
                                 </div>
                                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -111,80 +174,119 @@ const MyProfile = () => {
                 </div>
 
                 {/* Credit Packages Purchased */}
-                <div>
-                    <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">
-                        Credit Packages
-                    </h2>
+                {isLoading ? (
+                    <Skeleton className="h-24 w-full rounded-xl" />
+                ) : purchases.length > 0 ? (
+                    <div>
+                        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">
+                            Credit Packages
+                        </h2>
 
-                    {/* Summary row */}
-                    <Card className="mb-2">
-                        <CardContent className="p-4">
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 shrink-0">
-                                    <Wallet className="h-5 w-5 text-primary" />
+                        <Card className="mb-2">
+                            <CardContent className="p-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 shrink-0">
+                                        <Wallet className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="text-sm font-semibold text-foreground">
+                                            ₹{totalCreditsPurchased.toLocaleString()} total credits
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            ₹{totalSpent.toLocaleString()} spent across{' '}
+                                            {purchases.length} package{purchases.length !== 1 ? 's' : ''}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div className="flex-1">
-                                    <p className="text-sm font-semibold text-foreground">
-                                        ₹
-                                        {totalCreditsPurchased.toLocaleString()}{' '}
-                                        total credits
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        ₹{totalSpent.toLocaleString()} spent
-                                        across {DEMO_PURCHASED_PACKAGES.length}{' '}
-                                        packages
-                                    </p>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                            </CardContent>
+                        </Card>
 
-                    {/* Individual purchases */}
-                    <div className="space-y-2">
-                        {DEMO_PURCHASED_PACKAGES.map((pkg) => (
-                            <Card key={pkg.id}>
-                                <CardContent className="p-4">
-                                    <div className="flex items-start justify-between gap-3">
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-0.5">
-                                                <p className="font-semibold text-foreground text-sm">
-                                                    {pkg.package_name}
+                        <div className="space-y-2">
+                            {purchases.map((p) => (
+                                <Card key={p.id}>
+                                    <CardContent className="p-4">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <p className="font-semibold text-foreground text-sm">
+                                                        {p.package.name}
+                                                    </p>
+                                                    {p.package.tierUnlock && (
+                                                        <Badge
+                                                            variant="secondary"
+                                                            className={`text-[10px] px-1.5 py-0 capitalize ${TIER_COLORS[p.package.tierUnlock] ?? ''}`}
+                                                        >
+                                                            {p.package.tierUnlock.toLowerCase()}
+                                                        </Badge>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {format(new Date(p.createdAt), 'MMM d, yyyy')}
                                                 </p>
-                                                {pkg.tier_grant && (
+                                            </div>
+                                            <div className="text-right shrink-0">
+                                                <p className="text-sm font-semibold text-foreground">
+                                                    ₹{p.package.amount.toLocaleString()}
+                                                </p>
+                                                <p className="text-[10px] text-muted-foreground">
+                                                    paid ₹{p.amountPaid.toLocaleString()}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    </div>
+                ) : null}
+
+                {/* Venue Memberships */}
+                {isLoading ? (
+                    <Skeleton className="h-24 w-full rounded-xl" />
+                ) : venueMemberships.length > 0 ? (
+                    <div>
+                        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">
+                            My Memberships
+                        </h2>
+                        <div className="space-y-2">
+                            {venueMemberships.map((m) => (
+                                <Card key={m.venue.id}>
+                                    <CardContent className="p-4">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-semibold text-foreground text-sm">
+                                                    {m.venue.name}
+                                                </p>
+                                                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
+                                                    <MapPin className="h-3 w-3" />
+                                                    <span>{m.venue.city}</span>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground mt-1">
+                                                    {m.totalBookings} session{m.totalBookings !== 1 ? 's' : ''} · ₹{Number(m.totalSpend).toLocaleString('en-IN')} spent
+                                                </p>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-1 shrink-0">
+                                                {m.tier ? (
                                                     <Badge
                                                         variant="secondary"
-                                                        className={`text-[10px] px-1.5 py-0 capitalize ${tierColors[pkg.tier_grant] || ''}`}
+                                                        className={`text-xs px-2 capitalize ${TIER_COLORS[m.tier] ?? ''}`}
                                                     >
-                                                        {pkg.tier_grant}
+                                                        <Trophy className="h-3 w-3 mr-1" />
+                                                        {m.tier.toLowerCase()}
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="secondary" className="text-xs px-2 text-muted-foreground">
+                                                        No tier
                                                     </Badge>
                                                 )}
                                             </div>
-                                            <p className="text-xs text-muted-foreground">
-                                                {pkg.venue_name}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground mt-0.5">
-                                                {format(
-                                                    new Date(pkg.purchased_at),
-                                                    'MMM d, yyyy',
-                                                )}
-                                            </p>
                                         </div>
-                                        <div className="text-right shrink-0">
-                                            <p className="text-sm font-semibold text-foreground">
-                                                ₹
-                                                {pkg.credit_value.toLocaleString()}
-                                            </p>
-                                            <p className="text-[10px] text-muted-foreground">
-                                                paid ₹
-                                                {pkg.cash_amount.toLocaleString()}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        ))}
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
                     </div>
-                </div>
+                ) : null}
 
                 {/* Sign Out */}
                 <Button

@@ -1,5 +1,6 @@
 export const endpoints = {
     // Auth
+    me: '/auth/me',
     login: '/user-login',
     verifyOtp: '/verify-otp',
     resendOtp: '/resend-otp',
