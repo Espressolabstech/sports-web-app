@@ -31,7 +31,7 @@ export function FacilityCard({ facility }: FacilityCardProps) {
                 </h3>
                 <div className="mt-1 flex items-center gap-1 text-sm text-muted-foreground">
                     <MapPin className="h-3.5 w-3.5" />
-                    <span>{facility.address}, {facility.city}</span>
+                    <span>{facility.city}</span>
                 </div>
                 <div className="mt-2 flex flex-wrap gap-1">
                     {facility.availableSports.map(({ sport }) => (

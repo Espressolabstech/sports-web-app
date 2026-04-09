@@ -1,4 +1,4 @@
-import { cn } from '../utils/twMerge';
+import { cn, formatTime } from '../utils/twMerge';
 
 interface TimeSlot {
     startTime: string;
@@ -41,7 +41,7 @@ export function TimeSlotGrid({
                                 'border-border bg-muted/50 text-muted-foreground/50 cursor-not-allowed',
                         )}
                     >
-                        <div>{slot.startTime}</div>
+                        <div>{formatTime(slot.startTime)}</div>
                         <div className="text-xs opacity-75">
                             {isAvailable
                                 ? 'Available'

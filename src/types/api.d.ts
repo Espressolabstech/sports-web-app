@@ -157,7 +157,7 @@ declare global {
     interface ApiSlot {
         startTime: string;
         endTime: string;
-        status: 'available' | 'booked' | 'blocked';
+        status: 'available' | 'booked' | 'blocked' | 'held';
     }
 
     interface ApiAvailability {
@@ -193,6 +193,7 @@ declare global {
         cancellationPolicy: string;
         autoConfirm: boolean;
         maxBookingsPerPlayerDay: number | null;
+        minimumSlotMinutes: number;
         createdAt: string;
         updatedAt: string;
     }
@@ -220,6 +221,12 @@ declare global {
     }
 
     // ── Bookings ─────────────────────────────────────────────────────────────
+
+    interface HoldSlotBody {
+        courtId: string;
+        bookingDate: string;
+        slots: { startTime: string; endTime: string }[];
+    }
 
     interface CreateBookingBody {
         courtId: string;

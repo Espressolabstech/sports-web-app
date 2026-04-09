@@ -12,6 +12,8 @@ export const endpoints = {
     courtDetail: (courtId: string) => `/home/courts/${courtId}`,
 
     // Bookings
+    holdSlot: '/bookings/hold',
+    initiatePayment: (bookingId: string) => `/bookings/${bookingId}/initiate-payment`,
     createBooking: '/bookings/create',
     verifyBookingPayment: (bookingId: string) =>
         `/bookings/${bookingId}/verify-payment`,

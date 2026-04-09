@@ -1,6 +1,19 @@
 import { endpoints } from '../../config/apiEndpoints';
 import apiClient from '../client/apiClient';
 
+export const holdSlot = async (
+    data: HoldSlotBody,
+): Promise<ApiResponse<{ booking: ApiBooking }>> => {
+    return apiClient({ url: endpoints.holdSlot, method: 'POST', data });
+};
+
+export const initiatePayment = async (
+    bookingId: string,
+    data: { paymentMethod: string },
+): Promise<ApiResponse<ApiCreateBookingResponse>> => {
+    return apiClient({ url: endpoints.initiatePayment(bookingId), method: 'POST', data });
+};
+
 export const createBooking = async (
     data: CreateBookingBody,
 ): Promise<ApiResponse<ApiCreateBookingResponse>> => {

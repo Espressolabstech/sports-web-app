@@ -1,15 +1,17 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getUpcomingBookings, getPastBookings } from '../../api/adapters/myBookings';
-import { cancelBooking } from '../../api/adapters/bookings';
+import { cancelBooking, initiatePayment, verifyBookingPayment } from '../../api/adapters/bookings';
 import { statusColors } from '../../utils/mockData';
+import { formatTime } from '../../utils/twMerge';
 import { differenceInHours, format } from 'date-fns';
 import { toast } from 'sonner';
 import {
     ArrowLeft,
     Calendar,
     Clock,
+    Loader2,
     MapPin,
     Navigation,
     Share2,
@@ -20,8 +22,10 @@ import { Button } from '../../components/ui/button';
 import { BottomNav } from '../../components/BottomNav';
 import { OtcConfirmationDialog } from '../../components/OtcConfirmationDialog';
 
+const HOLD_DURATION_MS = 7 * 60 * 1000;
+
 const bookingStatusColors: Record<string, string> = {
-    PENDING: 'bg-yellow-100 text-yellow-800',
+    PENDING: 'bg-amber-100 text-amber-800',
     CONFIRMED: 'bg-green-100 text-green-800',
     COMPLETED: 'bg-blue-100 text-blue-800',
     CANCELLED: 'bg-red-100 text-red-800',
@@ -33,8 +37,16 @@ const bookingStatusColors: Record<string, string> = {
     cancelled: statusColors.cancelled,
 };
 
-const isUpcoming = (b: ApiBooking) =>
-    b.status === 'PENDING' || b.status === 'CONFIRMED';
+const getHoldSecondsLeft = (b: ApiBooking) => {
+    if (b.status !== 'PENDING') return null;
+    const expiry = new Date(b.createdAt).getTime() + HOLD_DURATION_MS;
+    return Math.max(0, Math.floor((expiry - Date.now()) / 1000));
+};
+
+const isActiveHold = (b: ApiBooking) => {
+    const s = getHoldSecondsLeft(b);
+    return s !== null && s > 0;
+};
 
 const MyBookings = () => {
     const navigate = useNavigate();
@@ -43,6 +55,14 @@ const MyBookings = () => {
     const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
     const [selectedBooking, setSelectedBooking] = useState<ApiBooking | null>(null);
     const [otcActiveBookings, setOtcActiveBookings] = useState<Set<string>>(new Set());
+    const [tick, setTick] = useState(0);
+    const [payingHoldId, setPayingHoldId] = useState<string | null>(null);
+
+    // Drive per-second countdown for active holds
+    useEffect(() => {
+        const id = setInterval(() => setTick((t) => t + 1), 1000);
+        return () => clearInterval(id);
+    }, []);
 
     const { data: upcomingData, isLoading: upcomingLoading } = useQuery({
         queryKey: ['bookings', 'upcoming'],
@@ -67,7 +87,58 @@ const MyBookings = () => {
         onError: () => toast.error('Failed to activate Open to Cancel'),
     });
 
-    const upcomingBookings = [...(upcomingData?.data?.bookings ?? [])].sort((a, b) =>
+    const { mutate: payHold } = useMutation({
+        mutationFn: (bookingId: string) =>
+            initiatePayment(bookingId, { paymentMethod: 'UPI' }),
+        onMutate: (bookingId) => setPayingHoldId(bookingId),
+        onSettled: () => setPayingHoldId(null),
+        onSuccess: (res) => {
+            const { booking, razorpay } = res.data;
+            const rzp = new window.Razorpay({
+                key: razorpay.keyId,
+                amount: razorpay.amount,
+                currency: razorpay.currency,
+                order_id: razorpay.orderId,
+                name: 'BookEase',
+                handler: async (payment: any) => {
+                    try {
+                        await verifyBookingPayment(booking.id, {
+                            razorpayPaymentId: payment.razorpay_payment_id,
+                            razorpayOrderId: payment.razorpay_order_id,
+                            razorpaySignature: payment.razorpay_signature,
+                        });
+                        toast.success('Booking confirmed!');
+                        queryClient.invalidateQueries({ queryKey: ['bookings'] });
+                    } catch {
+                        toast.error('Payment verification failed.');
+                        queryClient.invalidateQueries({ queryKey: ['bookings'] });
+                    }
+                },
+                modal: {
+                    ondismiss: () => {
+                        toast.error('Payment cancelled.');
+                        queryClient.invalidateQueries({ queryKey: ['bookings'] });
+                    },
+                },
+                theme: { color: '#2563eb' },
+            });
+            rzp.open();
+        },
+        onError: (err: any) => {
+            const msg = err?.response?.data?.message ?? 'Failed to initiate payment.';
+            toast.error(msg);
+            queryClient.invalidateQueries({ queryKey: ['bookings'] });
+        },
+    });
+
+    // tick drives per-second re-render so hold countdowns stay fresh
+    const allUpcoming = [...(upcomingData?.data?.bookings ?? [])].filter((b) => {
+        if (b.status !== 'PENDING') return true;
+        // hide expired holds (use tick so this re-evaluates every second)
+        return tick >= 0 && isActiveHold(b);
+    });
+
+    const upcomingBookings = allUpcoming.sort((a, b) =>
         `${a.bookingDate}${a.startTime}`.localeCompare(`${b.bookingDate}${b.startTime}`),
     );
 
@@ -151,7 +222,7 @@ const MyBookings = () => {
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-foreground">
                                     <Clock className="h-4 w-4 text-muted-foreground" />
-                                    {selectedBooking.startTime} – {selectedBooking.endTime}
+                                    {formatTime(selectedBooking.startTime)} – {formatTime(selectedBooking.endTime)}
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-foreground">
                                     <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -210,33 +281,33 @@ const MyBookings = () => {
     const renderBookingCard = (b: ApiBooking, isUpcomingCard: boolean) => {
         const isOtcActive = otcActiveBookings.has(b.id);
         const canActivateOtc = isOtcEligible(b);
+        const holdSecs = getHoldSecondsLeft(b);
+        const isPendingHold = holdSecs !== null && holdSecs > 0;
+        const holdMins = holdSecs !== null ? Math.floor(holdSecs / 60) : 0;
+        const holdSecsRem = holdSecs !== null ? holdSecs % 60 : 0;
 
         return (
             <Card
                 key={b.id}
-                className={`cursor-pointer hover:shadow-md transition-shadow ${!isUpcomingCard ? 'opacity-80' : ''}`}
-                onClick={() => setSelectedBooking(b)}
+                className={`cursor-pointer hover:shadow-md transition-shadow ${!isUpcomingCard ? 'opacity-80' : ''} ${isPendingHold ? 'border-amber-300' : ''}`}
+                onClick={() => !isPendingHold && setSelectedBooking(b)}
             >
                 <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                         <div>
-                            <p className="font-semibold text-foreground">
-                                {b.court.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                {b.venue.name}
-                            </p>
+                            <p className="font-semibold text-foreground">{b.court.name}</p>
+                            <p className="text-xs text-muted-foreground">{b.venue.name}</p>
                             <p className="text-xs text-muted-foreground mt-0.5">
                                 {format(
                                     new Date(b.bookingDate),
                                     isUpcomingCard ? 'EEEE, MMM d' : 'MMM d, yyyy',
                                 )}{' '}
-                                · {b.startTime} - {b.endTime}
+                                · {formatTime(b.startTime)} – {formatTime(b.endTime)}
                             </p>
                         </div>
                         <div className="flex flex-col items-end gap-1">
                             <Badge className={bookingStatusColors[b.status] ?? ''}>
-                                {b.status.replace(/_/g, ' ')}
+                                {isPendingHold ? 'Held' : b.status.replace(/_/g, ' ')}
                             </Badge>
                             {isOtcActive && (
                                 <Badge className="bg-warning/10 text-warning text-[10px]">
@@ -245,10 +316,37 @@ const MyBookings = () => {
                             )}
                         </div>
                     </div>
+
                     <div className="mt-2 flex justify-between text-sm">
                         <span className="text-muted-foreground">Total</span>
                         <span className="font-medium">₹{b.finalAmount}</span>
                     </div>
+
+                    {isPendingHold && (
+                        <div
+                            className="mt-3 flex items-center gap-2"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="flex items-center gap-1 text-xs text-amber-600 flex-1">
+                                <Clock className="h-3.5 w-3.5" />
+                                <span className="tabular-nums">
+                                    {holdMins}:{holdSecsRem.toString().padStart(2, '0')} to pay
+                                </span>
+                            </div>
+                            <Button
+                                size="sm"
+                                className="text-xs"
+                                disabled={payingHoldId === b.id}
+                                onClick={() => payHold(b.id)}
+                            >
+                                {payingHoldId === b.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                    'Pay Now'
+                                )}
+                            </Button>
+                        </div>
+                    )}
 
                     {isUpcomingCard && b.status === 'CONFIRMED' && (
                         <div

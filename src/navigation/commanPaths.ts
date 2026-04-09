@@ -5,4 +5,5 @@ export const path = {
     profile: '/profile',
     venue: '/venue/:venueId',
     booking: '/booking/:facilityId/:courtId?',
+    confirmBooking: '/confirm-booking',
 };

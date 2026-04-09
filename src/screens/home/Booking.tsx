@@ -3,14 +3,13 @@ import { useState, useEffect, useMemo } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft, Clock, Loader2, X } from 'lucide-react';
 import { getVenueDetail } from '../../api/adapters/venues';
 import { getCourtDetail } from '../../api/adapters/courts';
-import { createBooking, verifyBookingPayment } from '../../api/adapters/bookings';
+import { holdSlot } from '../../api/adapters/bookings';
 import { DateStrip } from '../../components/DateStrip';
-import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { cn } from '../../utils/twMerge';
+import { cn, formatTime } from '../../utils/twMerge';
 import { useQuery } from '@tanstack/react-query';
 
 // slot keyed by startTime per court
@@ -130,9 +129,20 @@ const Booking = () => {
         (sum, s) => sum + getEffectivePrice(s.startTime, selectedDate, selectedPeaks, basePrice),
         0,
     );
-    const bookingFee = Math.round(totalPrice * 0.1);
-    const gst = Number(((totalPrice + bookingFee) * 0.05).toFixed(2));
-    const grandTotal = totalPrice + bookingFee + gst;
+
+    const minimumSlotMinutes = facility?.bookingPolicy?.minimumSlotMinutes ?? 0;
+    const selectedDurationMinutes = useMemo(() => {
+        if (!selectedSlotObjects.length) return 0;
+        const toMin = (t: string) => {
+            const [h, m] = t.split(':').map(Number);
+            return h * 60 + m;
+        };
+        return (
+            toMin(selectedSlotObjects[selectedSlotObjects.length - 1].endTime) -
+            toMin(selectedSlotObjects[0].startTime)
+        );
+    }, [selectedSlotObjects]);
+    const belowMinimum = minimumSlotMinutes > 0 && selectedDurationMinutes < minimumSlotMinutes;
 
     const handleSlotTap = (courtId: string, startTime: string) => {
         const slots = courtSlotsData[courtId] ?? [];
@@ -161,46 +171,33 @@ const Booking = () => {
         }
     };
 
-    const { mutate: confirmBooking, isPending: bookingLoading } = useMutation({
+    const { mutate: reviewBooking, isPending: holdLoading } = useMutation({
         mutationFn: () =>
-            createBooking({
+            holdSlot({
                 courtId: selectedCourt,
                 bookingDate: dateStr,
                 slots: selectedSlotObjects.map((s) => ({
                     startTime: s.startTime,
                     endTime: s.endTime,
                 })),
-                paymentMethod: 'UPI',
             }),
         onSuccess: (res) => {
-            const { booking, razorpay } = res.data;
-            const rzp = new window.Razorpay({
-                key: razorpay.keyId,
-                amount: razorpay.amount,
-                currency: razorpay.currency,
-                order_id: razorpay.orderId,
-                name: facility?.name ?? 'BookEase',
-                description: `${selectedCourtData?.name} — ${selectedSlots.length} slot(s)`,
-                handler: async (payment) => {
-                    try {
-                        await verifyBookingPayment(booking.id, {
-                            razorpayPaymentId: payment.razorpay_payment_id,
-                            razorpayOrderId: payment.razorpay_order_id,
-                            razorpaySignature: payment.razorpay_signature,
-                        });
-                        toast.success('Booking confirmed!');
-                        setSelectedSlots([]);
-                        navigate(-1);
-                    } catch {
-                        toast.error('Payment verification failed.');
-                    }
+            const { booking } = res.data;
+            navigate('/confirm-booking', {
+                state: {
+                    holdId: booking.id,
+                    venueName: facility!.name,
+                    venueAddress: [facility!.city, facility!.address].filter(Boolean).join(', '),
+                    sport: selectedSport,
+                    bookingDate: dateStr,
+                    courtName: selectedCourtData!.name,
+                    slots: selectedSlotObjects,
+                    totalPrice,
+                    createdAt: booking.createdAt,
                 },
-                modal: { ondismiss: () => toast.error('Payment cancelled.') },
-                theme: { color: '#2563eb' },
             });
-            rzp.open();
         },
-        onError: () => toast.error('Booking failed. Please try again.'),
+        onError: () => toast.error('Could not hold slot. Please try again.'),
     });
 
     if (venueLoading) {
@@ -220,7 +217,7 @@ const Booking = () => {
     }
 
     return (
-        <div className="min-h-screen bg-background pb-10">
+        <div className="min-h-screen bg-background pb-28">
             {/* Header */}
             <header className="flex items-center gap-3 bg-primary px-4 pb-4 pt-10 text-primary-foreground">
                 <button
@@ -306,7 +303,7 @@ const Booking = () => {
                                 <div key={time} className="flex gap-1 items-center">
                                     {/* Time label */}
                                     <div className="w-14 shrink-0 text-xs text-muted-foreground font-medium">
-                                        {time}
+                                        {formatTime(time)}
                                     </div>
 
                                     {/* Cell per court */}
@@ -319,9 +316,13 @@ const Booking = () => {
                                         );
 
                                         const isAvailable = slot.status === 'available';
+                                        const isHeld = slot.status === 'held';
                                         const isSelected =
                                             selectedCourt === c.id &&
                                             selectedSlots.includes(slot.startTime);
+                                        const courtBase = c.courtPricings[0]?.pricePerSlot ?? 0;
+                                        const isPeak = isAvailable &&
+                                            getEffectivePrice(slot.startTime, selectedDate, courtPeakData[c.id] ?? [], courtBase) !== courtBase;
 
                                         return (
                                             <button
@@ -334,35 +335,51 @@ const Booking = () => {
                                                         'bg-primary text-primary-foreground border-primary shadow-sm',
                                                     isAvailable && !isSelected &&
                                                         'bg-green-500/10 text-green-700 border-green-500/30 hover:bg-green-500/20 dark:text-green-400',
-                                                    !isAvailable &&
+                                                    isHeld &&
+                                                        'bg-amber-50 text-amber-600 border-amber-200 cursor-not-allowed dark:bg-amber-950/20 dark:text-amber-400',
+                                                    !isAvailable && !isHeld &&
                                                         'bg-muted text-muted-foreground border-border cursor-not-allowed opacity-50',
                                                 )}
                                             >
-                                                <span>
-                                                    {isSelected
-                                                        ? 'Selected'
-                                                        : isAvailable
-                                                          ? 'Open'
-                                                          : slot.status === 'booked'
-                                                            ? 'Booked'
-                                                            : 'N/A'}
-                                                </span>
-                                                {isAvailable && (
-                                                    <span
-                                                        className={cn(
-                                                            'text-[10px] mt-0.5',
-                                                            isSelected
-                                                                ? 'text-primary-foreground/80'
-                                                                : 'text-green-600 dark:text-green-400',
-                                                        )}
-                                                    >
-                                                        ₹{getEffectivePrice(
-                                                                slot.startTime,
-                                                                selectedDate,
-                                                                courtPeakData[c.id] ?? [],
-                                                                c.courtPricings[0]?.pricePerSlot ?? 0,
+                                                {isHeld ? (
+                                                    <>
+                                                        <Clock className="h-3.5 w-3.5 mb-0.5" />
+                                                        <span>Held</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <div className="flex items-center gap-1">
+                                                            <span>
+                                                                {isSelected
+                                                                    ? 'Selected'
+                                                                    : isAvailable
+                                                                      ? 'Open'
+                                                                      : 'Booked'}
+                                                            </span>
+                                                            {isPeak && (
+                                                                <span className={cn(
+                                                                    'flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-bold',
+                                                                    isSelected
+                                                                        ? 'bg-purple-300 text-purple-900'
+                                                                        : 'bg-purple-600 text-white',
+                                                                )}>
+                                                                    P
+                                                                </span>
                                                             )}
-                                                    </span>
+                                                        </div>
+                                                        {isAvailable && (
+                                                            <span
+                                                                className={cn(
+                                                                    'text-[10px] mt-0.5',
+                                                                    isSelected
+                                                                        ? 'text-primary-foreground/80'
+                                                                        : 'text-green-600 dark:text-green-400',
+                                                                )}
+                                                            >
+                                                                ₹{getEffectivePrice(slot.startTime, selectedDate, courtPeakData[c.id] ?? [], courtBase)}
+                                                            </span>
+                                                        )}
+                                                    </>
                                                 )}
                                             </button>
                                         );
@@ -373,77 +390,42 @@ const Booking = () => {
                     </div>
                 )}
 
-                {/* Booking summary */}
-                {selectedSlots.length > 0 && selectedCourtData && (
-                    <Card className="border-primary/20 shadow-sm">
-                        <CardContent className="p-4 space-y-3">
-                            <h3 className="font-semibold text-foreground">
-                                Booking Summary
-                            </h3>
-                            <div className="space-y-1.5 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Court</span>
-                                    <span className="font-medium">{selectedCourtData.name}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Date</span>
-                                    <span className="font-medium">{format(selectedDate, 'MMM d, yyyy')}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Time</span>
-                                    <span className="font-medium">
-                                        {selectedSlotObjects[0]?.startTime} –{' '}
-                                        {selectedSlotObjects[selectedSlotObjects.length - 1]?.endTime}
-                                    </span>
-                                </div>
-                                {selectedSlotObjects.map((s) => {
-                                    const slotPrice = getEffectivePrice(s.startTime, selectedDate, selectedPeaks, basePrice);
-                                    const isPeak = slotPrice !== basePrice;
-                                    return (
-                                        <div key={s.startTime} className="flex justify-between">
-                                            <span className="text-muted-foreground">
-                                                {s.startTime} – {s.endTime}
-                                                {isPeak && (
-                                                    <span className="ml-1.5 text-[10px] rounded-full bg-orange-100 text-orange-600 px-1.5 py-0.5">
-                                                        Peak
-                                                    </span>
-                                                )}
-                                            </span>
-                                            <span>₹{slotPrice}</span>
-                                        </div>
-                                    );
-                                })}
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Booking fee (10%)</span>
-                                    <span>₹{bookingFee}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">GST (5%)</span>
-                                    <span>₹{gst}</span>
-                                </div>
-                                <div className="flex justify-between border-t pt-2 font-semibold text-base">
-                                    <span>Total</span>
-                                    <span className="text-primary">₹{grandTotal.toFixed(2)}</span>
-                                </div>
-                            </div>
-                            <Button
-                                className="w-full"
-                                onClick={() => confirmBooking()}
-                                disabled={bookingLoading}
-                            >
-                                {bookingLoading ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                                        Processing…
-                                    </>
-                                ) : (
-                                    'Confirm & Pay'
-                                )}
-                            </Button>
-                        </CardContent>
-                    </Card>
-                )}
             </main>
+
+            {/* Sticky bottom bar */}
+            {selectedSlots.length > 0 && selectedCourtData && (
+                <div className="fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg z-50">
+                    <div className="mx-auto max-w-lg px-4 py-3 flex items-center gap-3">
+                        <button
+                            onClick={() => setSelectedSlots([])}
+                            className="rounded-full p-1.5 bg-muted hover:bg-muted/80 shrink-0"
+                        >
+                            <X className="h-4 w-4 text-muted-foreground" />
+                        </button>
+                        <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-sm">
+                                {selectedSlots.length} slot{selectedSlots.length > 1 ? 's' : ''} · ₹{totalPrice}
+                            </p>
+                            {belowMinimum ? (
+                                <p className="text-xs text-destructive">
+                                    Min. booking is {minimumSlotMinutes} min ({selectedDurationMinutes} min selected)
+                                </p>
+                            ) : (
+                                <p className="text-xs text-muted-foreground truncate">
+                                    {selectedSlotObjects[0] ? formatTime(selectedSlotObjects[0].startTime) : ''} – {selectedSlotObjects[selectedSlotObjects.length - 1] ? formatTime(selectedSlotObjects[selectedSlotObjects.length - 1].endTime) : ''}
+                                </p>
+                            )}
+                        </div>
+                        <Button onClick={() => reviewBooking()} disabled={holdLoading || belowMinimum} className="shrink-0">
+                            {holdLoading ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                                'Review Booking'
+                            )}
+                        </Button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

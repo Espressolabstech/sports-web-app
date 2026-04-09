@@ -7,6 +7,7 @@ import MyBookings from '../screens/MyBookings';
 import MyProfile from '../screens/Profile';
 import Venues from '../screens/home/Venues';
 import Booking from '../screens/home/Booking';
+import ConfirmBooking from '../screens/home/ConfirmBooking';
 
 export const router = createBrowserRouter([
     {
@@ -32,5 +33,9 @@ export const router = createBrowserRouter([
     {
         path: path.booking,
         element: <Booking />,
+    },
+    {
+        path: path.confirmBooking,
+        element: <ConfirmBooking />,
     },
 ]);

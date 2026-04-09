@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/espressolabs/Documents/GitHub/**)",
+      "Bash(find /Users/espressolabs/Documents/GitHub/sports-api -name \"courts.controller.ts\" -exec wc -l {} \\\\;)",
+      "Bash(grep -E \"\\\\.\\(tsx|ts|jsx|js\\)$\")",
+      "Bash(npx prisma:*)"
+    ],
+    "additionalDirectories": [
+      "/Users/espressolabs/Documents/GitHub/sports-api/src/routes/bookings",
+      "/Users/espressolabs/Documents/GitHub/sports-api/src/routes/home",
+      "/Users/espressolabs/Documents/GitHub/book-ease-venue-dashboard/src/utils",
+      "/Users/espressolabs/Documents/GitHub/book-ease-venue-dashboard/src/screens/Bookings",
+      "/Users/espressolabs/Documents/GitHub/book-ease-venue-dashboard/src/screens/Dashboard",
+      "/Users/espressolabs/Documents/GitHub/sports-api/prisma",
+      "/Users/espressolabs/Documents/GitHub/sports-api/src/routes/booking-policy",
+      "/Users/espressolabs/Documents/GitHub/book-ease-venue-dashboard/src/types"
+    ]
+  }
+}
