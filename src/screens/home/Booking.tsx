@@ -186,6 +186,7 @@ const Booking = () => {
             navigate('/confirm-booking', {
                 state: {
                     holdId: booking.id,
+                    venueId: facilityId,
                     venueName: facility!.name,
                     venueAddress: [facility!.city, facility!.address].filter(Boolean).join(', '),
                     sport: selectedSport,

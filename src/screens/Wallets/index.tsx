@@ -15,14 +15,8 @@ const Wallets = () => {
     });
 
     const profile = data?.data;
-    const globalBalance = Number(profile?.wallet?.balance ?? 0);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const venueMemberships: Array<{
-        tier: string | null;
-        totalSpend: number;
-        totalBookings: number;
-        venue: { id: string; name: string; city: string };
-    }> = (profile as any)?.venueMemberships ?? [];
+    const wallets = profile?.wallets ?? [];
+    const totalBalance = wallets.reduce((sum, w) => sum + Number(w.balance), 0);
 
     return (
         <div className="min-h-screen bg-background pb-20">
@@ -36,7 +30,7 @@ const Wallets = () => {
             </header>
 
             <main className="mx-auto max-w-lg space-y-5 px-4 pt-5">
-                {/* Global Wallet */}
+                {/* Total Balance */}
                 {isLoading ? (
                     <Skeleton className="h-24 w-full rounded-xl" />
                 ) : (
@@ -49,10 +43,10 @@ const Wallets = () => {
                                 </span>
                             </div>
                             <p className="text-2xl font-bold text-foreground">
-                                ₹{globalBalance.toLocaleString('en-IN')}
+                                ₹{totalBalance.toLocaleString('en-IN')}
                             </p>
                             <p className="text-xs text-muted-foreground mt-0.5">
-                                Available across all venues
+                                Across {wallets.length} venue{wallets.length !== 1 ? 's' : ''}
                             </p>
                         </CardContent>
                     </Card>
@@ -69,39 +63,36 @@ const Wallets = () => {
                             <Skeleton className="h-20 w-full rounded-xl" />
                             <Skeleton className="h-20 w-full rounded-xl" />
                         </div>
-                    ) : venueMemberships.length === 0 ? (
+                    ) : wallets.length === 0 ? (
                         <Card>
                             <CardContent className="p-6 text-center">
                                 <Wallet className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                                 <p className="text-sm text-muted-foreground">
-                                    No venue wallets yet. Book a session to get started.
+                                    No venue wallets yet. Purchase a credit package to get started.
                                 </p>
                             </CardContent>
                         </Card>
                     ) : (
                         <div className="space-y-3">
-                            {venueMemberships.map((m) => (
-                                <Card key={m.venue.id}>
+                            {wallets.map((w) => (
+                                <Card key={w.venueId}>
                                     <CardContent className="p-4">
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-semibold text-foreground text-sm">
-                                                    {m.venue.name}
+                                                    {w.venue.name}
                                                 </p>
                                                 <div className="flex items-center gap-1 text-xs text-muted-foreground mt-0.5">
                                                     <MapPin className="h-3 w-3" />
-                                                    <span>{m.venue.city}</span>
+                                                    <span>{w.venue.city}</span>
                                                 </div>
-                                                <p className="text-xs text-muted-foreground mt-1">
-                                                    {m.totalBookings} session{m.totalBookings !== 1 ? 's' : ''}
-                                                </p>
                                             </div>
                                             <div className="text-right shrink-0">
-                                                <p className="text-sm font-bold text-foreground">
-                                                    ₹{Number(m.totalSpend).toLocaleString('en-IN')}
+                                                <p className={`text-lg font-bold ${Number(w.balance) > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>
+                                                    ₹{Number(w.balance).toLocaleString('en-IN')}
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
-                                                    total spent
+                                                    available
                                                 </p>
                                             </div>
                                         </div>

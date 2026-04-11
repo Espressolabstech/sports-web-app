@@ -33,10 +33,12 @@ export const verifyBookingPayment = async (
 
 export const cancelBooking = async (
     bookingId: string,
+    payload?: { cancelReason?: string },
 ): Promise<ApiResponse<ApiBooking>> => {
     return apiClient({
         url: endpoints.cancelBooking(bookingId),
         method: 'PATCH',
+        data: payload,
     });
 };
 

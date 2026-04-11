@@ -230,6 +230,7 @@ const Venues = () => {
     const [perksSheetOpen, setPerksSheetOpen] = useState(false);
     const [creditsSheetOpen, setCreditsSheetOpen] = useState(false);
     const [perkDetailOpen, setPerkDetailOpen] = useState<TierPerkInfo | null>(null);
+    const [policiesSheetOpen, setPoliciesSheetOpen] = useState(false);
 
     const { data: venueData, isLoading: venueLoading } = useQuery({
         queryKey: ['venue', venueId],
@@ -633,24 +634,32 @@ const Venues = () => {
                         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
                             Policies
                         </p>
-                        <div className="flex items-start gap-2">
+                        <button
+                            onClick={() => setPoliciesSheetOpen(true)}
+                            className="w-full flex items-start gap-2 text-left hover:opacity-75 transition-opacity"
+                        >
                             <Shield className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                            <div>
+                            <div className="flex-1 min-w-0">
                                 <p className="text-[11px] font-semibold text-foreground">Cancellation</p>
-                                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
                                     {cancellationPolicy || 'Contact venue for cancellation details.'}
                                 </p>
                             </div>
-                        </div>
-                        <div className="flex items-start gap-2">
+                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                        </button>
+                        <button
+                            onClick={() => setPoliciesSheetOpen(true)}
+                            className="w-full flex items-start gap-2 text-left hover:opacity-75 transition-opacity"
+                        >
                             <RefreshCw className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                            <div>
-                                <p className="text-[11px] font-semibold text-foreground">Rescheduling</p>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-[11px] font-semibold text-foreground">Cancellation + Rescheduling</p>
                                 <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                    Contact venue for rescheduling options.
+                                    Tap to view full policies
                                 </p>
                             </div>
-                        </div>
+                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                        </button>
                     </div>
                 </div>
 
@@ -704,6 +713,108 @@ const Venues = () => {
                     )}
                 </DialogContent>
             </Dialog>
+
+            {/* Cancellation + Rescheduling Policies Sheet */}
+            <Sheet open={policiesSheetOpen} onOpenChange={setPoliciesSheetOpen}>
+                <SheetContent
+                    side="bottom"
+                    className="rounded-t-2xl max-h-[80vh] overflow-y-auto"
+                >
+                    <SheetHeader className="mb-4">
+                        <SheetTitle>Cancellation &amp; Rescheduling</SheetTitle>
+                    </SheetHeader>
+
+                    <div className="space-y-5 pb-8">
+                        {/* Cancellation Policy */}
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <div className="rounded-full bg-red-100 dark:bg-red-950/30 p-1.5">
+                                    <Shield className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                </div>
+                                <p className="text-sm font-semibold text-foreground">Cancellation Policy</p>
+                            </div>
+                            <p className="text-sm text-muted-foreground leading-relaxed pl-9">
+                                {cancellationPolicy || 'Contact the venue directly for cancellation details.'}
+                            </p>
+                        </div>
+
+                        <Separator />
+
+                        {/* Minimum Notice */}
+                        {facility.bookingPolicy && (
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <div className="rounded-full bg-amber-100 dark:bg-amber-950/30 p-1.5">
+                                        <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                    </div>
+                                    <p className="text-sm font-semibold text-foreground">Minimum Notice</p>
+                                </div>
+                                <p className="text-sm text-muted-foreground leading-relaxed pl-9">
+                                    {facility.bookingPolicy.minimumNoticeMinutes >= 60
+                                        ? `${Math.round(facility.bookingPolicy.minimumNoticeMinutes / 60)} hour${Math.round(facility.bookingPolicy.minimumNoticeMinutes / 60) !== 1 ? 's' : ''} before the booking start time`
+                                        : `${facility.bookingPolicy.minimumNoticeMinutes} minutes before the booking start time`}
+                                </p>
+                            </div>
+                        )}
+
+                        <Separator />
+
+                        {/* Rescheduling */}
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <div className="rounded-full bg-blue-100 dark:bg-blue-950/30 p-1.5">
+                                    <RefreshCw className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                                </div>
+                                <p className="text-sm font-semibold text-foreground">Rescheduling</p>
+                            </div>
+                            <p className="text-sm text-muted-foreground leading-relaxed pl-9">
+                                Contact the venue directly to reschedule your booking. Rescheduling is subject to court availability and the venue's discretion.
+                            </p>
+                        </div>
+
+                        <Separator />
+
+                        {/* Auto Confirm */}
+                        {facility.bookingPolicy && (
+                            <div className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <div className={`rounded-full p-1.5 ${facility.bookingPolicy.autoConfirm ? 'bg-emerald-100 dark:bg-emerald-950/30' : 'bg-muted'}`}>
+                                        <Check className={`h-4 w-4 ${facility.bookingPolicy.autoConfirm ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} />
+                                    </div>
+                                    <p className="text-sm font-semibold text-foreground">Booking Confirmation</p>
+                                </div>
+                                <p className="text-sm text-muted-foreground leading-relaxed pl-9">
+                                    {facility.bookingPolicy.autoConfirm
+                                        ? 'Bookings are confirmed instantly upon payment.'
+                                        : 'Bookings require manual confirmation from the venue after payment.'}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Advance Booking */}
+                        {facility.bookingPolicy && facility.bookingPolicy.adavanceBookingDays > 0 && (
+                            <>
+                                <Separator />
+                                <div className="space-y-2">
+                                    <div className="flex items-center gap-2">
+                                        <div className="rounded-full bg-violet-100 dark:bg-violet-950/30 p-1.5">
+                                            <Zap className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                                        </div>
+                                        <p className="text-sm font-semibold text-foreground">Advance Booking</p>
+                                    </div>
+                                    <p className="text-sm text-muted-foreground leading-relaxed pl-9">
+                                        Courts can be booked up to{' '}
+                                        <span className="font-medium text-foreground">
+                                            {facility.bookingPolicy.adavanceBookingDays} days
+                                        </span>{' '}
+                                        in advance.
+                                    </p>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </SheetContent>
+            </Sheet>
 
             {/* Features & Perks Sheet */}
             <Sheet open={perksSheetOpen} onOpenChange={setPerksSheetOpen}>

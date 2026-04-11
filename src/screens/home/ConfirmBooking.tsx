@@ -1,25 +1,29 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { ArrowLeft, Clock, Loader2, MapPin } from 'lucide-react';
+import { ArrowLeft, Clock, Loader2, MapPin, Wallet } from 'lucide-react';
 import { initiatePayment, verifyBookingPayment } from '../../api/adapters/bookings';
+import { getWallet } from '../../api/adapters/wallet';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { formatTime } from '../../utils/twMerge';
 
 interface ConfirmBookingState {
     holdId: string;
+    venueId: string;
     venueName: string;
     venueAddress: string;
     sport: string;
-    bookingDate: string; // YYYY-MM-DD
+    bookingDate: string;
     courtName: string;
     slots: Array<{ startTime: string; endTime: string }>;
     totalPrice: number;
     createdAt: string;
 }
+
+type PaymentMethod = 'UPI' | 'WALLET';
 
 const HOLD_DURATION_MS = 7 * 60 * 1000;
 
@@ -29,6 +33,7 @@ const ConfirmBooking = () => {
     const state = location.state as ConfirmBookingState | null;
 
     const [secondsLeft, setSecondsLeft] = useState(0);
+    const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('UPI');
 
     useEffect(() => {
         if (!state?.createdAt) return;
@@ -46,11 +51,29 @@ const ConfirmBooking = () => {
         return () => clearInterval(interval);
     }, [state?.createdAt]);
 
+    // Fetch venue-specific wallet balance
+    const { data: walletData } = useQuery({
+        queryKey: ['venueWallet', state?.venueId],
+        queryFn: () => getWallet(state!.venueId),
+        enabled: !!state?.venueId,
+    });
+    const walletBalance = Number(walletData?.data?.wallet?.balance ?? 0);
+    const hasEnoughBalance = walletBalance >= (state?.totalPrice ?? 0);
+
     const { mutate: pay, isPending: payLoading } = useMutation({
         mutationFn: () =>
-            initiatePayment(state!.holdId, { paymentMethod: 'UPI' }),
+            initiatePayment(state!.holdId, { paymentMethod: selectedMethod }),
         onSuccess: (res) => {
-            const { booking, razorpay } = res.data;
+            const { booking, razorpay, walletBalance: newBalance } = res.data as any;
+
+            // Wallet payment confirmed immediately
+            if (selectedMethod === 'WALLET') {
+                toast.success('Booking confirmed via wallet!');
+                navigate('/my-bookings');
+                return;
+            }
+
+            // Razorpay flow
             const rzp = new window.Razorpay({
                 key: razorpay.keyId,
                 amount: razorpay.amount,
@@ -77,7 +100,7 @@ const ConfirmBooking = () => {
             rzp.open();
         },
         onError: (err: any) => {
-            const msg = err?.response?.data?.message ?? 'Failed to initiate payment.';
+            const msg = err?.message ?? err?.response?.data?.message ?? 'Failed to initiate payment.';
             toast.error(msg);
             if (msg.toLowerCase().includes('expired')) navigate(-1);
         },
@@ -180,6 +203,63 @@ const ConfirmBooking = () => {
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Payment Method */}
+                <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 px-1">
+                        Payment Method
+                    </p>
+                    <div className="space-y-2">
+                        {/* UPI / Online */}
+                        <button
+                            onClick={() => setSelectedMethod('UPI')}
+                            className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-colors ${
+                                selectedMethod === 'UPI'
+                                    ? 'border-primary bg-primary/5'
+                                    : 'border-border bg-card'
+                            }`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-4 h-4 rounded-full border-2 border-primary flex items-center justify-center shrink-0">
+                                    {selectedMethod === 'UPI' && (
+                                        <div className="w-2 h-2 rounded-full bg-primary" />
+                                    )}
+                                </div>
+                                <span className="text-sm font-medium">UPI / Online</span>
+                            </div>
+                        </button>
+
+                        {/* Venue Wallet */}
+                        <button
+                            onClick={() => hasEnoughBalance && setSelectedMethod('WALLET')}
+                            disabled={!hasEnoughBalance}
+                            className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-colors ${
+                                selectedMethod === 'WALLET'
+                                    ? 'border-primary bg-primary/5'
+                                    : 'border-border bg-card'
+                            } ${!hasEnoughBalance ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="w-4 h-4 rounded-full border-2 border-primary flex items-center justify-center shrink-0">
+                                    {selectedMethod === 'WALLET' && (
+                                        <div className="w-2 h-2 rounded-full bg-primary" />
+                                    )}
+                                </div>
+                                <div className="text-left">
+                                    <div className="flex items-center gap-1.5">
+                                        <Wallet className="h-3.5 w-3.5 text-primary" />
+                                        <span className="text-sm font-medium">Venue Wallet</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                        Balance: ₹{walletBalance.toLocaleString('en-IN')}
+                                        {!hasEnoughBalance && walletBalance > 0 && ' — insufficient'}
+                                        {walletBalance === 0 && ' — no credits'}
+                                    </p>
+                                </div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
             </main>
 
             {/* Bottom CTA */}
@@ -196,8 +276,10 @@ const ConfirmBooking = () => {
                                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                 Processing…
                             </>
+                        ) : selectedMethod === 'WALLET' ? (
+                            `Pay ₹${state.totalPrice} from Wallet`
                         ) : (
-                            'Choose Payment Method'
+                            `Pay ₹${state.totalPrice} via UPI`
                         )}
                     </Button>
                 </div>

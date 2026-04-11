@@ -8,6 +8,7 @@ import { formatTime } from '../../utils/twMerge';
 import { differenceInHours, format } from 'date-fns';
 import { toast } from 'sonner';
 import {
+    AlertTriangle,
     ArrowLeft,
     Calendar,
     Clock,
@@ -15,10 +16,19 @@ import {
     MapPin,
     Navigation,
     Share2,
+    XCircle,
 } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '../../components/ui/dialog';
 import { BottomNav } from '../../components/BottomNav';
 import { OtcConfirmationDialog } from '../../components/OtcConfirmationDialog';
 
@@ -57,6 +67,7 @@ const MyBookings = () => {
     const [otcActiveBookings, setOtcActiveBookings] = useState<Set<string>>(new Set());
     const [tick, setTick] = useState(0);
     const [payingHoldId, setPayingHoldId] = useState<string | null>(null);
+    const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
 
     // Drive per-second countdown for active holds
     useEffect(() => {
@@ -85,6 +96,20 @@ const MyBookings = () => {
             });
         },
         onError: () => toast.error('Failed to activate Open to Cancel'),
+    });
+
+    const { mutate: directCancel, isPending: directCancelLoading } = useMutation({
+        mutationFn: (bookingId: string) => cancelBooking(bookingId, { cancelReason: 'Cancelled by player' }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['bookings'] });
+            setCancelDialogOpen(false);
+            setSelectedBooking(null);
+            toast.success('Booking cancelled successfully');
+        },
+        onError: (err: any) => {
+            const msg = err?.response?.data?.message ?? 'Unable to cancel this booking.';
+            toast.error(msg);
+        },
     });
 
     const { mutate: payHold } = useMutation({
@@ -272,7 +297,63 @@ const MyBookings = () => {
                             <Share2 className="h-4 w-4 mr-2" /> Share
                         </Button>
                     </div>
+
+                    {selectedBooking.status === 'CONFIRMED' && (
+                        <Button
+                            variant="outline"
+                            className="w-full border-destructive/40 text-destructive hover:bg-destructive/5"
+                            onClick={() => setCancelDialogOpen(true)}
+                        >
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Cancel Booking
+                        </Button>
+                    )}
                 </main>
+
+                {/* Cancel confirmation dialog */}
+                <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+                    <DialogContent className="max-w-sm">
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <AlertTriangle className="h-5 w-5 text-destructive" />
+                                Cancel Booking?
+                            </DialogTitle>
+                            <DialogDescription>
+                                You are cancelling your booking for{' '}
+                                <span className="font-medium text-foreground">
+                                    {selectedBooking.court.name}
+                                </span>{' '}
+                                at{' '}
+                                <span className="font-medium text-foreground">
+                                    {selectedBooking.venue.name}
+                                </span>{' '}
+                                on{' '}
+                                {format(new Date(selectedBooking.bookingDate), 'EEE, MMM d')}.
+                                Refunds are subject to the venue's cancellation policy.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <DialogFooter className="gap-2 sm:gap-0">
+                            <Button
+                                variant="outline"
+                                onClick={() => setCancelDialogOpen(false)}
+                                disabled={directCancelLoading}
+                            >
+                                Keep Booking
+                            </Button>
+                            <Button
+                                variant="destructive"
+                                onClick={() => directCancel(selectedBooking.id)}
+                                disabled={directCancelLoading}
+                            >
+                                {directCancelLoading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                ) : null}
+                                Yes, Cancel
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
                 <BottomNav />
             </div>
         );

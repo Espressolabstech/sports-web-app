@@ -28,6 +28,7 @@ export const endpoints = {
     // Wallet
     wallet: '/wallet',
     walletTransactions: '/wallet/transactions',
+    venueWallet: (venueId: string) => `/wallet?venueId=${venueId}`,
 
     // Credit Packages
     creditPackages: '/credit-packages',

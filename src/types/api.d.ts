@@ -37,9 +37,15 @@ declare global {
         };
     }
 
+    interface ApiMyProfileWallet {
+        venueId: string;
+        balance: number;
+        venue: { id: string; name: string; city: string };
+    }
+
     interface ApiMyProfile {
         user: ApiMyProfileUser;
-        wallet: { balance: number };
+        wallets: ApiMyProfileWallet[];
         totalBookings: number;
         purchases: ApiMyProfilePurchase[];
         venueMemberships: ApiMyProfileVenueMembership[];
