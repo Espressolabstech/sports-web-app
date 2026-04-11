@@ -3,12 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getVenueDetail } from '../../api/adapters/venues';
 import { getVenueTier } from '../../api/adapters/tier';
-import { sportEmojis } from '../../utils/mockData';
 import {
     ArrowLeft,
     Crown,
     ExternalLink,
-    LogOut,
     MapPin,
     Percent,
     Share2,
@@ -22,6 +20,9 @@ import {
     Clock,
     RefreshCw,
     Check,
+    Sparkles,
+    Wallet,
+    LogOut,
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -31,7 +32,6 @@ import {
 } from '../../components/ui/dropdown-menu';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { CreditPackages } from '../../components/CreditPackage';
 import { Separator } from '../../components/ui/separator';
 import { PhoneLoginModal } from '../../components/PhoneLoginModal';
 import {
@@ -48,7 +48,9 @@ import {
     SheetTitle,
 } from '../../components/ui/sheet';
 import { getToken } from '../../utils/cookies.helpers';
+import { formatTime } from '../../utils/twMerge';
 
+// ── Tier Metadata ──────────────────────────────────────────────────────────────
 const TIER_META: Record<
     string,
     {
@@ -58,6 +60,8 @@ const TIER_META: Record<
         bgGradient: string;
         color: string;
         bgClass: string;
+        chipBg: string;
+        chipText: string;
     }
 > = {
     club: {
@@ -68,6 +72,8 @@ const TIER_META: Record<
             'bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100 dark:from-blue-950/40 dark:via-sky-950/30 dark:to-blue-900/40',
         color: 'text-blue-600 dark:text-blue-400',
         bgClass: 'bg-blue-500/10',
+        chipBg: 'bg-blue-500/15',
+        chipText: 'text-blue-700 dark:text-blue-300',
     },
     pro: {
         label: 'Pro',
@@ -77,6 +83,8 @@ const TIER_META: Record<
             'bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100 dark:from-emerald-950/40 dark:via-teal-950/30 dark:to-emerald-900/40',
         color: 'text-emerald-600 dark:text-emerald-400',
         bgClass: 'bg-emerald-500/10',
+        chipBg: 'bg-emerald-500/15',
+        chipText: 'text-emerald-700 dark:text-emerald-300',
     },
     elite: {
         label: 'Elite',
@@ -86,6 +94,8 @@ const TIER_META: Record<
             'bg-gradient-to-br from-violet-50 via-fuchsia-50 to-violet-100 dark:from-violet-950/40 dark:via-fuchsia-950/30 dark:to-violet-900/40',
         color: 'text-violet-600 dark:text-violet-400',
         bgClass: 'bg-violet-500/10',
+        chipBg: 'bg-violet-500/15',
+        chipText: 'text-violet-700 dark:text-violet-300',
     },
 };
 
@@ -161,15 +171,65 @@ const TIER_PERKS: Record<string, TierPerkInfo[]> = Object.fromEntries(
     ]),
 );
 
+// ── Sport SVG Icons ────────────────────────────────────────────────────────────
+function PadelIcon({ className }: { className?: string }) {
+    return (
+        <svg
+            className={className}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <ellipse cx="12" cy="9" rx="5.5" ry="7" />
+            <line x1="12" y1="16" x2="12" y2="23" />
+            <line x1="9" y1="5" x2="9" y2="13" />
+            <line x1="15" y1="5" x2="15" y2="13" />
+            <line x1="7" y1="9" x2="17" y2="9" />
+            <circle cx="12" cy="9" r="1" fill="currentColor" stroke="none" />
+        </svg>
+    );
+}
+
+function PickleballIcon({ className }: { className?: string }) {
+    return (
+        <svg
+            className={className}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <rect x="6" y="1" width="12" height="14" rx="6" />
+            <line x1="12" y1="15" x2="12" y2="23" />
+            <circle cx="10" cy="7" r="0.8" fill="currentColor" stroke="none" />
+            <circle cx="14" cy="7" r="0.8" fill="currentColor" stroke="none" />
+            <circle cx="10" cy="11" r="0.8" fill="currentColor" stroke="none" />
+            <circle cx="14" cy="11" r="0.8" fill="currentColor" stroke="none" />
+            <circle cx="12" cy="9" r="0.8" fill="currentColor" stroke="none" />
+        </svg>
+    );
+}
+
+const SPORT_ICONS: Record<string, React.ReactNode> = {
+    PADEL: <PadelIcon className="h-6 w-6" />,
+    PICKELBALL: <PickleballIcon className="h-6 w-6" />,
+    Padel: <PadelIcon className="h-6 w-6" />,
+    Pickleball: <PickleballIcon className="h-6 w-6" />,
+};
+
 const Venues = () => {
     const { venueId } = useParams();
     const navigate = useNavigate();
     const user = !!getToken();
     const [loginOpen, setLoginOpen] = useState(false);
-    const [loyaltyOpen, setLoyaltyOpen] = useState(false);
-    const [perkDetailOpen, setPerkDetailOpen] = useState<TierPerkInfo | null>(
-        null,
-    );
+    const [perksSheetOpen, setPerksSheetOpen] = useState(false);
+    const [creditsSheetOpen, setCreditsSheetOpen] = useState(false);
+    const [perkDetailOpen, setPerkDetailOpen] = useState<TierPerkInfo | null>(null);
 
     const { data: venueData, isLoading: venueLoading } = useQuery({
         queryKey: ['venue', venueId],
@@ -189,32 +249,22 @@ const Venues = () => {
     const allCourts = Object.values(courtsBySport).flat();
     const creditPackages: CreditPackage[] = (venueData?.data?.creditPackages ?? []) as CreditPackage[];
 
-    const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const venueInfo = {
-        googleMapsUrl: '',
-        hours: (facility?.venueHours ?? []).map((h) => ({
-            day: DAY_NAMES[h.dayOfWeek],
-            time: h.isClosed ? 'Closed' : `${h.openTime} – ${h.closeTime}`,
-        })),
-        cancellationPolicy: facility?.bookingPolicy?.cancellationPolicy ?? '',
-        reschedulingPolicy: '',
-    };
-
-    // Tier display data
     const tierConfigs: ApiTierConfig[] = tierData?.data?.tier_configs ?? [];
     const currentTierName = membership?.tier ? membership.tier.toLowerCase() : null;
     const spendProgress = membership?.tierProgress?.spendProgressPct ?? (currentTierName === 'elite' ? 100 : 0);
     const remainSpend = membership?.tierProgress?.remainingSpend ?? 0;
 
     const tierOrder = ['club', 'pro', 'elite'];
-    const currentTierIndex = currentTierName
-        ? tierOrder.indexOf(currentTierName)
-        : -1;
+    const currentTierIndex = currentTierName ? tierOrder.indexOf(currentTierName) : -1;
     const nextTierName = membership?.tierProgress?.nextTier
         ? membership.tierProgress.nextTier.toLowerCase()
         : currentTierIndex >= 0 && currentTierIndex < 2
           ? tierOrder[currentTierIndex + 1]
           : null;
+    const nextLabel = nextTierName ? TIER_META[nextTierName]?.label : null;
+
+    const meta = currentTierName ? TIER_META[currentTierName] : null;
+    const perks = currentTierName ? TIER_PERKS[currentTierName] : [];
 
     // Group courts by sport
     const sportGroups = Object.entries(courtsBySport).map(([sport, sportCourts]) => {
@@ -224,6 +274,16 @@ const Venues = () => {
                 : 0;
         return { sport, courtCount: sportCourts.length, minPrice };
     });
+
+    // Hours from API
+    const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const venueHours = (facility?.venueHours ?? []).map((h) => ({
+        day: DAY_NAMES[h.dayOfWeek],
+        time: h.isClosed
+            ? 'Closed'
+            : `${formatTime(h.openTime)} – ${formatTime(h.closeTime)}`,
+    }));
+    const cancellationPolicy = facility?.bookingPolicy?.cancellationPolicy ?? '';
 
     if (venueLoading) {
         return (
@@ -248,22 +308,18 @@ const Venues = () => {
             const firstCourt = allCourts.find(
                 (c: ApiCourt) => c.sport.toLowerCase() === sport.toLowerCase(),
             );
-            navigate(
-                `/booking/${facility.id}${firstCourt ? `/${firstCourt.id}` : ''}`,
-            );
+            navigate(`/booking/${facility.id}${firstCourt ? `/${firstCourt.id}` : ''}`);
         }
     };
 
     const handleShare = async () => {
         const shareData = {
             title: facility.name,
-            text: `Book courts at ${facility.name} — ${facility.address}, ${facility.city}`,
+            text: `Book courts at ${facility.name} — ${facility.city}`,
             url: window.location.href,
         };
         if (navigator.share) {
-            try {
-                await navigator.share(shareData);
-            } catch (_) {}
+            try { await navigator.share(shareData); } catch (_) {}
         } else {
             await navigator.clipboard.writeText(window.location.href);
         }
@@ -271,9 +327,9 @@ const Venues = () => {
 
     return (
         <div className="min-h-screen bg-background pb-10">
-            {/* Hero */}
+            {/* ── Hero ── */}
             <div className="relative">
-                <div className="h-56 w-full overflow-hidden bg-muted">
+                <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
                     {facility.venueImages.length > 0 && (
                         <img
                             src={facility.venueImages[0].url}
@@ -281,11 +337,9 @@ const Venues = () => {
                             className="h-full w-full object-cover"
                         />
                     )}
-                    {/* gradient fade at bottom */}
                     <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
                 </div>
 
-                {/* Back button */}
                 <div className="absolute left-3 top-3">
                     <button
                         onClick={() => navigate('/')}
@@ -295,7 +349,6 @@ const Venues = () => {
                     </button>
                 </div>
 
-                {/* Top-right actions */}
                 <div className="absolute right-3 top-3 flex items-center gap-2">
                     <button
                         onClick={handleShare}
@@ -314,15 +367,10 @@ const Venues = () => {
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                    onClick={() => navigate('/profile')}
-                                >
+                                <DropdownMenuItem onClick={() => navigate('/profile')}>
                                     Profile & Bookings
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                    // onClick={logout}
-                                    className="text-destructive"
-                                >
+                                <DropdownMenuItem className="text-destructive">
                                     <LogOut className="h-4 w-4 mr-2" />
                                     Sign Out
                                 </DropdownMenuItem>
@@ -333,129 +381,147 @@ const Venues = () => {
             </div>
 
             <div className="mx-auto max-w-lg px-4">
-                {/* ── Venue identity ── */}
-                <div className="pt-2 pb-4">
-                    <h1 className="text-2xl font-bold text-foreground">
-                        {facility.name}
-                    </h1>
+                {/* ── Section 1: Venue Identity ── */}
+                <div className="pt-2 pb-5">
+                    <div className="flex items-start gap-2">
+                        <h1 className="text-2xl font-bold text-foreground flex-1">
+                            {facility.name}
+                        </h1>
+                        {user && currentTierName && meta && (
+                            <button
+                                onClick={() => setPerksSheetOpen(true)}
+                                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${meta.chipBg} ${meta.chipText} shrink-0 mt-1 hover:opacity-80 transition-opacity`}
+                            >
+                                <span className="[&>svg]:h-3 [&>svg]:w-3">{meta.icon}</span>
+                                {meta.label}
+                            </button>
+                        )}
+                    </div>
                     <button
-                        onClick={() =>
-                            window.open(venueInfo.googleMapsUrl, '_blank')
-                        }
-                        className="mt-1 flex w-full items-start gap-1.5 text-sm text-primary hover:underline text-left"
+                        className="mt-1 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:underline text-left"
                     >
-                        <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-                        <span className="min-w-0 flex-1 break-words">{facility.address}, {facility.city}</span>
-                        <ExternalLink className="h-3 w-3 opacity-60 shrink-0 mt-0.5" />
+                        <MapPin className="h-3.5 w-3.5 shrink-0" />
+                        <span>{facility.city}</span>
+                        <ExternalLink className="h-3 w-3 opacity-60" />
                     </button>
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
                         {facility.description}
                     </p>
                 </div>
 
-                {/* ── Features & Perks card — only show if user has booked here ── */}
-                {(membership?.totalBookings ?? 0) > 0 && (() => {
-                    const meta = currentTierName
-                        ? TIER_META[currentTierName]
-                        : null;
-                    const perks = currentTierName
-                        ? TIER_PERKS[currentTierName]
-                        : [];
+                <Separator className="mb-5" />
 
-                    const nextLabel = nextTierName
-                        ? TIER_META[nextTierName]?.label
-                        : null;
-                    const upgradeHint =
-                        nextTierName && remainSpend > 0
-                            ? `Spend ₹${remainSpend.toLocaleString('en-IN')} more to upgrade to ${nextLabel}`
-                            : nextLabel
-                              ? `You're about to reach ${nextLabel}`
-                              : null;
+                {/* ── Section 2: Book a Court ── */}
+                <section className="mb-6">
+                    <h2 className="text-lg font-bold text-foreground mb-3">Book a Court</h2>
+                    <div className="space-y-2">
+                        {sportGroups.map(({ sport, courtCount, minPrice }) => (
+                            <button
+                                key={sport}
+                                className="w-full flex items-center gap-3 rounded-xl border bg-card p-3 hover:shadow-md transition-all text-left group"
+                                onClick={() => handleBookSport(sport)}
+                            >
+                                <div className="text-muted-foreground/60 shrink-0">
+                                    {SPORT_ICONS[sport] || <Shield className="h-6 w-6" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <p className="font-bold text-foreground text-[15px] leading-tight">
+                                        {sport === 'PADEL' ? 'Padel' : sport === 'PICKELBALL' ? 'Pickleball' : sport}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                        {courtCount} court{courtCount !== 1 ? 's' : ''} · From ₹{minPrice}/hr
+                                    </p>
+                                </div>
+                                <Button
+                                    size="default"
+                                    className="shrink-0 gap-1.5 px-5 font-semibold shadow-sm group-hover:shadow-md transition-shadow"
+                                    onClick={(e) => { e.stopPropagation(); handleBookSport(sport); }}
+                                >
+                                    Book
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </button>
+                        ))}
+                    </div>
+                </section>
 
-                    return (
-                        <div
-                            className={`rounded-2xl mb-5 overflow-hidden relative ${meta ? meta.bgGradient : 'bg-card border'}`}
-                        >
-                            {/* Subtle decorative circles */}
+                <Separator className="mb-5" />
+
+                {/* ── Section 3: Features & Perks ── */}
+                <section className="mb-6">
+                    <div className="mb-3">
+                        <h2 className="text-lg font-bold text-foreground">Features & Perks</h2>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                            Play more, unlock more at this venue
+                        </p>
+                    </div>
+
+                    {(membership?.totalBookings ?? 0) === 0 ? (
+                        /* No bookings yet — unlock prompt only */
+                        <div className="rounded-2xl bg-card border px-5 py-4">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Sparkles className="h-5 w-5 text-primary" />
+                                <p className="text-base font-bold text-foreground">Unlock Perks</p>
+                            </div>
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                                Make your first booking to start unlocking exclusive perks like flexible cancellations, rental discounts, and early access to slots.
+                            </p>
+                            <button
+                                onClick={() => setPerksSheetOpen(true)}
+                                className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
+                            >
+                                See all tiers &amp; perks
+                                <ChevronRight className="h-3 w-3" />
+                            </button>
+                        </div>
+                    ) : (
+                        /* Has bookings — show tier card */
+                        <div className={`rounded-2xl overflow-hidden relative ${meta ? meta.bgGradient : 'bg-card border'}`}>
                             {meta && (
                                 <>
-                                    <div
-                                        className="absolute -top-6 -right-6 h-24 w-24 rounded-full opacity-[0.07] bg-current"
-                                        style={{ color: 'currentColor' }}
-                                    />
+                                    <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full opacity-[0.07] bg-current" />
                                     <div className="absolute -bottom-4 -left-4 h-16 w-16 rounded-full opacity-[0.05] bg-current" />
                                 </>
                             )}
-
                             <div className="relative px-5 py-4">
-                                {/* Top: tier badge + info button */}
                                 <div className="flex items-start justify-between">
-                                    {!currentTierName ? (
-                                        <div>
-                                            <p className="text-base font-bold text-foreground">
-                                                Features & Perks
-                                            </p>
-                                            <p className="text-xs text-muted-foreground mt-0.5">
-                                                Book once to start unlocking
-                                                perks
-                                            </p>
+                                    <div className="flex items-center gap-2">
+                                        <div className={`flex items-center justify-center h-9 w-9 rounded-xl ${meta!.bgClass} ${meta!.color}`}>
+                                            {meta!.icon}
                                         </div>
-                                    ) : (
-                                        <div>
-                                            {/* Large tier name */}
-                                            <div className="flex items-center gap-2">
-                                                <div
-                                                    className={`flex items-center justify-center h-9 w-9 rounded-xl ${meta!.bgClass} ${meta!.color}`}
-                                                >
-                                                    {meta!.icon}
-                                                </div>
-                                                <div>
-                                                    <p
-                                                        className={`text-2xl font-extrabold tracking-tight ${meta!.color}`}
-                                                    >
-                                                        {meta!.label}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            {currentTierName === 'elite' && (
-                                                <p className="text-xs font-medium text-muted-foreground mt-1 ml-11">
-                                                    Highest tier — all perks
-                                                    unlocked
-                                                </p>
-                                            )}
-                                        </div>
-                                    )}
+                                        <p className={`text-2xl font-extrabold tracking-tight ${meta!.color}`}>
+                                            {meta!.label}
+                                        </p>
+                                    </div>
                                     <button
-                                        onClick={() => setLoyaltyOpen(true)}
-                                        className="mt-1 text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors shrink-0"
+                                        onClick={() => setPerksSheetOpen(true)}
+                                        className="text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors mt-1"
                                         aria-label="View all tiers"
                                     >
                                         <Info className="h-4 w-4" />
                                     </button>
                                 </div>
-
-                                {/* Progress bar + upgrade text */}
-                                {currentTierName &&
-                                    nextTierName && (
-                                        <div className="mt-4">
-                                            <div className="h-2 w-full rounded-full bg-black/[0.06] dark:bg-white/[0.08] overflow-hidden">
-                                                <div
-                                                    className={`h-full rounded-full transition-all duration-500 ${meta!.gradient}`}
-                                                    style={{
-                                                        width: `${spendProgress}%`,
-                                                    }}
-                                                />
-                                            </div>
-                                            {upgradeHint && (
-                                                <p className="text-xs text-muted-foreground mt-2">
-                                                    {upgradeHint}
-                                                </p>
-                                            )}
+                                {currentTierName === 'elite' && (
+                                    <p className="text-xs font-medium text-muted-foreground mt-1 ml-11">
+                                        Highest tier — all perks unlocked
+                                    </p>
+                                )}
+                                {nextTierName && (
+                                    <div className="mt-3">
+                                        <div className="h-2 w-full rounded-full bg-black/[0.06] dark:bg-white/[0.08] overflow-hidden">
+                                            <div
+                                                className={`h-full rounded-full transition-all duration-500 ${meta!.gradient}`}
+                                                style={{ width: `${spendProgress}%` }}
+                                            />
                                         </div>
-                                    )}
-
-                                {/* Perks list */}
-                                {currentTierName && perks.length > 0 && (
+                                        {remainSpend > 0 && (
+                                            <p className="text-xs text-muted-foreground mt-2">
+                                                Spend ₹{remainSpend.toLocaleString('en-IN')} more to upgrade to {nextLabel}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+                                {perks.length > 0 && (
                                     <div className="mt-4">
                                         <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-2">
                                             Perks you've unlocked
@@ -464,14 +530,10 @@ const Venues = () => {
                                             {perks.map((perk) => (
                                                 <button
                                                     key={perk.key}
-                                                    onClick={() =>
-                                                        setPerkDetailOpen(perk)
-                                                    }
+                                                    onClick={() => setPerkDetailOpen(perk)}
                                                     className="flex items-center gap-2.5 w-full text-left rounded-xl bg-white/60 dark:bg-white/[0.06] hover:bg-white/80 dark:hover:bg-white/[0.1] px-3 py-2 transition-colors group"
                                                 >
-                                                    <div
-                                                        className={`flex items-center justify-center h-6 w-6 rounded-lg ${meta!.bgClass} ${meta!.color} shrink-0`}
-                                                    >
+                                                    <div className={`flex items-center justify-center h-6 w-6 rounded-lg ${meta!.bgClass} ${meta!.color} shrink-0`}>
                                                         {perk.icon}
                                                     </div>
                                                     <span className="text-sm font-medium text-foreground flex-1">
@@ -485,157 +547,115 @@ const Venues = () => {
                                 )}
                             </div>
                         </div>
-                    );
-                })()}
-                {/* ── Book By Sport ── */}
-                <section className="mb-6">
-                    <h2 className="text-sm font-semibold text-foreground mb-2">
-                        Book a Court
-                    </h2>
-                    <div className="space-y-2">
-                        {sportGroups.map(({ sport, courtCount, minPrice }) => (
-                            <Card
-                                key={sport}
-                                className="cursor-pointer hover:shadow-md transition-shadow"
-                                onClick={() => handleBookSport(sport)}
-                            >
-                                <CardContent className="flex items-center gap-3 p-4">
-                                    <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-xl shrink-0">
-                                        {sportEmojis[sport] || '⚽'}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="font-semibold text-foreground">
-                                            {sport}
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            {courtCount} court
-                                            {courtCount !== 1 ? 's' : ''} · From
-                                            ₹{minPrice}/hr
-                                        </p>
-                                    </div>
-                                    <Button
-                                        size="sm"
-                                        className="gap-1 shrink-0"
-                                    >
-                                        Book
-                                        <ChevronRight className="h-4 w-4" />
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        ))}
-                    </div>
-                </section>
+                    )}
 
-                {/* ── Credit Packages ── */}
-                {creditPackages.length > 0 && (
-                    <CreditPackages
-                        packages={creditPackages}
-                        venueName={facility.name}
-                        venueId={facility.id}
-                        isLoggedIn={!!user}
-                        onLoginRequired={() => setLoginOpen(true)}
-                    />
-                )}
-
-                {/* ── Amenities ── */}
-                <section className="mb-6">
-                    <h2 className="text-sm font-semibold text-foreground mb-2">
-                        Amenities
-                    </h2>
-                    <div className="flex flex-wrap gap-2">
-                        {facility.venueAmenities.map((a) => (
-                            <span
-                                key={a.name}
-                                className="rounded-full bg-accent px-3 py-1 text-xs text-accent-foreground"
-                            >
-                                {a.name}
-                            </span>
-                        ))}
-                    </div>
-                </section>
-
-                <Separator className="mb-6" />
-
-                {/* ── Hours & Location row ── */}
-                <section className="mb-6 grid grid-cols-2 gap-3">
-                    {/* Hours */}
-                    <div className="rounded-xl border bg-card p-4">
-                        <div className="flex items-center gap-1.5 mb-2">
-                            <Clock className="h-4 w-4 text-primary" />
-                            <span className="text-xs font-semibold text-foreground">
-                                Hours
-                            </span>
-                        </div>
-                        <div className="space-y-0.5">
-                            {venueInfo.hours.map((h) => (
-                                <div key={h.day}>
+                    {/* Credit Packages row — always visible */}
+                    {creditPackages.length > 0 && (
+                        <button
+                            onClick={() => setCreditsSheetOpen(true)}
+                            className="w-full flex items-center justify-between gap-3 rounded-xl border bg-card p-4 hover:bg-accent/50 transition-colors text-left mt-3"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+                                    <Wallet className="h-4 w-4 text-primary" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold text-foreground">Credit Packages</p>
                                     <p className="text-xs text-muted-foreground">
-                                        {h.day}
-                                    </p>
-                                    <p className="text-xs font-medium text-foreground">
-                                        {h.time}
+                                        Buy credits &amp; fast-track your tier
                                     </p>
                                 </div>
+                            </div>
+                            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                        </button>
+                    )}
+                </section>
+
+                <Separator className="mb-5" />
+
+                {/* ── Bottom info card: Amenities + Hours + Location + Policies ── */}
+                <div className="rounded-2xl border bg-card overflow-hidden mb-6">
+                    {/* Amenities */}
+                    <div className="p-4 pb-3">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">
+                            Amenities
+                        </p>
+                        <div className="flex flex-wrap gap-1.5">
+                            {facility.venueAmenities.map((a) => (
+                                <span
+                                    key={a.name}
+                                    className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-medium text-accent-foreground"
+                                >
+                                    {a.name}
+                                </span>
                             ))}
                         </div>
                     </div>
 
-                    {/* Location / Maps */}
-                    <button
-                        onClick={() =>
-                            window.open(venueInfo.googleMapsUrl, '_blank')
-                        }
-                        className="rounded-xl border bg-card p-4 text-left hover:bg-accent/50 transition-colors"
-                    >
-                        <div className="flex items-center gap-1.5 mb-2">
-                            <MapPin className="h-4 w-4 text-primary" />
-                            <span className="text-xs font-semibold text-foreground">
-                                Location
-                            </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                            {facility.address}, {facility.city}
-                        </p>
-                        <div className="mt-2 flex items-center gap-1 text-xs text-primary font-medium">
-                            <span>Get directions</span>
-                            <ExternalLink className="h-3 w-3" />
-                        </div>
-                    </button>
-                </section>
+                    <Separator />
 
-                {/* ── Policies ── */}
-                <section className="mb-6 space-y-3">
-                    <h2 className="text-sm font-semibold text-foreground">
-                        Policies
-                    </h2>
-
-                    <div className="rounded-xl border bg-card p-4 space-y-1">
-                        <div className="flex items-center gap-2 mb-1">
-                            <Shield className="h-4 w-4 text-primary shrink-0" />
-                            <span className="text-xs font-semibold text-foreground">
-                                Cancellation
-                            </span>
+                    {/* Hours & Location side by side */}
+                    <div className="grid grid-cols-2 divide-x divide-border">
+                        <div className="p-4">
+                            <div className="flex items-center gap-1.5 mb-2">
+                                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="text-xs font-semibold text-foreground">Hours</span>
+                            </div>
+                            <div className="space-y-1">
+                                {venueHours.map((h, i) => (
+                                    <div key={i}>
+                                        <p className="text-[11px] text-muted-foreground">{h.day}</p>
+                                        <p className="text-[11px] font-medium text-foreground">{h.time}</p>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed pl-6">
-                            {venueInfo.cancellationPolicy}
-                        </p>
+
+                        <button className="p-4 text-left hover:bg-accent/30 transition-colors">
+                            <div className="flex items-center gap-1.5 mb-2">
+                                <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="text-xs font-semibold text-foreground">Location</span>
+                            </div>
+                            <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                {facility.city}
+                            </p>
+                            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
+                                <span>Directions</span>
+                                <ExternalLink className="h-2.5 w-2.5" />
+                            </div>
+                        </button>
                     </div>
 
-                    <div className="rounded-xl border bg-card p-4 space-y-1">
-                        <div className="flex items-center gap-2 mb-1">
-                            <RefreshCw className="h-4 w-4 text-primary shrink-0" />
-                            <span className="text-xs font-semibold text-foreground">
-                                Rescheduling
-                            </span>
-                        </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed pl-6">
-                            {venueInfo.reschedulingPolicy}
-                        </p>
-                    </div>
-                </section>
+                    <Separator />
 
-                {/* ── Footer ── */}
-                <div className="text-center pt-2 pb-2">
+                    {/* Policies */}
+                    <div className="p-4 space-y-3">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                            Policies
+                        </p>
+                        <div className="flex items-start gap-2">
+                            <Shield className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                            <div>
+                                <p className="text-[11px] font-semibold text-foreground">Cancellation</p>
+                                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                    {cancellationPolicy || 'Contact venue for cancellation details.'}
+                                </p>
+                            </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                            <RefreshCw className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
+                            <div>
+                                <p className="text-[11px] font-semibold text-foreground">Rescheduling</p>
+                                <p className="text-[11px] text-muted-foreground leading-relaxed">
+                                    Contact venue for rescheduling options.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Footer */}
+                <div className="text-center pb-2">
                     <button
                         onClick={() => navigate('/')}
                         className="text-xs text-muted-foreground hover:text-foreground hover:underline"
@@ -645,9 +665,10 @@ const Venues = () => {
                 </div>
             </div>
 
+            {/* ── Modals & Sheets ── */}
             <PhoneLoginModal open={loginOpen} onOpenChange={setLoginOpen} />
 
-            {/* ── Perk Detail Dialog ── */}
+            {/* Perk Detail Dialog */}
             <Dialog
                 open={!!perkDetailOpen}
                 onOpenChange={(open) => !open && setPerkDetailOpen(null)}
@@ -669,19 +690,14 @@ const Venues = () => {
                                     How it works
                                 </p>
                                 <ol className="space-y-1.5">
-                                    {perkDetailOpen.howItWorks.map(
-                                        (step, i) => (
-                                            <li
-                                                key={i}
-                                                className="flex gap-2 text-xs text-muted-foreground"
-                                            >
-                                                <span className="shrink-0 font-semibold text-foreground">
-                                                    {i + 1}.
-                                                </span>
-                                                {step}
-                                            </li>
-                                        ),
-                                    )}
+                                    {perkDetailOpen.howItWorks.map((step, i) => (
+                                        <li key={i} className="flex gap-2 text-xs text-muted-foreground">
+                                            <span className="shrink-0 font-semibold text-foreground">
+                                                {i + 1}.
+                                            </span>
+                                            {step}
+                                        </li>
+                                    ))}
                                 </ol>
                             </div>
                         </>
@@ -689,48 +705,42 @@ const Venues = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* ── Features & Perks Sheet ── */}
-            <Sheet open={loyaltyOpen} onOpenChange={setLoyaltyOpen}>
+            {/* Features & Perks Sheet */}
+            <Sheet open={perksSheetOpen} onOpenChange={setPerksSheetOpen}>
                 <SheetContent
                     side="bottom"
                     className="rounded-t-2xl max-h-[85vh] overflow-y-auto"
                 >
                     <SheetHeader className="mb-1">
-                        <SheetTitle>
-                            Features & Perks at {facility.name}
-                        </SheetTitle>
+                        <SheetTitle>Features & Perks at {facility.name}</SheetTitle>
                     </SheetHeader>
                     <p className="text-sm text-muted-foreground mb-5">
-                        Book more to level up and unlock exclusive features at
-                        this venue.
+                        Spend more to level up and unlock exclusive features at this venue.
                     </p>
 
                     <div className="space-y-3 pb-8">
                         {tierOrder.map((tierKey, i) => {
-                            const meta = TIER_META[tierKey];
+                            const tMeta = TIER_META[tierKey];
                             const isCurrentTier = tierKey === currentTierName;
                             const isUnlocked = currentTierIndex >= i;
-                            const config = tierConfigs.find(
-                                (c: any) => c.tier_name === tierKey,
-                            );
-                            const perks = TIER_PERKS[tierKey] || [];
+                            const config = tierConfigs.find((c: ApiTierConfig) => c.tier_name === tierKey);
+                            const tPerks = TIER_PERKS[tierKey] || [];
+
+                            const noBookings = (membership?.totalBookings ?? 0) === 0;
+                            const isDimmed = noBookings || (!isUnlocked && currentTierIndex >= 0);
 
                             return (
                                 <div
                                     key={tierKey}
-                                    className={`rounded-xl border bg-card overflow-hidden transition-all ${isCurrentTier ? 'shadow-md ring-1 ring-primary/20' : ''} ${!isUnlocked ? 'opacity-50' : ''}`}
+                                    className={`rounded-xl border bg-card overflow-hidden transition-all ${isCurrentTier ? 'shadow-md ring-1 ring-primary/20' : ''} ${isDimmed ? 'opacity-40' : ''}`}
                                 >
-                                    <div
-                                        className={`h-1 w-full ${meta.gradient}`}
-                                    />
+                                    <div className={`h-1 w-full ${tMeta.gradient}`} />
                                     <div className="p-4">
                                         <div className="flex items-start justify-between mb-2">
                                             <div className="flex items-center gap-2">
-                                                <span className={meta.color}>
-                                                    {meta.icon}
-                                                </span>
+                                                <span className={tMeta.color}>{tMeta.icon}</span>
                                                 <span className="font-bold text-foreground text-base">
-                                                    {meta.label}
+                                                    {tMeta.label}
                                                 </span>
                                                 {isCurrentTier && (
                                                     <span className="text-xs font-medium text-primary bg-primary/10 rounded-full px-2 py-0.5">
@@ -738,50 +748,110 @@ const Venues = () => {
                                                     </span>
                                                 )}
                                             </div>
-                                            {!isUnlocked && config && (
+                                            {config && config.min_spend > 0 && (
                                                 <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5 shrink-0 ml-2">
-                                                    ₹
-                                                    {Number(
-                                                        config.min_spend,
-                                                    ).toLocaleString(
-                                                        'en-IN',
-                                                    )}{' '}
-                                                    spend
+                                                    ₹{Number(config.min_spend).toLocaleString('en-IN')} spend
                                                 </span>
                                             )}
                                         </div>
 
-                                        {/* Perks list */}
                                         <div className="space-y-1.5 mt-3">
-                                            {perks.map((perk) => (
-                                                <div
+                                            {tPerks.map((perk) => (
+                                                <button
                                                     key={perk.name}
-                                                    className="flex items-start gap-2"
+                                                    onClick={() => setPerkDetailOpen(perk)}
+                                                    className="flex items-start gap-2 w-full text-left hover:bg-accent/40 rounded-lg px-2 py-1.5 -mx-2 transition-colors"
                                                 >
-                                                    <span
-                                                        className={`mt-0.5 shrink-0 ${isUnlocked ? meta.color : 'text-muted-foreground'}`}
-                                                    >
+                                                    <span className={`mt-0.5 shrink-0 ${isUnlocked || currentTierIndex < 0 ? tMeta.color : 'text-muted-foreground'}`}>
                                                         {perk.icon}
                                                     </span>
                                                     <div>
-                                                        <p className="text-sm font-medium text-foreground">
-                                                            {perk.name}
-                                                        </p>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            {perk.description}
-                                                        </p>
+                                                        <p className="text-sm font-medium text-foreground">{perk.name}</p>
+                                                        <p className="text-xs text-muted-foreground">{perk.description}</p>
                                                     </div>
-                                                </div>
+                                                </button>
                                             ))}
-                                            {perks.length === 0 && (
-                                                <p className="text-xs text-muted-foreground">
-                                                    Base tier — book to start
-                                                    unlocking perks
-                                                </p>
-                                            )}
                                         </div>
+
+                                        {!isUnlocked && creditPackages.length > 0 && (() => {
+                                            const fastTrackPkg = creditPackages.find(
+                                                (p: CreditPackage) => (p as any).tier_grant === tierKey,
+                                            );
+                                            if (!fastTrackPkg) return null;
+                                            return (
+                                                <button
+                                                    onClick={() => {
+                                                        setPerksSheetOpen(false);
+                                                        setTimeout(() => setCreditsSheetOpen(true), 300);
+                                                    }}
+                                                    className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                                                >
+                                                    <Wallet className="h-3 w-3" />
+                                                    Fast-track with a credit package
+                                                    <ChevronRight className="h-3 w-3" />
+                                                </button>
+                                            );
+                                        })()}
                                     </div>
                                 </div>
+                            );
+                        })}
+                    </div>
+                </SheetContent>
+            </Sheet>
+
+            {/* Credit Packages Sheet */}
+            <Sheet open={creditsSheetOpen} onOpenChange={setCreditsSheetOpen}>
+                <SheetContent
+                    side="bottom"
+                    className="rounded-t-2xl max-h-[85vh] overflow-y-auto"
+                >
+                    <SheetHeader className="mb-1">
+                        <SheetTitle className="flex items-center gap-2">
+                            <Wallet className="h-5 w-5 text-primary" />
+                            Credit Packages
+                        </SheetTitle>
+                    </SheetHeader>
+                    <p className="text-sm text-muted-foreground mb-4">
+                        Buy credits to save on bookings. Some packages instantly unlock a higher tier.
+                    </p>
+                    <div className="space-y-2.5 pb-8">
+                        {creditPackages.map((pkg) => {
+                            const tierMeta = pkg.tierUnlock ? TIER_META[pkg.tierUnlock.toLowerCase()] : null;
+                            return (
+                                <Card key={pkg.id} className="overflow-hidden">
+                                    <CardContent className="p-4">
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-foreground mb-0.5">{pkg.name}</p>
+                                                <p className="text-xs text-muted-foreground mb-2">
+                                                    ₹{Number(pkg.amount).toLocaleString('en-IN')} added to wallet
+                                                    {pkg.tierUnlock && ` + unlock ${pkg.tierUnlock.toLowerCase()} perks`}
+                                                </p>
+                                                {tierMeta && (
+                                                    <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${tierMeta.chipBg} ${tierMeta.chipText}`}>
+                                                        <span className="[&>svg]:h-2.5 [&>svg]:w-2.5">{tierMeta.icon}</span>
+                                                        Unlocks {tierMeta.label} Tier
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <Button
+                                                size="sm"
+                                                className="shrink-0 mt-1"
+                                                onClick={() => {
+                                                    if (!user) {
+                                                        setCreditsSheetOpen(false);
+                                                        setLoginOpen(true);
+                                                        return;
+                                                    }
+                                                    // payment handled by CreditPackages component elsewhere
+                                                }}
+                                            >
+                                                Buy ₹{Number(pkg.amount).toLocaleString('en-IN')}
+                                            </Button>
+                                        </div>
+                                    </CardContent>
+                                </Card>
                             );
                         })}
                     </div>

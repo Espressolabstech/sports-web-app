@@ -12,6 +12,7 @@ import {
     Trophy,
     Wallet,
 } from 'lucide-react';
+import { path } from '../../navigation/commanPaths';
 import { Switch } from '../../components/ui/switch';
 import { Badge } from '../../components/ui/badge';
 import { Skeleton } from '../../components/ui/skeleton';
@@ -97,19 +98,25 @@ const MyProfile = () => {
                     <Skeleton className="h-24 w-full rounded-xl" />
                 ) : (
                     <div className="grid grid-cols-2 gap-3">
-                        <Card>
+                        <Card
+                            className="cursor-pointer hover:bg-accent/50 transition-colors"
+                            onClick={() => navigate(path.wallets)}
+                        >
                             <CardContent className="p-4">
-                                <div className="flex items-center gap-2 mb-1">
-                                    <Wallet className="h-4 w-4 text-primary" />
-                                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                                        Wallet
-                                    </span>
+                                <div className="flex items-center justify-between mb-1">
+                                    <div className="flex items-center gap-2">
+                                        <Wallet className="h-4 w-4 text-primary" />
+                                        <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                            Wallet
+                                        </span>
+                                    </div>
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground" />
                                 </div>
-                                <p className="text-xl font-bold text-foreground">
-                                    ₹{Number(wallet?.balance ?? 0).toLocaleString('en-IN')}
+                                <p className="text-sm font-medium text-foreground">
+                                    View all venue wallets
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                    Available balance
+                                    Tap to see your balances
                                 </p>
                             </CardContent>
                         </Card>

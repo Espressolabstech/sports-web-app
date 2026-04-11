@@ -1,9 +1,10 @@
+import { Images } from '../resources/images';
 import { cn } from '../utils/twMerge';
 
 const sports = [
-    { label: 'All', value: 'All', icon: '🏟️' },
-    { label: 'Padel', value: 'PADEL', icon: '🎾' },
-    { label: 'Pickleball', value: 'PICKELBALL', icon: '🏓' },
+    { label: 'All', value: 'All', emoji: '🏟️', svgIcon: null },
+    { label: 'Padel', value: 'PADEL', emoji: null, svgIcon: Images.PaddleIcon },
+    { label: 'Pickleball', value: 'PICKELBALL', emoji: null, svgIcon: Images.PickeBallIcon },
 ];
 
 export function SportChips({ selected, onSelect }: SportChipsProps) {
@@ -20,7 +21,10 @@ export function SportChips({ selected, onSelect }: SportChipsProps) {
                             : 'bg-card text-muted-foreground border',
                     )}
                 >
-                    <span>{sport.icon}</span>
+                    {sport.svgIcon
+                        ? <img src={sport.svgIcon} alt={sport.label} className="w-4 h-4" />
+                        : <span>{sport.emoji}</span>
+                    }
                     <span>{sport.label}</span>
                 </button>
             ))}

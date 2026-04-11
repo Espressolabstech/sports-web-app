@@ -5,6 +5,7 @@ import Login from '../screens/Login';
 import Home from '../screens/home';
 import MyBookings from '../screens/MyBookings';
 import MyProfile from '../screens/Profile';
+import Wallets from '../screens/Wallets';
 import Venues from '../screens/home/Venues';
 import Booking from '../screens/home/Booking';
 import ConfirmBooking from '../screens/home/ConfirmBooking';
@@ -25,6 +26,10 @@ export const router = createBrowserRouter([
     {
         path: path.profile,
         element: <ProtectedComponentWrapper children={<MyProfile />} />,
+    },
+    {
+        path: path.wallets,
+        element: <ProtectedComponentWrapper children={<Wallets />} />,
     },
     {
         path: path.venue,

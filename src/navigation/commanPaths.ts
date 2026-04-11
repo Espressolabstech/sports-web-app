@@ -3,6 +3,7 @@ export const path = {
     login: '/login',
     MyBookings: '/my-bookings',
     profile: '/profile',
+    wallets: '/wallets',
     venue: '/venue/:venueId',
     booking: '/booking/:facilityId/:courtId?',
     confirmBooking: '/confirm-booking',
