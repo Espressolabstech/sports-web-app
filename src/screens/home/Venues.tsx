@@ -229,7 +229,9 @@ const Venues = () => {
     const [loginOpen, setLoginOpen] = useState(false);
     const [perksSheetOpen, setPerksSheetOpen] = useState(false);
     const [creditsSheetOpen, setCreditsSheetOpen] = useState(false);
-    const [perkDetailOpen, setPerkDetailOpen] = useState<TierPerkInfo | null>(null);
+    const [perkDetailOpen, setPerkDetailOpen] = useState<TierPerkInfo | null>(
+        null,
+    );
     const [policiesSheetOpen, setPoliciesSheetOpen] = useState(false);
 
     const { data: venueData, isLoading: venueLoading } = useQuery({
@@ -248,15 +250,22 @@ const Venues = () => {
     const membership = venueData?.data?.membership;
     const courtsBySport = venueData?.data?.courtsBySport ?? {};
     const allCourts = Object.values(courtsBySport).flat();
-    const creditPackages: CreditPackage[] = (venueData?.data?.creditPackages ?? []) as CreditPackage[];
+    const creditPackages: CreditPackage[] = (venueData?.data?.creditPackages ??
+        []) as CreditPackage[];
 
     const tierConfigs: ApiTierConfig[] = tierData?.data?.tier_configs ?? [];
-    const currentTierName = membership?.tier ? membership.tier.toLowerCase() : null;
-    const spendProgress = membership?.tierProgress?.spendProgressPct ?? (currentTierName === 'elite' ? 100 : 0);
+    const currentTierName = membership?.tier
+        ? membership.tier.toLowerCase()
+        : null;
+    const spendProgress =
+        membership?.tierProgress?.spendProgressPct ??
+        (currentTierName === 'elite' ? 100 : 0);
     const remainSpend = membership?.tierProgress?.remainingSpend ?? 0;
 
     const tierOrder = ['club', 'pro', 'elite'];
-    const currentTierIndex = currentTierName ? tierOrder.indexOf(currentTierName) : -1;
+    const currentTierIndex = currentTierName
+        ? tierOrder.indexOf(currentTierName)
+        : -1;
     const nextTierName = membership?.tierProgress?.nextTier
         ? membership.tierProgress.nextTier.toLowerCase()
         : currentTierIndex >= 0 && currentTierIndex < 2
@@ -268,13 +277,19 @@ const Venues = () => {
     const perks = currentTierName ? TIER_PERKS[currentTierName] : [];
 
     // Group courts by sport
-    const sportGroups = Object.entries(courtsBySport).map(([sport, sportCourts]) => {
-        const minPrice =
-            sportCourts.length > 0
-                ? Math.min(...sportCourts.map((c) => c.courtPricings[0]?.pricePerSlot ?? 0))
-                : 0;
-        return { sport, courtCount: sportCourts.length, minPrice };
-    });
+    const sportGroups = Object.entries(courtsBySport).map(
+        ([sport, sportCourts]) => {
+            const minPrice =
+                sportCourts.length > 0
+                    ? Math.min(
+                          ...sportCourts.map(
+                              (c) => c.courtPricings[0]?.pricePerSlot ?? 0,
+                          ),
+                      )
+                    : 0;
+            return { sport, courtCount: sportCourts.length, minPrice };
+        },
+    );
 
     // Hours from API
     const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -284,7 +299,8 @@ const Venues = () => {
             ? 'Closed'
             : `${formatTime(h.openTime)} – ${formatTime(h.closeTime)}`,
     }));
-    const cancellationPolicy = facility?.bookingPolicy?.cancellationPolicy ?? '';
+    const cancellationPolicy =
+        facility?.bookingPolicy?.cancellationPolicy ?? '';
 
     if (venueLoading) {
         return (
@@ -309,21 +325,35 @@ const Venues = () => {
             const firstCourt = allCourts.find(
                 (c: ApiCourt) => c.sport.toLowerCase() === sport.toLowerCase(),
             );
-            navigate(`/booking/${facility.id}${firstCourt ? `/${firstCourt.id}` : ''}`);
+            navigate(
+                `/booking/${facility.id}${firstCourt ? `/${firstCourt.id}` : ''}`,
+            );
         }
     };
 
-    const handleShare = async () => {
-        const shareData = {
-            title: facility.name,
-            text: `Book courts at ${facility.name} — ${facility.city}`,
-            url: window.location.href,
-        };
-        if (navigator.share) {
-            try { await navigator.share(shareData); } catch (_) {}
-        } else {
-            await navigator.clipboard.writeText(window.location.href);
-        }
+    const handleShare = () => {
+        const sports = sportGroups.map((g) => g.sport).join(' & ');
+        const mapsLink =
+            facility.latitude && facility.longitude
+                ? `https://maps.google.com/?q=${facility.latitude},${facility.longitude}`
+                : `https://maps.google.com/?q=${encodeURIComponent(`${facility.name} ${facility.city}`)}`;
+
+        const lines = [
+            `🏟️ Check out *${facility.name}* on BookEase!`,
+            ``,
+            `🎾 Sports: ${sports}`,
+            `📍 Location: ${facility.city}`,
+            `🗺️ Directions: ${mapsLink}`,
+            ``,
+            `Book a court: ${window.location.href}`,
+        ];
+        const text = lines.join('\n');
+
+        window.open(
+            `https://wa.me/?text=${encodeURIComponent(text)}`,
+            '_blank',
+            'noopener,noreferrer',
+        );
     };
 
     return (
@@ -368,7 +398,9 @@ const Venues = () => {
                                 </button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                                <DropdownMenuItem
+                                    onClick={() => navigate('/profile')}
+                                >
                                     Profile & Bookings
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="text-destructive">
@@ -393,14 +425,14 @@ const Venues = () => {
                                 onClick={() => setPerksSheetOpen(true)}
                                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${meta.chipBg} ${meta.chipText} shrink-0 mt-1 hover:opacity-80 transition-opacity`}
                             >
-                                <span className="[&>svg]:h-3 [&>svg]:w-3">{meta.icon}</span>
+                                <span className="[&>svg]:h-3 [&>svg]:w-3">
+                                    {meta.icon}
+                                </span>
                                 {meta.label}
                             </button>
                         )}
                     </div>
-                    <button
-                        className="mt-1 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:underline text-left"
-                    >
+                    <button className="mt-1 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:underline text-left">
                         <MapPin className="h-3.5 w-3.5 shrink-0" />
                         <span>{facility.city}</span>
                         <ExternalLink className="h-3 w-3 opacity-60" />
@@ -414,7 +446,9 @@ const Venues = () => {
 
                 {/* ── Section 2: Book a Court ── */}
                 <section className="mb-6">
-                    <h2 className="text-lg font-bold text-foreground mb-3">Book a Court</h2>
+                    <h2 className="text-lg font-bold text-foreground mb-3">
+                        Book a Court
+                    </h2>
                     <div className="space-y-2">
                         {sportGroups.map(({ sport, courtCount, minPrice }) => (
                             <button
@@ -423,20 +457,31 @@ const Venues = () => {
                                 onClick={() => handleBookSport(sport)}
                             >
                                 <div className="text-muted-foreground/60 shrink-0">
-                                    {SPORT_ICONS[sport] || <Shield className="h-6 w-6" />}
+                                    {SPORT_ICONS[sport] || (
+                                        <Shield className="h-6 w-6" />
+                                    )}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <p className="font-bold text-foreground text-[15px] leading-tight">
-                                        {sport === 'PADEL' ? 'Padel' : sport === 'PICKELBALL' ? 'Pickleball' : sport}
+                                        {sport === 'PADEL'
+                                            ? 'Padel'
+                                            : sport === 'PICKELBALL'
+                                              ? 'Pickleball'
+                                              : sport}
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                        {courtCount} court{courtCount !== 1 ? 's' : ''} · From ₹{minPrice}/hr
+                                        {courtCount} court
+                                        {courtCount !== 1 ? 's' : ''} · From ₹
+                                        {minPrice}/hr
                                     </p>
                                 </div>
                                 <Button
                                     size="default"
                                     className="shrink-0 gap-1.5 px-5 font-semibold shadow-sm group-hover:shadow-md transition-shadow"
-                                    onClick={(e) => { e.stopPropagation(); handleBookSport(sport); }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleBookSport(sport);
+                                    }}
                                 >
                                     Book
                                     <ChevronRight className="h-4 w-4" />
@@ -451,7 +496,9 @@ const Venues = () => {
                 {/* ── Section 3: Features & Perks ── */}
                 <section className="mb-6">
                     <div className="mb-3">
-                        <h2 className="text-lg font-bold text-foreground">Features & Perks</h2>
+                        <h2 className="text-lg font-bold text-foreground">
+                            Features & Perks
+                        </h2>
                         <p className="text-xs text-muted-foreground mt-0.5">
                             Play more, unlock more at this venue
                         </p>
@@ -462,10 +509,14 @@ const Venues = () => {
                         <div className="rounded-2xl bg-card border px-5 py-4">
                             <div className="flex items-center gap-2 mb-2">
                                 <Sparkles className="h-5 w-5 text-primary" />
-                                <p className="text-base font-bold text-foreground">Unlock Perks</p>
+                                <p className="text-base font-bold text-foreground">
+                                    Unlock Perks
+                                </p>
                             </div>
                             <p className="text-sm text-muted-foreground leading-relaxed">
-                                Make your first booking to start unlocking exclusive perks like flexible cancellations, rental discounts, and early access to slots.
+                                Make your first booking to start unlocking
+                                exclusive perks like flexible cancellations,
+                                rental discounts, and early access to slots.
                             </p>
                             <button
                                 onClick={() => setPerksSheetOpen(true)}
@@ -477,7 +528,9 @@ const Venues = () => {
                         </div>
                     ) : (
                         /* Has bookings — show tier card */
-                        <div className={`rounded-2xl overflow-hidden relative ${meta ? meta.bgGradient : 'bg-card border'}`}>
+                        <div
+                            className={`rounded-2xl overflow-hidden relative ${meta ? meta.bgGradient : 'bg-card border'}`}
+                        >
                             {meta && (
                                 <>
                                     <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full opacity-[0.07] bg-current" />
@@ -487,10 +540,14 @@ const Venues = () => {
                             <div className="relative px-5 py-4">
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-center gap-2">
-                                        <div className={`flex items-center justify-center h-9 w-9 rounded-xl ${meta!.bgClass} ${meta!.color}`}>
+                                        <div
+                                            className={`flex items-center justify-center h-9 w-9 rounded-xl ${meta!.bgClass} ${meta!.color}`}
+                                        >
                                             {meta!.icon}
                                         </div>
-                                        <p className={`text-2xl font-extrabold tracking-tight ${meta!.color}`}>
+                                        <p
+                                            className={`text-2xl font-extrabold tracking-tight ${meta!.color}`}
+                                        >
                                             {meta!.label}
                                         </p>
                                     </div>
@@ -512,12 +569,18 @@ const Venues = () => {
                                         <div className="h-2 w-full rounded-full bg-black/[0.06] dark:bg-white/[0.08] overflow-hidden">
                                             <div
                                                 className={`h-full rounded-full transition-all duration-500 ${meta!.gradient}`}
-                                                style={{ width: `${spendProgress}%` }}
+                                                style={{
+                                                    width: `${spendProgress}%`,
+                                                }}
                                             />
                                         </div>
                                         {remainSpend > 0 && (
                                             <p className="text-xs text-muted-foreground mt-2">
-                                                Spend ₹{remainSpend.toLocaleString('en-IN')} more to upgrade to {nextLabel}
+                                                Spend ₹
+                                                {remainSpend.toLocaleString(
+                                                    'en-IN',
+                                                )}{' '}
+                                                more to upgrade to {nextLabel}
                                             </p>
                                         )}
                                     </div>
@@ -531,10 +594,14 @@ const Venues = () => {
                                             {perks.map((perk) => (
                                                 <button
                                                     key={perk.key}
-                                                    onClick={() => setPerkDetailOpen(perk)}
+                                                    onClick={() =>
+                                                        setPerkDetailOpen(perk)
+                                                    }
                                                     className="flex items-center gap-2.5 w-full text-left rounded-xl bg-white/60 dark:bg-white/[0.06] hover:bg-white/80 dark:hover:bg-white/[0.1] px-3 py-2 transition-colors group"
                                                 >
-                                                    <div className={`flex items-center justify-center h-6 w-6 rounded-lg ${meta!.bgClass} ${meta!.color} shrink-0`}>
+                                                    <div
+                                                        className={`flex items-center justify-center h-6 w-6 rounded-lg ${meta!.bgClass} ${meta!.color} shrink-0`}
+                                                    >
                                                         {perk.icon}
                                                     </div>
                                                     <span className="text-sm font-medium text-foreground flex-1">
@@ -561,7 +628,9 @@ const Venues = () => {
                                     <Wallet className="h-4 w-4 text-primary" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-semibold text-foreground">Credit Packages</p>
+                                    <p className="text-sm font-semibold text-foreground">
+                                        Credit Packages
+                                    </p>
                                     <p className="text-xs text-muted-foreground">
                                         Buy credits &amp; fast-track your tier
                                     </p>
@@ -600,13 +669,19 @@ const Venues = () => {
                         <div className="p-4">
                             <div className="flex items-center gap-1.5 mb-2">
                                 <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span className="text-xs font-semibold text-foreground">Hours</span>
+                                <span className="text-xs font-semibold text-foreground">
+                                    Hours
+                                </span>
                             </div>
                             <div className="space-y-1">
                                 {venueHours.map((h, i) => (
                                     <div key={i}>
-                                        <p className="text-[11px] text-muted-foreground">{h.day}</p>
-                                        <p className="text-[11px] font-medium text-foreground">{h.time}</p>
+                                        <p className="text-[11px] text-muted-foreground">
+                                            {h.day}
+                                        </p>
+                                        <p className="text-[11px] font-medium text-foreground">
+                                            {h.time}
+                                        </p>
                                     </div>
                                 ))}
                             </div>
@@ -615,7 +690,9 @@ const Venues = () => {
                         <button className="p-4 text-left hover:bg-accent/30 transition-colors">
                             <div className="flex items-center gap-1.5 mb-2">
                                 <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span className="text-xs font-semibold text-foreground">Location</span>
+                                <span className="text-xs font-semibold text-foreground">
+                                    Location
+                                </span>
                             </div>
                             <p className="text-[11px] text-muted-foreground leading-relaxed">
                                 {facility.city}
@@ -640,9 +717,12 @@ const Venues = () => {
                         >
                             <Shield className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
                             <div className="flex-1 min-w-0">
-                                <p className="text-[11px] font-semibold text-foreground">Cancellation</p>
+                                <p className="text-[11px] font-semibold text-foreground">
+                                    Cancellation
+                                </p>
                                 <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
-                                    {cancellationPolicy || 'Contact venue for cancellation details.'}
+                                    {cancellationPolicy ||
+                                        'Contact venue for cancellation details.'}
                                 </p>
                             </div>
                             <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
@@ -653,7 +733,9 @@ const Venues = () => {
                         >
                             <RefreshCw className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
                             <div className="flex-1 min-w-0">
-                                <p className="text-[11px] font-semibold text-foreground">Cancellation + Rescheduling</p>
+                                <p className="text-[11px] font-semibold text-foreground">
+                                    Cancellation + Rescheduling
+                                </p>
                                 <p className="text-[11px] text-muted-foreground leading-relaxed">
                                     Tap to view full policies
                                 </p>
@@ -699,14 +781,19 @@ const Venues = () => {
                                     How it works
                                 </p>
                                 <ol className="space-y-1.5">
-                                    {perkDetailOpen.howItWorks.map((step, i) => (
-                                        <li key={i} className="flex gap-2 text-xs text-muted-foreground">
-                                            <span className="shrink-0 font-semibold text-foreground">
-                                                {i + 1}.
-                                            </span>
-                                            {step}
-                                        </li>
-                                    ))}
+                                    {perkDetailOpen.howItWorks.map(
+                                        (step, i) => (
+                                            <li
+                                                key={i}
+                                                className="flex gap-2 text-xs text-muted-foreground"
+                                            >
+                                                <span className="shrink-0 font-semibold text-foreground">
+                                                    {i + 1}.
+                                                </span>
+                                                {step}
+                                            </li>
+                                        ),
+                                    )}
                                 </ol>
                             </div>
                         </>
@@ -731,10 +818,13 @@ const Venues = () => {
                                 <div className="rounded-full bg-red-100 dark:bg-red-950/30 p-1.5">
                                     <Shield className="h-4 w-4 text-red-600 dark:text-red-400" />
                                 </div>
-                                <p className="text-sm font-semibold text-foreground">Cancellation Policy</p>
+                                <p className="text-sm font-semibold text-foreground">
+                                    Cancellation Policy
+                                </p>
                             </div>
                             <p className="text-sm text-muted-foreground leading-relaxed pl-9">
-                                {cancellationPolicy || 'Contact the venue directly for cancellation details.'}
+                                {cancellationPolicy ||
+                                    'Contact the venue directly for cancellation details.'}
                             </p>
                         </div>
 
@@ -747,10 +837,13 @@ const Venues = () => {
                                     <div className="rounded-full bg-amber-100 dark:bg-amber-950/30 p-1.5">
                                         <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                                     </div>
-                                    <p className="text-sm font-semibold text-foreground">Minimum Notice</p>
+                                    <p className="text-sm font-semibold text-foreground">
+                                        Minimum Notice
+                                    </p>
                                 </div>
                                 <p className="text-sm text-muted-foreground leading-relaxed pl-9">
-                                    {facility.bookingPolicy.minimumNoticeMinutes >= 60
+                                    {facility.bookingPolicy
+                                        .minimumNoticeMinutes >= 60
                                         ? `${Math.round(facility.bookingPolicy.minimumNoticeMinutes / 60)} hour${Math.round(facility.bookingPolicy.minimumNoticeMinutes / 60) !== 1 ? 's' : ''} before the booking start time`
                                         : `${facility.bookingPolicy.minimumNoticeMinutes} minutes before the booking start time`}
                                 </p>
@@ -765,10 +858,14 @@ const Venues = () => {
                                 <div className="rounded-full bg-blue-100 dark:bg-blue-950/30 p-1.5">
                                     <RefreshCw className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                                 </div>
-                                <p className="text-sm font-semibold text-foreground">Rescheduling</p>
+                                <p className="text-sm font-semibold text-foreground">
+                                    Rescheduling
+                                </p>
                             </div>
                             <p className="text-sm text-muted-foreground leading-relaxed pl-9">
-                                Contact the venue directly to reschedule your booking. Rescheduling is subject to court availability and the venue's discretion.
+                                Contact the venue directly to reschedule your
+                                booking. Rescheduling is subject to court
+                                availability and the venue's discretion.
                             </p>
                         </div>
 
@@ -778,10 +875,16 @@ const Venues = () => {
                         {facility.bookingPolicy && (
                             <div className="space-y-2">
                                 <div className="flex items-center gap-2">
-                                    <div className={`rounded-full p-1.5 ${facility.bookingPolicy.autoConfirm ? 'bg-emerald-100 dark:bg-emerald-950/30' : 'bg-muted'}`}>
-                                        <Check className={`h-4 w-4 ${facility.bookingPolicy.autoConfirm ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`} />
+                                    <div
+                                        className={`rounded-full p-1.5 ${facility.bookingPolicy.autoConfirm ? 'bg-emerald-100 dark:bg-emerald-950/30' : 'bg-muted'}`}
+                                    >
+                                        <Check
+                                            className={`h-4 w-4 ${facility.bookingPolicy.autoConfirm ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'}`}
+                                        />
                                     </div>
-                                    <p className="text-sm font-semibold text-foreground">Booking Confirmation</p>
+                                    <p className="text-sm font-semibold text-foreground">
+                                        Booking Confirmation
+                                    </p>
                                 </div>
                                 <p className="text-sm text-muted-foreground leading-relaxed pl-9">
                                     {facility.bookingPolicy.autoConfirm
@@ -792,26 +895,33 @@ const Venues = () => {
                         )}
 
                         {/* Advance Booking */}
-                        {facility.bookingPolicy && facility.bookingPolicy.adavanceBookingDays > 0 && (
-                            <>
-                                <Separator />
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <div className="rounded-full bg-violet-100 dark:bg-violet-950/30 p-1.5">
-                                            <Zap className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                        {facility.bookingPolicy &&
+                            facility.bookingPolicy.adavanceBookingDays > 0 && (
+                                <>
+                                    <Separator />
+                                    <div className="space-y-2">
+                                        <div className="flex items-center gap-2">
+                                            <div className="rounded-full bg-violet-100 dark:bg-violet-950/30 p-1.5">
+                                                <Zap className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                                            </div>
+                                            <p className="text-sm font-semibold text-foreground">
+                                                Advance Booking
+                                            </p>
                                         </div>
-                                        <p className="text-sm font-semibold text-foreground">Advance Booking</p>
+                                        <p className="text-sm text-muted-foreground leading-relaxed pl-9">
+                                            Courts can be booked up to{' '}
+                                            <span className="font-medium text-foreground">
+                                                {
+                                                    facility.bookingPolicy
+                                                        .adavanceBookingDays
+                                                }{' '}
+                                                days
+                                            </span>{' '}
+                                            in advance.
+                                        </p>
                                     </div>
-                                    <p className="text-sm text-muted-foreground leading-relaxed pl-9">
-                                        Courts can be booked up to{' '}
-                                        <span className="font-medium text-foreground">
-                                            {facility.bookingPolicy.adavanceBookingDays} days
-                                        </span>{' '}
-                                        in advance.
-                                    </p>
-                                </div>
-                            </>
-                        )}
+                                </>
+                            )}
                     </div>
                 </SheetContent>
             </Sheet>
@@ -823,10 +933,13 @@ const Venues = () => {
                     className="rounded-t-2xl max-h-[85vh] overflow-y-auto"
                 >
                     <SheetHeader className="mb-1">
-                        <SheetTitle>Features & Perks at {facility.name}</SheetTitle>
+                        <SheetTitle>
+                            Features & Perks at {facility.name}
+                        </SheetTitle>
                     </SheetHeader>
                     <p className="text-sm text-muted-foreground mb-5">
-                        Spend more to level up and unlock exclusive features at this venue.
+                        Spend more to level up and unlock exclusive features at
+                        this venue.
                     </p>
 
                     <div className="space-y-3 pb-8">
@@ -834,22 +947,31 @@ const Venues = () => {
                             const tMeta = TIER_META[tierKey];
                             const isCurrentTier = tierKey === currentTierName;
                             const isUnlocked = currentTierIndex >= i;
-                            const config = tierConfigs.find((c: ApiTierConfig) => c.tier_name === tierKey);
+                            const config = tierConfigs.find(
+                                (c: ApiTierConfig) => c.tier_name === tierKey,
+                            );
                             const tPerks = TIER_PERKS[tierKey] || [];
 
-                            const noBookings = (membership?.totalBookings ?? 0) === 0;
-                            const isDimmed = noBookings || (!isUnlocked && currentTierIndex >= 0);
+                            const noBookings =
+                                (membership?.totalBookings ?? 0) === 0;
+                            const isDimmed =
+                                noBookings ||
+                                (!isUnlocked && currentTierIndex >= 0);
 
                             return (
                                 <div
                                     key={tierKey}
                                     className={`rounded-xl border bg-card overflow-hidden transition-all ${isCurrentTier ? 'shadow-md ring-1 ring-primary/20' : ''} ${isDimmed ? 'opacity-40' : ''}`}
                                 >
-                                    <div className={`h-1 w-full ${tMeta.gradient}`} />
+                                    <div
+                                        className={`h-1 w-full ${tMeta.gradient}`}
+                                    />
                                     <div className="p-4">
                                         <div className="flex items-start justify-between mb-2">
                                             <div className="flex items-center gap-2">
-                                                <span className={tMeta.color}>{tMeta.icon}</span>
+                                                <span className={tMeta.color}>
+                                                    {tMeta.icon}
+                                                </span>
                                                 <span className="font-bold text-foreground text-base">
                                                     {tMeta.label}
                                                 </span>
@@ -861,7 +983,13 @@ const Venues = () => {
                                             </div>
                                             {config && config.min_spend > 0 && (
                                                 <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5 shrink-0 ml-2">
-                                                    ₹{Number(config.min_spend).toLocaleString('en-IN')} spend
+                                                    ₹
+                                                    {Number(
+                                                        config.min_spend,
+                                                    ).toLocaleString(
+                                                        'en-IN',
+                                                    )}{' '}
+                                                    spend
                                                 </span>
                                             )}
                                         </div>
@@ -870,39 +998,62 @@ const Venues = () => {
                                             {tPerks.map((perk) => (
                                                 <button
                                                     key={perk.name}
-                                                    onClick={() => setPerkDetailOpen(perk)}
+                                                    onClick={() =>
+                                                        setPerkDetailOpen(perk)
+                                                    }
                                                     className="flex items-start gap-2 w-full text-left hover:bg-accent/40 rounded-lg px-2 py-1.5 -mx-2 transition-colors"
                                                 >
-                                                    <span className={`mt-0.5 shrink-0 ${isUnlocked || currentTierIndex < 0 ? tMeta.color : 'text-muted-foreground'}`}>
+                                                    <span
+                                                        className={`mt-0.5 shrink-0 ${isUnlocked || currentTierIndex < 0 ? tMeta.color : 'text-muted-foreground'}`}
+                                                    >
                                                         {perk.icon}
                                                     </span>
                                                     <div>
-                                                        <p className="text-sm font-medium text-foreground">{perk.name}</p>
-                                                        <p className="text-xs text-muted-foreground">{perk.description}</p>
+                                                        <p className="text-sm font-medium text-foreground">
+                                                            {perk.name}
+                                                        </p>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {perk.description}
+                                                        </p>
                                                     </div>
                                                 </button>
                                             ))}
                                         </div>
 
-                                        {!isUnlocked && creditPackages.length > 0 && (() => {
-                                            const fastTrackPkg = creditPackages.find(
-                                                (p: CreditPackage) => (p as any).tier_grant === tierKey,
-                                            );
-                                            if (!fastTrackPkg) return null;
-                                            return (
-                                                <button
-                                                    onClick={() => {
-                                                        setPerksSheetOpen(false);
-                                                        setTimeout(() => setCreditsSheetOpen(true), 300);
-                                                    }}
-                                                    className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
-                                                >
-                                                    <Wallet className="h-3 w-3" />
-                                                    Fast-track with a credit package
-                                                    <ChevronRight className="h-3 w-3" />
-                                                </button>
-                                            );
-                                        })()}
+                                        {!isUnlocked &&
+                                            creditPackages.length > 0 &&
+                                            (() => {
+                                                const fastTrackPkg =
+                                                    creditPackages.find(
+                                                        (p: CreditPackage) =>
+                                                            (p as any)
+                                                                .tier_grant ===
+                                                            tierKey,
+                                                    );
+                                                if (!fastTrackPkg) return null;
+                                                return (
+                                                    <button
+                                                        onClick={() => {
+                                                            setPerksSheetOpen(
+                                                                false,
+                                                            );
+                                                            setTimeout(
+                                                                () =>
+                                                                    setCreditsSheetOpen(
+                                                                        true,
+                                                                    ),
+                                                                300,
+                                                            );
+                                                        }}
+                                                        className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+                                                    >
+                                                        <Wallet className="h-3 w-3" />
+                                                        Fast-track with a credit
+                                                        package
+                                                        <ChevronRight className="h-3 w-3" />
+                                                    </button>
+                                                );
+                                            })()}
                                     </div>
                                 </div>
                             );
@@ -924,25 +1075,42 @@ const Venues = () => {
                         </SheetTitle>
                     </SheetHeader>
                     <p className="text-sm text-muted-foreground mb-4">
-                        Buy credits to save on bookings. Some packages instantly unlock a higher tier.
+                        Buy credits to save on bookings. Some packages instantly
+                        unlock a higher tier.
                     </p>
                     <div className="space-y-2.5 pb-8">
                         {creditPackages.map((pkg) => {
-                            const tierMeta = pkg.tierUnlock ? TIER_META[pkg.tierUnlock.toLowerCase()] : null;
+                            const tierMeta = pkg.tierUnlock
+                                ? TIER_META[pkg.tierUnlock.toLowerCase()]
+                                : null;
                             return (
                                 <Card key={pkg.id} className="overflow-hidden">
                                     <CardContent className="p-4">
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex-1 min-w-0">
-                                                <p className="font-bold text-foreground mb-0.5">{pkg.name}</p>
+                                                <p className="font-bold text-foreground mb-0.5">
+                                                    {pkg.name}
+                                                </p>
                                                 <p className="text-xs text-muted-foreground mb-2">
-                                                    ₹{Number(pkg.amount).toLocaleString('en-IN')} added to wallet
-                                                    {pkg.tierUnlock && ` + unlock ${pkg.tierUnlock.toLowerCase()} perks`}
+                                                    ₹
+                                                    {Number(
+                                                        pkg.amount,
+                                                    ).toLocaleString(
+                                                        'en-IN',
+                                                    )}{' '}
+                                                    added to wallet
+                                                    {pkg.tierUnlock &&
+                                                        ` + unlock ${pkg.tierUnlock.toLowerCase()} perks`}
                                                 </p>
                                                 {tierMeta && (
-                                                    <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${tierMeta.chipBg} ${tierMeta.chipText}`}>
-                                                        <span className="[&>svg]:h-2.5 [&>svg]:w-2.5">{tierMeta.icon}</span>
-                                                        Unlocks {tierMeta.label} Tier
+                                                    <div
+                                                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${tierMeta.chipBg} ${tierMeta.chipText}`}
+                                                    >
+                                                        <span className="[&>svg]:h-2.5 [&>svg]:w-2.5">
+                                                            {tierMeta.icon}
+                                                        </span>
+                                                        Unlocks {tierMeta.label}{' '}
+                                                        Tier
                                                     </div>
                                                 )}
                                             </div>
@@ -951,14 +1119,19 @@ const Venues = () => {
                                                 className="shrink-0 mt-1"
                                                 onClick={() => {
                                                     if (!user) {
-                                                        setCreditsSheetOpen(false);
+                                                        setCreditsSheetOpen(
+                                                            false,
+                                                        );
                                                         setLoginOpen(true);
                                                         return;
                                                     }
                                                     // payment handled by CreditPackages component elsewhere
                                                 }}
                                             >
-                                                Buy ₹{Number(pkg.amount).toLocaleString('en-IN')}
+                                                Buy ₹
+                                                {Number(
+                                                    pkg.amount,
+                                                ).toLocaleString('en-IN')}
                                             </Button>
                                         </div>
                                     </CardContent>

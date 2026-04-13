@@ -3,9 +3,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { ArrowLeft, Clock, Loader2, X } from 'lucide-react';
+import { ArrowLeft, Clock, Loader2, Share2, X } from 'lucide-react';
 import { getVenueDetail } from '../../api/adapters/venues';
-import { getCourtDetail } from '../../api/adapters/courts';
+import { getCourtDetail, getCourtShareText } from '../../api/adapters/courts';
 import { holdSlot } from '../../api/adapters/bookings';
 import { DateStrip } from '../../components/DateStrip';
 import { Button } from '../../components/ui/button';
@@ -53,16 +53,17 @@ const Booking = () => {
     });
 
     const facility = venueData?.data?.venue;
-    const courtsBySport: Record<string, ApiCourt[]> = venueData?.data?.courtsBySport ?? {};
+    const courtsBySport: Record<string, ApiCourt[]> =
+        venueData?.data?.courtsBySport ?? {};
     const availableSports = Object.keys(courtsBySport);
 
     // Set initial sport + court once venue loads
     useEffect(() => {
         if (!availableSports.length) return;
         const initialSport = courtId
-            ? Object.entries(courtsBySport).find(([, cs]) =>
+            ? (Object.entries(courtsBySport).find(([, cs]) =>
                   cs.some((c) => c.id === courtId),
-              )?.[0] ?? availableSports[0]
+              )?.[0] ?? availableSports[0])
             : availableSports[0];
         setSelectedSport(initialSport);
         setSelectedCourt(courtId || courtsBySport[initialSport]?.[0]?.id || '');
@@ -84,23 +85,38 @@ const Booking = () => {
             filteredCourts.map(async (c) => {
                 try {
                     const res = await getCourtDetail(c.id, dateStr);
-                    const { isClosed, session1, session2 } = res.data.availability;
-                    const slots = isClosed ? [] : [...(session1 ?? []), ...(session2 ?? [])];
+                    const { isClosed, session1, session2 } =
+                        res.data.availability;
+                    const slots = isClosed
+                        ? []
+                        : [...(session1 ?? []), ...(session2 ?? [])];
                     const peaks = res.data.court.peakHourPricings ?? [];
                     return { courtId: c.id, slots, peaks };
                 } catch {
                     return { courtId: c.id, slots: [], peaks: [] };
                 }
             }),
-        ).then((results) => {
-            if (cancelled) return;
-            setCourtSlotsData(Object.fromEntries(results.map((r) => [r.courtId, r.slots])));
-            setCourtPeakData(Object.fromEntries(results.map((r) => [r.courtId, r.peaks])));
-        }).finally(() => {
-            if (!cancelled) setSlotsLoading(false);
-        });
+        )
+            .then((results) => {
+                if (cancelled) return;
+                setCourtSlotsData(
+                    Object.fromEntries(
+                        results.map((r) => [r.courtId, r.slots]),
+                    ),
+                );
+                setCourtPeakData(
+                    Object.fromEntries(
+                        results.map((r) => [r.courtId, r.peaks]),
+                    ),
+                );
+            })
+            .finally(() => {
+                if (!cancelled) setSlotsLoading(false);
+            });
 
-        return () => { cancelled = true; };
+        return () => {
+            cancelled = true;
+        };
     }, [filteredCourts.map((c) => c.id).join(','), dateStr]);
 
     const isToday = dateStr === format(new Date(), 'yyyy-MM-dd');
@@ -108,17 +124,20 @@ const Booking = () => {
 
     // All unique time labels from first court's slots, filtered to future slots on today
     const timeLabels = useMemo(
-        () => (courtSlotsData[filteredCourts[0]?.id] ?? [])
-            .filter((s) => {
-                if (!isToday) return true;
-                const [h, m] = s.startTime.split(':').map(Number);
-                return h * 60 + m > nowMinutes;
-            })
-            .map((s) => s.startTime),
+        () =>
+            (courtSlotsData[filteredCourts[0]?.id] ?? [])
+                .filter((s) => {
+                    if (!isToday) return true;
+                    const [h, m] = s.startTime.split(':').map(Number);
+                    return h * 60 + m > nowMinutes;
+                })
+                .map((s) => s.startTime),
         [courtSlotsData, filteredCourts],
     );
 
-    const selectedCourtData = filteredCourts.find((c) => c.id === selectedCourt);
+    const selectedCourtData = filteredCourts.find(
+        (c) => c.id === selectedCourt,
+    );
     const basePrice = selectedCourtData?.courtPricings[0]?.pricePerSlot ?? 0;
     const allSlotsForCourt = courtSlotsData[selectedCourt] ?? [];
     const selectedPeaks = courtPeakData[selectedCourt] ?? [];
@@ -126,7 +145,14 @@ const Booking = () => {
         selectedSlots.includes(s.startTime),
     );
     const totalPrice = selectedSlotObjects.reduce(
-        (sum, s) => sum + getEffectivePrice(s.startTime, selectedDate, selectedPeaks, basePrice),
+        (sum, s) =>
+            sum +
+            getEffectivePrice(
+                s.startTime,
+                selectedDate,
+                selectedPeaks,
+                basePrice,
+            ),
         0,
     );
 
@@ -142,7 +168,8 @@ const Booking = () => {
             toMin(selectedSlotObjects[0].startTime)
         );
     }, [selectedSlotObjects]);
-    const belowMinimum = minimumSlotMinutes > 0 && selectedDurationMinutes < minimumSlotMinutes;
+    const belowMinimum =
+        minimumSlotMinutes > 0 && selectedDurationMinutes < minimumSlotMinutes;
 
     const handleSlotTap = (courtId: string, startTime: string) => {
         const slots = courtSlotsData[courtId] ?? [];
@@ -171,6 +198,25 @@ const Booking = () => {
         }
     };
 
+    const [isSharing, setIsSharing] = useState(false);
+
+    const handleShare = async () => {
+        if (!selectedCourt && !filteredCourts[0]?.id) return;
+        const targetCourtId = selectedCourt || filteredCourts[0].id;
+        setIsSharing(true);
+        try {
+            const res = await getCourtShareText(targetCourtId, dateStr);
+            const text = res.data.messageText;
+            // wa.me deep-link — opens WhatsApp with the message pre-filled
+            const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(waUrl, '_blank', 'noopener,noreferrer');
+        } catch {
+            toast.error('Could not generate share text. Please try again.');
+        } finally {
+            setIsSharing(false);
+        }
+    };
+
     const { mutate: reviewBooking, isPending: holdLoading } = useMutation({
         mutationFn: () =>
             holdSlot({
@@ -188,13 +234,17 @@ const Booking = () => {
                     holdId: booking.id,
                     venueId: facilityId,
                     venueName: facility!.name,
-                    venueAddress: [facility!.city, facility!.address].filter(Boolean).join(', '),
+                    venueAddress: [facility!.city, facility!.address]
+                        .filter(Boolean)
+                        .join(', '),
                     sport: selectedSport,
                     bookingDate: dateStr,
                     courtName: selectedCourtData!.name,
                     slots: selectedSlotObjects,
                     totalPrice,
                     createdAt: booking.createdAt,
+                    latitude: facility!.latitude ?? null,
+                    longitude: facility!.longitude ?? null,
                 },
             });
         },
@@ -227,10 +277,25 @@ const Booking = () => {
                 >
                     <ArrowLeft className="h-5 w-5" />
                 </button>
-                <div>
+                <div className="flex-1 min-w-0">
                     <h1 className="font-semibold">{facility.name}</h1>
-                    <p className="text-xs opacity-80">Select Court &amp; Time</p>
+                    <p className="text-xs opacity-80">
+                        Select Court &amp; Time
+                    </p>
                 </div>
+                {/* Share button */}
+                <button
+                    onClick={handleShare}
+                    disabled={isSharing}
+                    className="rounded-full p-2 hover:bg-primary-foreground/10 disabled:opacity-50 shrink-0"
+                    aria-label="Share availability on WhatsApp"
+                >
+                    {isSharing ? (
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                        <Share2 className="h-5 w-5" />
+                    )}
+                </button>
             </header>
 
             <main className="mx-auto max-w-lg px-4 pt-4 space-y-4">
@@ -292,7 +357,9 @@ const Booking = () => {
                                         {c.name}
                                     </p>
                                     <p className="text-[10px] text-muted-foreground">
-                                        from ₹{c.courtPricings[0]?.pricePerSlot ?? 0}/slot
+                                        from ₹
+                                        {c.courtPricings[0]?.pricePerSlot ?? 0}
+                                        /slot
                                     </p>
                                 </div>
                             ))}
@@ -301,7 +368,10 @@ const Booking = () => {
                         {/* Time rows */}
                         <div className="space-y-1">
                             {timeLabels.map((time) => (
-                                <div key={time} className="flex gap-1 items-center">
+                                <div
+                                    key={time}
+                                    className="flex gap-1 items-center"
+                                >
                                     {/* Time label */}
                                     <div className="w-14 shrink-0 text-xs text-muted-foreground font-medium">
                                         {formatTime(time)}
@@ -309,36 +379,58 @@ const Booking = () => {
 
                                     {/* Cell per court */}
                                     {filteredCourts.map((c) => {
-                                        const slot = (courtSlotsData[c.id] ?? []).find(
-                                            (s) => s.startTime === time,
-                                        );
-                                        if (!slot) return (
-                                            <div key={c.id} className="flex-1 min-w-[90px] h-14 rounded-lg bg-muted/30" />
-                                        );
+                                        const slot = (
+                                            courtSlotsData[c.id] ?? []
+                                        ).find((s) => s.startTime === time);
+                                        if (!slot)
+                                            return (
+                                                <div
+                                                    key={c.id}
+                                                    className="flex-1 min-w-[90px] h-14 rounded-lg bg-muted/30"
+                                                />
+                                            );
 
-                                        const isAvailable = slot.status === 'available';
+                                        const isAvailable =
+                                            slot.status === 'available';
                                         const isHeld = slot.status === 'held';
                                         const isSelected =
                                             selectedCourt === c.id &&
-                                            selectedSlots.includes(slot.startTime);
-                                        const courtBase = c.courtPricings[0]?.pricePerSlot ?? 0;
-                                        const isPeak = isAvailable &&
-                                            getEffectivePrice(slot.startTime, selectedDate, courtPeakData[c.id] ?? [], courtBase) !== courtBase;
+                                            selectedSlots.includes(
+                                                slot.startTime,
+                                            );
+                                        const courtBase =
+                                            c.courtPricings[0]?.pricePerSlot ??
+                                            0;
+                                        const isPeak =
+                                            isAvailable &&
+                                            getEffectivePrice(
+                                                slot.startTime,
+                                                selectedDate,
+                                                courtPeakData[c.id] ?? [],
+                                                courtBase,
+                                            ) !== courtBase;
 
                                         return (
                                             <button
                                                 key={c.id}
                                                 disabled={!isAvailable}
-                                                onClick={() => handleSlotTap(c.id, slot.startTime)}
+                                                onClick={() =>
+                                                    handleSlotTap(
+                                                        c.id,
+                                                        slot.startTime,
+                                                    )
+                                                }
                                                 className={cn(
                                                     'flex-1 min-w-[90px] h-14 rounded-lg flex flex-col items-center justify-center text-xs font-semibold transition-all border',
                                                     isSelected &&
                                                         'bg-primary text-primary-foreground border-primary shadow-sm',
-                                                    isAvailable && !isSelected &&
+                                                    isAvailable &&
+                                                        !isSelected &&
                                                         'bg-green-500/10 text-green-700 border-green-500/30 hover:bg-green-500/20 dark:text-green-400',
                                                     isHeld &&
                                                         'bg-amber-50 text-amber-600 border-amber-200 cursor-not-allowed dark:bg-amber-950/20 dark:text-amber-400',
-                                                    !isAvailable && !isHeld &&
+                                                    !isAvailable &&
+                                                        !isHeld &&
                                                         'bg-muted text-muted-foreground border-border cursor-not-allowed opacity-50',
                                                 )}
                                             >
@@ -358,12 +450,14 @@ const Booking = () => {
                                                                       : 'Booked'}
                                                             </span>
                                                             {isPeak && (
-                                                                <span className={cn(
-                                                                    'flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-bold',
-                                                                    isSelected
-                                                                        ? 'bg-purple-300 text-purple-900'
-                                                                        : 'bg-purple-600 text-white',
-                                                                )}>
+                                                                <span
+                                                                    className={cn(
+                                                                        'flex h-3.5 w-3.5 items-center justify-center rounded-full text-[8px] font-bold',
+                                                                        isSelected
+                                                                            ? 'bg-purple-300 text-purple-900'
+                                                                            : 'bg-purple-600 text-white',
+                                                                    )}
+                                                                >
                                                                     P
                                                                 </span>
                                                             )}
@@ -377,7 +471,15 @@ const Booking = () => {
                                                                         : 'text-green-600 dark:text-green-400',
                                                                 )}
                                                             >
-                                                                ₹{getEffectivePrice(slot.startTime, selectedDate, courtPeakData[c.id] ?? [], courtBase)}
+                                                                ₹
+                                                                {getEffectivePrice(
+                                                                    slot.startTime,
+                                                                    selectedDate,
+                                                                    courtPeakData[
+                                                                        c.id
+                                                                    ] ?? [],
+                                                                    courtBase,
+                                                                )}
                                                             </span>
                                                         )}
                                                     </>
@@ -390,7 +492,6 @@ const Booking = () => {
                         </div>
                     </div>
                 )}
-
             </main>
 
             {/* Sticky bottom bar */}
@@ -405,19 +506,40 @@ const Booking = () => {
                         </button>
                         <div className="flex-1 min-w-0">
                             <p className="font-semibold text-sm">
-                                {selectedSlots.length} slot{selectedSlots.length > 1 ? 's' : ''} · ₹{totalPrice}
+                                {selectedSlots.length} slot
+                                {selectedSlots.length > 1 ? 's' : ''} · ₹
+                                {totalPrice}
                             </p>
                             {belowMinimum ? (
                                 <p className="text-xs text-destructive">
-                                    Min. booking is {minimumSlotMinutes} min ({selectedDurationMinutes} min selected)
+                                    Min. booking is {minimumSlotMinutes} min (
+                                    {selectedDurationMinutes} min selected)
                                 </p>
                             ) : (
                                 <p className="text-xs text-muted-foreground truncate">
-                                    {selectedSlotObjects[0] ? formatTime(selectedSlotObjects[0].startTime) : ''} – {selectedSlotObjects[selectedSlotObjects.length - 1] ? formatTime(selectedSlotObjects[selectedSlotObjects.length - 1].endTime) : ''}
+                                    {selectedSlotObjects[0]
+                                        ? formatTime(
+                                              selectedSlotObjects[0].startTime,
+                                          )
+                                        : ''}{' '}
+                                    –{' '}
+                                    {selectedSlotObjects[
+                                        selectedSlotObjects.length - 1
+                                    ]
+                                        ? formatTime(
+                                              selectedSlotObjects[
+                                                  selectedSlotObjects.length - 1
+                                              ].endTime,
+                                          )
+                                        : ''}
                                 </p>
                             )}
                         </div>
-                        <Button onClick={() => reviewBooking()} disabled={holdLoading || belowMinimum} className="shrink-0">
+                        <Button
+                            onClick={() => reviewBooking()}
+                            disabled={holdLoading || belowMinimum}
+                            className="shrink-0"
+                        >
                             {holdLoading ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
                             ) : (

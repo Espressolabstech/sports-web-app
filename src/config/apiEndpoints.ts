@@ -10,6 +10,7 @@ export const endpoints = {
     venues: '/home/venues',
     venueDetail: (venueId: string) => `/home/venues/${venueId}`,
     courtDetail: (courtId: string) => `/home/courts/${courtId}`,
+    courtShare: (courtId: string) => `/home/courts/${courtId}/share`,
 
     // Bookings
     holdSlot: '/bookings/hold',

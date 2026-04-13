@@ -7,4 +7,5 @@ export const path = {
     venue: '/venue/:venueId',
     booking: '/booking/:facilityId/:courtId?',
     confirmBooking: '/confirm-booking',
+    bookingSuccess: '/booking-success',
 };
