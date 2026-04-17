@@ -23,6 +23,8 @@ interface ConfirmBookingState {
     courtName: string;
     slots: Array<{ startTime: string; endTime: string }>;
     totalPrice: number;
+    discountAmount?: number;
+    finalAmount?: number;
     createdAt: string;
     latitude?: number | null;
     longitude?: number | null;
@@ -66,7 +68,8 @@ const ConfirmBooking = () => {
         enabled: !!state?.venueId,
     });
     const walletBalance = Number(walletData?.data?.wallet?.balance ?? 0);
-    const hasEnoughBalance = walletBalance >= (state?.totalPrice ?? 0);
+    const payableAmount = state?.finalAmount ?? state?.totalPrice ?? 0;
+    const hasEnoughBalance = walletBalance >= payableAmount;
 
     const { mutate: pay, isPending: payLoading } = useMutation({
         mutationFn: () =>
@@ -93,7 +96,7 @@ const ConfirmBooking = () => {
                         bookingDate: state!.bookingDate,
                         startTime: state!.slots[0]?.startTime,
                         endTime: state!.slots[state!.slots.length - 1]?.endTime,
-                        totalPrice: state!.totalPrice,
+                        totalPrice: payableAmount,
                         latitude: state!.latitude,
                         longitude: state!.longitude,
                     },
@@ -131,7 +134,7 @@ const ConfirmBooking = () => {
                                 endTime:
                                     state!.slots[state!.slots.length - 1]
                                         ?.endTime,
-                                totalPrice: state!.totalPrice,
+                                totalPrice: payableAmount,
                                 latitude: state!.latitude,
                                 longitude: state!.longitude,
                             },
@@ -267,10 +270,34 @@ const ConfirmBooking = () => {
                                     {startTime} – {endTime}
                                 </span>
                             </span>
-                            <span className="font-semibold">
-                                ₹{state.totalPrice}
-                            </span>
+                            {state.discountAmount && state.discountAmount > 0 ? (
+                                <span className="text-muted-foreground line-through text-xs">
+                                    ₹{state.totalPrice}
+                                </span>
+                            ) : (
+                                <span className="font-semibold">
+                                    ₹{state.totalPrice}
+                                </span>
+                            )}
                         </div>
+
+                        {state.discountAmount && state.discountAmount > 0 && (
+                            <>
+                                <div className="flex items-center justify-between text-sm text-green-600 dark:text-green-400">
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
+                                        Tier discount
+                                    </span>
+                                    <span className="font-medium">−₹{state.discountAmount}</span>
+                                </div>
+                                <div className="flex items-center justify-between border-t pt-2 text-sm">
+                                    <span className="font-semibold text-foreground">You pay</span>
+                                    <span className="font-bold text-foreground text-base">
+                                        ₹{state.finalAmount ?? state.totalPrice}
+                                    </span>
+                                </div>
+                            </>
+                        )}
                     </CardContent>
                 </Card>
 
@@ -296,7 +323,7 @@ const ConfirmBooking = () => {
                                     )}
                                 </div>
                                 <span className="text-sm font-medium">
-                                    UPI / Online
+                                    Online
                                 </span>
                             </div>
                         </button>
@@ -326,7 +353,7 @@ const ConfirmBooking = () => {
                                             Venue Wallet
                                         </span>
                                     </div>
-                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                                    <p className="text-xs text-muted-foreground mt-0.5">
                                         Balance: ₹
                                         {walletBalance.toLocaleString('en-IN')}
                                         {!hasEnoughBalance &&
@@ -356,9 +383,9 @@ const ConfirmBooking = () => {
                                 Processing…
                             </>
                         ) : selectedMethod === 'WALLET' ? (
-                            `Pay ₹${state.totalPrice} from Wallet`
+                            `Pay ₹${payableAmount} from Wallet`
                         ) : (
-                            `Pay ₹${state.totalPrice} via UPI`
+                            `Pay ₹${payableAmount}`
                         )}
                     </Button>
                 </div>

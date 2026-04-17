@@ -1,8 +1,21 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { getVenueDetail } from '../../api/adapters/venues';
 import { getVenueTier } from '../../api/adapters/tier';
+import { purchaseCreditPackage, verifyCreditPayment } from '../../api/adapters/creditPackages';
+import { getWallet } from '../../api/adapters/wallet';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '../../components/ui/alert-dialog';
 import {
     ArrowLeft,
     Crown,
@@ -233,6 +246,59 @@ const Venues = () => {
         null,
     );
     const [policiesSheetOpen, setPoliciesSheetOpen] = useState(false);
+    const [confirmPkg, setConfirmPkg] = useState<CreditPackage | null>(null);
+    const [purchasing, setPurchasing] = useState(false);
+    const queryClient = useQueryClient();
+
+    const handleConfirmPurchase = async () => {
+        if (!confirmPkg || !facility) return;
+        setPurchasing(true);
+        try {
+            const res = await purchaseCreditPackage(confirmPkg.id, { venueId: facility.id });
+            const { razorpay } = res.data as any;
+
+            const options: RazorpayOptions = {
+                key: razorpay.keyId,
+                amount: razorpay.amount,
+                currency: razorpay.currency,
+                order_id: razorpay.orderId,
+                name: facility.name,
+                description: confirmPkg.name,
+                handler: async (response) => {
+                    try {
+                        await verifyCreditPayment({
+                            razorpayPaymentId: response.razorpay_payment_id,
+                            razorpayOrderId: response.razorpay_order_id,
+                            razorpaySignature: response.razorpay_signature,
+                            packageId: confirmPkg.id,
+                        });
+                        toast.success('Credits added to your wallet!', {
+                            description: `₹${Number(confirmPkg.amount).toLocaleString('en-IN')} credits are ready to use at ${facility.name}.`,
+                        });
+                        queryClient.invalidateQueries({ queryKey: ['venue', venueId] });
+                        queryClient.invalidateQueries({ queryKey: ['venue-tier', venueId] });
+                        queryClient.invalidateQueries({ queryKey: ['venue-wallet', venueId] });
+                    } catch {
+                        toast.error('Payment verification failed', {
+                            description: 'Please contact support with your payment ID.',
+                        });
+                    }
+                },
+                modal: { ondismiss: () => toast.info('Payment cancelled') },
+                theme: { color: '#2563eb' },
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+        } catch (err: any) {
+            toast.error('Could not initiate purchase', {
+                description: err?.message || 'Please try again.',
+            });
+        } finally {
+            setPurchasing(false);
+            setConfirmPkg(null);
+        }
+    };
 
     const { data: venueData, isLoading: venueLoading } = useQuery({
         queryKey: ['venue', venueId],
@@ -245,6 +311,13 @@ const Venues = () => {
         queryFn: () => getVenueTier(venueId!),
         enabled: !!venueId && !!user,
     });
+
+    const { data: walletData } = useQuery({
+        queryKey: ['venue-wallet', venueId],
+        queryFn: () => getWallet(venueId!),
+        enabled: !!venueId && !!user,
+    });
+    const walletBalance = Number(walletData?.data?.wallet?.balance ?? 0);
 
     const facility = venueData?.data?.venue;
     const membership = venueData?.data?.membership;
@@ -359,8 +432,8 @@ const Venues = () => {
     return (
         <div className="min-h-screen bg-background pb-10">
             {/* ── Hero ── */}
-            <div className="relative">
-                <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
+            <div className="relative mx-auto max-w-5xl">
+                <div className="aspect-[21/9] max-h-[45vh] w-full overflow-hidden bg-muted md:rounded-b-2xl">
                     {facility.venueImages.length > 0 && (
                         <img
                             src={facility.venueImages[0].url}
@@ -1068,70 +1141,99 @@ const Venues = () => {
                     side="bottom"
                     className="rounded-t-2xl max-h-[85vh] overflow-y-auto"
                 >
-                    <SheetHeader className="mb-1">
+                    <SheetHeader className="mb-3">
                         <SheetTitle className="flex items-center gap-2">
                             <Wallet className="h-5 w-5 text-primary" />
                             Credit Packages
                         </SheetTitle>
                     </SheetHeader>
+
+                    {/* Wallet balance + current tier summary */}
+                    {user && (
+                        <div className="flex items-center gap-3 rounded-xl bg-muted/60 px-4 py-3 mb-4">
+                            <div className="flex-1">
+                                <p className="text-xs text-muted-foreground">Wallet Balance</p>
+                                <p className="text-base font-bold text-foreground">
+                                    ₹{walletBalance.toLocaleString('en-IN')}
+                                </p>
+                            </div>
+                            {currentTierName && meta && (
+                                <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${meta.chipBg} ${meta.chipText}`}>
+                                    <span className="[&>svg]:h-3 [&>svg]:w-3">{meta.icon}</span>
+                                    {meta.label} Tier
+                                </div>
+                            )}
+                            {!currentTierName && (
+                                <p className="text-xs text-muted-foreground">No tier yet</p>
+                            )}
+                        </div>
+                    )}
+
                     <p className="text-sm text-muted-foreground mb-4">
-                        Buy credits to save on bookings. Some packages instantly
-                        unlock a higher tier.
+                        Buy credits to save on bookings. Some packages instantly unlock a higher tier.
                     </p>
+
                     <div className="space-y-2.5 pb-8">
                         {creditPackages.map((pkg) => {
                             const tierMeta = pkg.tierUnlock
                                 ? TIER_META[pkg.tierUnlock.toLowerCase()]
                                 : null;
+                            const pkgTierRank = pkg.tierUnlock
+                                ? tierOrder.indexOf(pkg.tierUnlock.toLowerCase())
+                                : -1;
+                            const tierAlreadyUnlocked =
+                                pkg.tierUnlock !== null &&
+                                pkgTierRank <= currentTierIndex;
+                            const isUpgrade =
+                                pkg.tierUnlock !== null && !tierAlreadyUnlocked;
+
                             return (
-                                <Card key={pkg.id} className="overflow-hidden">
+                                <Card
+                                    key={pkg.id}
+                                    className={`overflow-hidden ${tierAlreadyUnlocked ? 'border-primary/30 bg-primary/5' : ''}`}
+                                >
                                     <CardContent className="p-4">
                                         <div className="flex items-start justify-between gap-3">
                                             <div className="flex-1 min-w-0">
-                                                <p className="font-bold text-foreground mb-0.5">
-                                                    {pkg.name}
-                                                </p>
+                                                <div className="flex items-center gap-2 mb-0.5">
+                                                    <p className="font-bold text-foreground">
+                                                        {pkg.name}
+                                                    </p>
+                                                    {tierAlreadyUnlocked && (
+                                                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                                                            <Check className="h-2.5 w-2.5" /> Active
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <p className="text-xs text-muted-foreground mb-2">
-                                                    ₹
-                                                    {Number(
-                                                        pkg.amount,
-                                                    ).toLocaleString(
-                                                        'en-IN',
-                                                    )}{' '}
-                                                    added to wallet
-                                                    {pkg.tierUnlock &&
-                                                        ` + unlock ${pkg.tierUnlock.toLowerCase()} perks`}
+                                                    ₹{Number(pkg.amount).toLocaleString('en-IN')} added to wallet
+                                                    {tierAlreadyUnlocked
+                                                        ? ' (tier already unlocked)'
+                                                        : pkg.tierUnlock
+                                                          ? ` + unlock ${pkg.tierUnlock.toLowerCase()} perks`
+                                                          : ''}
                                                 </p>
                                                 {tierMeta && (
-                                                    <div
-                                                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${tierMeta.chipBg} ${tierMeta.chipText}`}
-                                                    >
-                                                        <span className="[&>svg]:h-2.5 [&>svg]:w-2.5">
-                                                            {tierMeta.icon}
-                                                        </span>
-                                                        Unlocks {tierMeta.label}{' '}
-                                                        Tier
+                                                    <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${tierMeta.chipBg} ${tierMeta.chipText}`}>
+                                                        <span className="[&>svg]:h-2.5 [&>svg]:w-2.5">{tierMeta.icon}</span>
+                                                        {tierAlreadyUnlocked ? `${tierMeta.label} Tier` : `Unlocks ${tierMeta.label} Tier`}
                                                     </div>
                                                 )}
                                             </div>
                                             <Button
                                                 size="sm"
+                                                variant={tierAlreadyUnlocked ? 'outline' : 'default'}
                                                 className="shrink-0 mt-1"
                                                 onClick={() => {
                                                     if (!user) {
-                                                        setCreditsSheetOpen(
-                                                            false,
-                                                        );
+                                                        setCreditsSheetOpen(false);
                                                         setLoginOpen(true);
                                                         return;
                                                     }
-                                                    // payment handled by CreditPackages component elsewhere
+                                                    setConfirmPkg(pkg);
                                                 }}
                                             >
-                                                Buy ₹
-                                                {Number(
-                                                    pkg.amount,
-                                                ).toLocaleString('en-IN')}
+                                                {isUpgrade ? 'Upgrade' : 'Top Up'} ₹{Number(pkg.amount).toLocaleString('en-IN')}
                                             </Button>
                                         </div>
                                     </CardContent>
@@ -1141,6 +1243,50 @@ const Venues = () => {
                     </div>
                 </SheetContent>
             </Sheet>
+
+            {/* Credit Package Purchase Confirmation */}
+            <AlertDialog
+                open={!!confirmPkg}
+                onOpenChange={(open) => !open && setConfirmPkg(null)}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirm Purchase</AlertDialogTitle>
+                        <AlertDialogDescription asChild>
+                            <div className="space-y-2">
+                                <p>
+                                    Pay{' '}
+                                    <strong className="text-foreground">
+                                        ₹{Number(confirmPkg?.amount).toLocaleString('en-IN')}
+                                    </strong>{' '}
+                                    to add{' '}
+                                    <strong className="text-foreground">
+                                        ₹{Number(confirmPkg?.amount).toLocaleString('en-IN')}
+                                    </strong>{' '}
+                                    in credits at{' '}
+                                    <strong className="text-foreground">
+                                        {facility?.name}
+                                    </strong>.
+                                </p>
+                                <p className="text-xs">
+                                    Credits never expire and can be used for any booking at this venue.
+                                </p>
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={purchasing}>
+                            Cancel
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleConfirmPurchase}
+                            disabled={purchasing}
+                        >
+                            {purchasing ? 'Processing…' : `Pay ₹${Number(confirmPkg?.amount).toLocaleString('en-IN')}`}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 };
