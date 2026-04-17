@@ -289,6 +289,7 @@ const Venues = () => {
             };
 
             const rzp = new window.Razorpay(options);
+            setCreditsSheetOpen(false);
             rzp.open();
         } catch (err: any) {
             toast.error('Could not initiate purchase', {

@@ -51,10 +51,10 @@ const MyProfile = () => {
     }> = (profile as any)?.venueMemberships ?? [];
 
     const totalCreditsPurchased = purchases.reduce(
-        (sum, p) => sum + p.package.amount,
+        (sum, p) => sum + Number(p.package.amount),
         0,
     );
-    const totalSpent = purchases.reduce((sum, p) => sum + p.amountPaid, 0);
+    const totalSpent = purchases.reduce((sum, p) => sum + Number(p.amountPaid), 0);
 
     const handleLogout = () => {
         clearCookies();

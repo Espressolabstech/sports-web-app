@@ -86,6 +86,7 @@ export function CreditPackages({
             };
 
             const rzp = new window.Razorpay(options);
+            setExpanded(false);
             rzp.open();
         } catch (err: any) {
             toast.error('Could not initiate purchase', {
