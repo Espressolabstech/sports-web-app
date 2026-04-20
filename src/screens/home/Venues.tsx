@@ -4,7 +4,10 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getVenueDetail } from '../../api/adapters/venues';
 import { getVenueTier } from '../../api/adapters/tier';
-import { purchaseCreditPackage, verifyCreditPayment } from '../../api/adapters/creditPackages';
+import {
+    purchaseCreditPackage,
+    verifyCreditPayment,
+} from '../../api/adapters/creditPackages';
 import { getWallet } from '../../api/adapters/wallet';
 import {
     AlertDialog,
@@ -254,7 +257,9 @@ const Venues = () => {
         if (!confirmPkg || !facility) return;
         setPurchasing(true);
         try {
-            const res = await purchaseCreditPackage(confirmPkg.id, { venueId: facility.id });
+            const res = await purchaseCreditPackage(confirmPkg.id, {
+                venueId: facility.id,
+            });
             const { razorpay } = res.data as any;
 
             const options: RazorpayOptions = {
@@ -275,12 +280,19 @@ const Venues = () => {
                         toast.success('Credits added to your wallet!', {
                             description: `₹${Number(confirmPkg.amount).toLocaleString('en-IN')} credits are ready to use at ${facility.name}.`,
                         });
-                        queryClient.invalidateQueries({ queryKey: ['venue', venueId] });
-                        queryClient.invalidateQueries({ queryKey: ['venue-tier', venueId] });
-                        queryClient.invalidateQueries({ queryKey: ['venue-wallet', venueId] });
+                        queryClient.invalidateQueries({
+                            queryKey: ['venue', venueId],
+                        });
+                        queryClient.invalidateQueries({
+                            queryKey: ['venue-tier', venueId],
+                        });
+                        queryClient.invalidateQueries({
+                            queryKey: ['venue-wallet', venueId],
+                        });
                     } catch {
                         toast.error('Payment verification failed', {
-                            description: 'Please contact support with your payment ID.',
+                            description:
+                                'Please contact support with your payment ID.',
                         });
                     }
                 },
@@ -405,7 +417,7 @@ const Venues = () => {
         }
     };
 
-    const handleShare = () => {
+    const handleShare = async () => {
         const sports = sportGroups.map((g) => g.sport).join(' & ');
         const mapsLink =
             facility.latitude && facility.longitude
@@ -413,21 +425,30 @@ const Venues = () => {
                 : `https://maps.google.com/?q=${encodeURIComponent(`${facility.name} ${facility.city}`)}`;
 
         const lines = [
-            `🏟️ Check out *${facility.name}* on BookEase!`,
+            `🏟️ Check out ${facility.name} on BookEase!`,
             ``,
             `🎾 Sports: ${sports}`,
             `📍 Location: ${facility.city}`,
             `🗺️ Directions: ${mapsLink}`,
             ``,
-            `Book a court: ${window.location.href}`,
+            `📅 Book a court now: ${window.location.href}`,
+            ``,
+            `See you on the court! 🏆`,
         ];
         const text = lines.join('\n');
 
-        window.open(
-            `https://wa.me/?text=${encodeURIComponent(text)}`,
-            '_blank',
-            'noopener,noreferrer',
-        );
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: `🏟️ ${facility.name} on BookEase`,
+                    text,
+                });
+            } catch {
+                // user cancelled — ignore
+            }
+        } else {
+            await navigator.clipboard.writeText(text);
+        }
     };
 
     return (
@@ -1153,25 +1174,34 @@ const Venues = () => {
                     {user && (
                         <div className="flex items-center gap-3 rounded-xl bg-muted/60 px-4 py-3 mb-4">
                             <div className="flex-1">
-                                <p className="text-xs text-muted-foreground">Wallet Balance</p>
+                                <p className="text-xs text-muted-foreground">
+                                    Wallet Balance
+                                </p>
                                 <p className="text-base font-bold text-foreground">
                                     ₹{walletBalance.toLocaleString('en-IN')}
                                 </p>
                             </div>
                             {currentTierName && meta && (
-                                <div className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${meta.chipBg} ${meta.chipText}`}>
-                                    <span className="[&>svg]:h-3 [&>svg]:w-3">{meta.icon}</span>
+                                <div
+                                    className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${meta.chipBg} ${meta.chipText}`}
+                                >
+                                    <span className="[&>svg]:h-3 [&>svg]:w-3">
+                                        {meta.icon}
+                                    </span>
                                     {meta.label} Tier
                                 </div>
                             )}
                             {!currentTierName && (
-                                <p className="text-xs text-muted-foreground">No tier yet</p>
+                                <p className="text-xs text-muted-foreground">
+                                    No tier yet
+                                </p>
                             )}
                         </div>
                     )}
 
                     <p className="text-sm text-muted-foreground mb-4">
-                        Buy credits to save on bookings. Some packages instantly unlock a higher tier.
+                        Buy credits to save on bookings. Some packages instantly
+                        unlock a higher tier.
                     </p>
 
                     <div className="space-y-2.5 pb-8">
@@ -1180,7 +1210,9 @@ const Venues = () => {
                                 ? TIER_META[pkg.tierUnlock.toLowerCase()]
                                 : null;
                             const pkgTierRank = pkg.tierUnlock
-                                ? tierOrder.indexOf(pkg.tierUnlock.toLowerCase())
+                                ? tierOrder.indexOf(
+                                      pkg.tierUnlock.toLowerCase(),
+                                  )
                                 : -1;
                             const tierAlreadyUnlocked =
                                 pkg.tierUnlock !== null &&
@@ -1202,12 +1234,19 @@ const Venues = () => {
                                                     </p>
                                                     {tierAlreadyUnlocked && (
                                                         <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                                                            <Check className="h-2.5 w-2.5" /> Active
+                                                            <Check className="h-2.5 w-2.5" />{' '}
+                                                            Active
                                                         </span>
                                                     )}
                                                 </div>
                                                 <p className="text-xs text-muted-foreground mb-2">
-                                                    ₹{Number(pkg.amount).toLocaleString('en-IN')} added to wallet
+                                                    ₹
+                                                    {Number(
+                                                        pkg.amount,
+                                                    ).toLocaleString(
+                                                        'en-IN',
+                                                    )}{' '}
+                                                    added to wallet
                                                     {tierAlreadyUnlocked
                                                         ? ' (tier already unlocked)'
                                                         : pkg.tierUnlock
@@ -1215,26 +1254,44 @@ const Venues = () => {
                                                           : ''}
                                                 </p>
                                                 {tierMeta && (
-                                                    <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${tierMeta.chipBg} ${tierMeta.chipText}`}>
-                                                        <span className="[&>svg]:h-2.5 [&>svg]:w-2.5">{tierMeta.icon}</span>
-                                                        {tierAlreadyUnlocked ? `${tierMeta.label} Tier` : `Unlocks ${tierMeta.label} Tier`}
+                                                    <div
+                                                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${tierMeta.chipBg} ${tierMeta.chipText}`}
+                                                    >
+                                                        <span className="[&>svg]:h-2.5 [&>svg]:w-2.5">
+                                                            {tierMeta.icon}
+                                                        </span>
+                                                        {tierAlreadyUnlocked
+                                                            ? `${tierMeta.label} Tier`
+                                                            : `Unlocks ${tierMeta.label} Tier`}
                                                     </div>
                                                 )}
                                             </div>
                                             <Button
                                                 size="sm"
-                                                variant={tierAlreadyUnlocked ? 'outline' : 'default'}
+                                                variant={
+                                                    tierAlreadyUnlocked
+                                                        ? 'outline'
+                                                        : 'default'
+                                                }
                                                 className="shrink-0 mt-1"
                                                 onClick={() => {
                                                     if (!user) {
-                                                        setCreditsSheetOpen(false);
+                                                        setCreditsSheetOpen(
+                                                            false,
+                                                        );
                                                         setLoginOpen(true);
                                                         return;
                                                     }
                                                     setConfirmPkg(pkg);
                                                 }}
                                             >
-                                                {isUpgrade ? 'Upgrade' : 'Top Up'} ₹{Number(pkg.amount).toLocaleString('en-IN')}
+                                                {isUpgrade
+                                                    ? 'Upgrade'
+                                                    : 'Top Up'}{' '}
+                                                ₹
+                                                {Number(
+                                                    pkg.amount,
+                                                ).toLocaleString('en-IN')}
                                             </Button>
                                         </div>
                                     </CardContent>
@@ -1258,19 +1315,27 @@ const Venues = () => {
                                 <p>
                                     Pay{' '}
                                     <strong className="text-foreground">
-                                        ₹{Number(confirmPkg?.amount).toLocaleString('en-IN')}
+                                        ₹
+                                        {Number(
+                                            confirmPkg?.amount,
+                                        ).toLocaleString('en-IN')}
                                     </strong>{' '}
                                     to add{' '}
                                     <strong className="text-foreground">
-                                        ₹{Number(confirmPkg?.amount).toLocaleString('en-IN')}
+                                        ₹
+                                        {Number(
+                                            confirmPkg?.amount,
+                                        ).toLocaleString('en-IN')}
                                     </strong>{' '}
                                     in credits at{' '}
                                     <strong className="text-foreground">
                                         {facility?.name}
-                                    </strong>.
+                                    </strong>
+                                    .
                                 </p>
                                 <p className="text-xs">
-                                    Credits never expire and can be used for any booking at this venue.
+                                    Credits never expire and can be used for any
+                                    booking at this venue.
                                 </p>
                             </div>
                         </AlertDialogDescription>
@@ -1283,7 +1348,9 @@ const Venues = () => {
                             onClick={handleConfirmPurchase}
                             disabled={purchasing}
                         >
-                            {purchasing ? 'Processing…' : `Pay ₹${Number(confirmPkg?.amount).toLocaleString('en-IN')}`}
+                            {purchasing
+                                ? 'Processing…'
+                                : `Pay ₹${Number(confirmPkg?.amount).toLocaleString('en-IN')}`}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

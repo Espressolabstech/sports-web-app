@@ -61,10 +61,10 @@ const BookingSuccess = () => {
             ? `https://maps.google.com/?q=${latitude},${longitude}`
             : `https://maps.google.com/?q=${encodeURIComponent(`${venueName} ${venueAddress}`)}`;
 
-    // ── WhatsApp share ──────────────────────────────────────────────────────
-    const handleShare = () => {
+    // ── Native share ────────────────────────────────────────────────────────
+    const handleShare = async () => {
         const lines = [
-            `🎉 Just booked a court at *${venueName}*!`,
+            `🎉 Just booked a court at ${venueName}!`,
             ``,
             `🏅 Sport: ${sport}`,
             `🏟️ Court: ${courtName}`,
@@ -72,14 +72,20 @@ const BookingSuccess = () => {
             `⏰ Time: ${timeRange}`,
             `📍 Location: ${mapsLink}`,
             ``,
-            `Book yours at: ${window.location.origin}/venue/${state.venueId}`,
+            `🔗 Book yours: ${window.location.origin}/venue/${state.venueId}`,
+            ``,
+            `See you on the court! 🏆`,
         ];
         const text = lines.join('\n');
-        window.open(
-            `https://wa.me/?text=${encodeURIComponent(text)}`,
-            '_blank',
-            'noopener,noreferrer',
-        );
+        if (navigator.share) {
+            try {
+                await navigator.share({ title: '🎉 Booking Confirmed!', text });
+            } catch {
+                // user cancelled — ignore
+            }
+        } else {
+            await navigator.clipboard.writeText(text);
+        }
     };
 
     return (
@@ -183,14 +189,14 @@ const BookingSuccess = () => {
 
             {/* ── Actions ── */}
             <div className="mx-auto w-full max-w-sm px-4 mt-5 space-y-3">
-                {/* WhatsApp share */}
+                {/* Share */}
                 <Button
-                    className="w-full gap-2 bg-[#25D366] hover:bg-[#1ebe5d] text-white"
+                    className="w-full gap-2"
                     size="lg"
                     onClick={handleShare}
                 >
                     <Share2 className="h-4 w-4" />
-                    Share on WhatsApp
+                    Share Booking
                 </Button>
 
                 {/* My Bookings */}
