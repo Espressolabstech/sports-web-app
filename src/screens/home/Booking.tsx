@@ -440,6 +440,8 @@ const Booking = () => {
                                         const isAvailable =
                                             slot.status === 'available';
                                         const isHeld = slot.status === 'held';
+                                        const isDowntime =
+                                            slot.status === 'downtime';
                                         const isSelected =
                                             selectedCourt === c.id &&
                                             selectedSlots.includes(
@@ -476,8 +478,11 @@ const Booking = () => {
                                                         'bg-green-500/10 text-green-700 border-green-500/30 hover:bg-green-500/20 dark:text-green-400',
                                                     isHeld &&
                                                         'bg-amber-50 text-amber-600 border-amber-200 cursor-not-allowed dark:bg-amber-950/20 dark:text-amber-400',
+                                                    isDowntime &&
+                                                        'bg-orange-50 text-orange-500 border-orange-200 cursor-not-allowed dark:bg-orange-950/20 dark:text-orange-400',
                                                     !isAvailable &&
                                                         !isHeld &&
+                                                        !isDowntime &&
                                                         'bg-muted text-muted-foreground border-border cursor-not-allowed opacity-50',
                                                 )}
                                             >
@@ -494,7 +499,9 @@ const Booking = () => {
                                                                     ? 'Selected'
                                                                     : isAvailable
                                                                       ? 'Open'
-                                                                      : 'Booked'}
+                                                                      : isDowntime
+                                                                        ? 'Closed'
+                                                                        : 'Booked'}
                                                             </span>
                                                             {isPeak && (
                                                                 <span
