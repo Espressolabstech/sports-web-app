@@ -270,7 +270,8 @@ const ConfirmBooking = () => {
                                     {startTime} – {endTime}
                                 </span>
                             </span>
-                            {state.discountAmount && state.discountAmount > 0 ? (
+                            {state.discountAmount &&
+                            state.discountAmount > 0 ? (
                                 <span className="text-muted-foreground line-through text-xs">
                                     ₹{state.totalPrice}
                                 </span>
@@ -288,10 +289,14 @@ const ConfirmBooking = () => {
                                         <span className="inline-block h-1.5 w-1.5 rounded-full bg-green-500" />
                                         Tier discount
                                     </span>
-                                    <span className="font-medium">−₹{state.discountAmount}</span>
+                                    <span className="font-medium">
+                                        −₹{state.discountAmount}
+                                    </span>
                                 </div>
                                 <div className="flex items-center justify-between border-t pt-2 text-sm">
-                                    <span className="font-semibold text-foreground">You pay</span>
+                                    <span className="font-semibold text-foreground">
+                                        You pay
+                                    </span>
                                     <span className="font-bold text-foreground text-base">
                                         ₹{state.finalAmount ?? state.totalPrice}
                                     </span>
@@ -326,6 +331,36 @@ const ConfirmBooking = () => {
                                     Online
                                 </span>
                             </div>
+                            {/* Razorpay logo */}
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 720 144"
+                                className="h-5 w-auto"
+                                aria-label="Razorpay"
+                            >
+                                <path
+                                    d="M46.1 0L0 144h37.5L83.6 0H46.1z"
+                                    fill="#072654"
+                                />
+                                <path
+                                    d="M100.5 0L54.4 144h37.5L138 0h-37.5z"
+                                    fill="#3395FF"
+                                />
+                                <path
+                                    d="M83.6 0L46.1 144h9.4l37.5-144h-9.4z"
+                                    fill="#072654"
+                                />
+                                <text
+                                    x="155"
+                                    y="110"
+                                    fontFamily="Arial, sans-serif"
+                                    fontWeight="700"
+                                    fontSize="100"
+                                    fill="#072654"
+                                >
+                                    razorpay
+                                </text>
+                            </svg>
                         </button>
 
                         {/* Venue Wallet */}
@@ -353,7 +388,7 @@ const ConfirmBooking = () => {
                                             Venue Wallet
                                         </span>
                                     </div>
-                                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                    <p className="text-xs text-muted-foreground mt-0.5">
                                         Balance: ₹
                                         {walletBalance.toLocaleString('en-IN')}
                                         {!hasEnoughBalance &&

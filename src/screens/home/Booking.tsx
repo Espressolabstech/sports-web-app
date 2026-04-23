@@ -217,7 +217,9 @@ const Booking = () => {
                     const slot = (courtSlotsData[c.id] ?? []).find(
                         (s) => s.startTime === time,
                     );
-                    return slot?.status === 'available' ? '\uD83D\uDFE9' : '\uD83D\uDFE5';
+                    return slot?.status === 'available'
+                        ? '\uD83D\uDFE9'
+                        : '\uD83D\uDFE5';
                 })
                 .join('  ');
             return `${dots}  ${formatTime(time)}`;

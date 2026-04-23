@@ -1,8 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getUpcomingBookings, getPastBookings } from '../../api/adapters/myBookings';
-import { cancelBooking, initiatePayment, verifyBookingPayment } from '../../api/adapters/bookings';
+import {
+    getUpcomingBookings,
+    getPastBookings,
+} from '../../api/adapters/myBookings';
+import {
+    cancelBooking,
+    initiatePayment,
+    verifyBookingPayment,
+} from '../../api/adapters/bookings';
 import { statusColors } from '../../utils/mockData';
 import { formatTime } from '../../utils/twMerge';
 import { differenceInHours, format } from 'date-fns';
@@ -62,9 +69,15 @@ const MyBookings = () => {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const [otcDialogOpen, setOtcDialogOpen] = useState(false);
-    const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
-    const [selectedBooking, setSelectedBooking] = useState<ApiBooking | null>(null);
-    const [otcActiveBookings, setOtcActiveBookings] = useState<Set<string>>(new Set());
+    const [selectedBookingId, setSelectedBookingId] = useState<string | null>(
+        null,
+    );
+    const [selectedBooking, setSelectedBooking] = useState<ApiBooking | null>(
+        null,
+    );
+    const [otcActiveBookings, setOtcActiveBookings] = useState<Set<string>>(
+        new Set(),
+    );
     const [tick, setTick] = useState(0);
     const [payingHoldId, setPayingHoldId] = useState<string | null>(null);
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
@@ -92,25 +105,32 @@ const MyBookings = () => {
             setOtcDialogOpen(false);
             setSelectedBookingId(null);
             toast.success('Open to Cancel activated', {
-                description: "We'll refund you automatically if someone else books this slot.",
+                description:
+                    "We'll refund you automatically if someone else books this slot.",
             });
         },
         onError: () => toast.error('Failed to activate Open to Cancel'),
     });
 
-    const { mutate: directCancel, isPending: directCancelLoading } = useMutation({
-        mutationFn: (bookingId: string) => cancelBooking(bookingId, { cancelReason: 'Cancelled by player' }),
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['bookings'] });
-            setCancelDialogOpen(false);
-            setSelectedBooking(null);
-            toast.success('Booking cancelled successfully');
-        },
-        onError: (err: any) => {
-            const msg = err?.response?.data?.message ?? 'Unable to cancel this booking.';
-            toast.error(msg);
-        },
-    });
+    const { mutate: directCancel, isPending: directCancelLoading } =
+        useMutation({
+            mutationFn: (bookingId: string) =>
+                cancelBooking(bookingId, {
+                    cancelReason: 'Cancelled by player',
+                }),
+            onSuccess: () => {
+                queryClient.invalidateQueries({ queryKey: ['bookings'] });
+                setCancelDialogOpen(false);
+                setSelectedBooking(null);
+                toast.success('Booking cancelled successfully');
+            },
+            onError: (err: any) => {
+                const msg =
+                    err?.response?.data?.message ??
+                    'Unable to cancel this booking.';
+                toast.error(msg);
+            },
+        });
 
     const { mutate: payHold } = useMutation({
         mutationFn: (bookingId: string) =>
@@ -133,16 +153,22 @@ const MyBookings = () => {
                             razorpaySignature: payment.razorpay_signature,
                         });
                         toast.success('Booking confirmed!');
-                        queryClient.invalidateQueries({ queryKey: ['bookings'] });
+                        queryClient.invalidateQueries({
+                            queryKey: ['bookings'],
+                        });
                     } catch {
                         toast.error('Payment verification failed.');
-                        queryClient.invalidateQueries({ queryKey: ['bookings'] });
+                        queryClient.invalidateQueries({
+                            queryKey: ['bookings'],
+                        });
                     }
                 },
                 modal: {
                     ondismiss: () => {
                         toast.error('Payment cancelled.');
-                        queryClient.invalidateQueries({ queryKey: ['bookings'] });
+                        queryClient.invalidateQueries({
+                            queryKey: ['bookings'],
+                        });
                     },
                 },
                 theme: { color: '#2563eb' },
@@ -150,31 +176,40 @@ const MyBookings = () => {
             rzp.open();
         },
         onError: (err: any) => {
-            const msg = err?.response?.data?.message ?? 'Failed to initiate payment.';
+            const msg =
+                err?.response?.data?.message ?? 'Failed to initiate payment.';
             toast.error(msg);
             queryClient.invalidateQueries({ queryKey: ['bookings'] });
         },
     });
 
     // tick drives per-second re-render so hold countdowns stay fresh
-    const allUpcoming = [...(upcomingData?.data?.bookings ?? [])].filter((b) => {
-        if (b.status !== 'PENDING') return true;
-        // hide expired holds (use tick so this re-evaluates every second)
-        return tick >= 0 && isActiveHold(b);
-    });
+    const allUpcoming = [...(upcomingData?.data?.bookings ?? [])].filter(
+        (b) => {
+            if (b.status !== 'PENDING') return true;
+            // hide expired holds (use tick so this re-evaluates every second)
+            return tick >= 0 && isActiveHold(b);
+        },
+    );
 
     const upcomingBookings = allUpcoming.sort((a, b) =>
-        `${a.bookingDate}${a.startTime}`.localeCompare(`${b.bookingDate}${b.startTime}`),
+        `${a.bookingDate}${a.startTime}`.localeCompare(
+            `${b.bookingDate}${b.startTime}`,
+        ),
     );
 
     const pastBookings = [...(pastData?.data?.bookings ?? [])].sort((a, b) =>
-        `${b.bookingDate}${b.startTime}`.localeCompare(`${a.bookingDate}${a.startTime}`),
+        `${b.bookingDate}${b.startTime}`.localeCompare(
+            `${a.bookingDate}${a.startTime}`,
+        ),
     );
 
     const isOtcEligible = (booking: ApiBooking) => {
         if (booking.status !== 'CONFIRMED') return false;
         if (otcActiveBookings.has(booking.id)) return false;
-        const sessionStart = new Date(`${booking.bookingDate.split('T')[0]}T${booking.startTime}`);
+        const sessionStart = new Date(
+            `${booking.bookingDate.split('T')[0]}T${booking.startTime}`,
+        );
         if (differenceInHours(sessionStart, new Date()) <= 1) return false;
         return true;
     };
@@ -196,7 +231,10 @@ const MyBookings = () => {
     };
 
     const handleShare = async (b: ApiBooking) => {
-        const formattedDate = format(new Date(b.bookingDate), 'EEEE, d MMMM yyyy');
+        const formattedDate = format(
+            new Date(b.bookingDate),
+            'EEEE, d MMMM yyyy',
+        );
         const timeRange = `${formatTime(b.startTime)} – ${formatTime(b.endTime)}`;
         const mapsLink = `https://maps.google.com/?q=${encodeURIComponent(`${b.venue.name} ${b.venue.city ?? ''}`)}`;
 
@@ -255,7 +293,9 @@ const MyBookings = () => {
                                 </div>
                                 <Badge
                                     className={
-                                        bookingStatusColors[selectedBooking.status] ?? ''
+                                        bookingStatusColors[
+                                            selectedBooking.status
+                                        ] ?? ''
                                     }
                                 >
                                     {selectedBooking.status.replace(/_/g, ' ')}
@@ -271,22 +311,28 @@ const MyBookings = () => {
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-foreground">
                                     <Clock className="h-4 w-4 text-muted-foreground" />
-                                    {formatTime(selectedBooking.startTime)} – {formatTime(selectedBooking.endTime)}
+                                    {formatTime(selectedBooking.startTime)} –{' '}
+                                    {formatTime(selectedBooking.endTime)}
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-foreground">
                                     <MapPin className="h-4 w-4 text-muted-foreground" />
-                                    {selectedBooking.venue.address}, {selectedBooking.venue.city}
+                                    {selectedBooking.venue.address},{' '}
+                                    {selectedBooking.venue.city}
                                 </div>
                             </div>
                             <div className="border-t pt-3 space-y-1 text-sm">
                                 <div className="flex justify-between">
-                                    <span className="text-muted-foreground">Amount</span>
+                                    <span className="text-muted-foreground">
+                                        Amount
+                                    </span>
                                     <span>₹{selectedBooking.totalAmount}</span>
                                 </div>
                                 {selectedBooking.discountAmount > 0 && (
                                     <div className="flex justify-between text-green-600">
                                         <span>Discount</span>
-                                        <span>-₹{selectedBooking.discountAmount}</span>
+                                        <span>
+                                            -₹{selectedBooking.discountAmount}
+                                        </span>
                                     </div>
                                 )}
                                 <div className="flex justify-between font-semibold pt-1 border-t">
@@ -295,7 +341,11 @@ const MyBookings = () => {
                                 </div>
                                 <div className="flex justify-between text-xs text-muted-foreground">
                                     <span>Payment</span>
-                                    <span>{selectedBooking.payment.paymentMethod} · {selectedBooking.payment.paymentStatus}</span>
+                                    <span>
+                                        {selectedBooking.payment.paymentMethod}{' '}
+                                        ·{' '}
+                                        {selectedBooking.payment.paymentStatus}
+                                    </span>
                                 </div>
                             </div>
                         </CardContent>
@@ -335,7 +385,10 @@ const MyBookings = () => {
                 </main>
 
                 {/* Cancel confirmation dialog */}
-                <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
+                <Dialog
+                    open={cancelDialogOpen}
+                    onOpenChange={setCancelDialogOpen}
+                >
                     <DialogContent className="max-w-sm">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
@@ -352,8 +405,12 @@ const MyBookings = () => {
                                     {selectedBooking.venue.name}
                                 </span>{' '}
                                 on{' '}
-                                {format(new Date(selectedBooking.bookingDate), 'EEE, MMM d')}.
-                                Refunds are subject to the venue's cancellation policy.
+                                {format(
+                                    new Date(selectedBooking.bookingDate),
+                                    'EEE, MMM d',
+                                )}
+                                . Refunds are subject to the venue's
+                                cancellation policy.
                             </DialogDescription>
                         </DialogHeader>
                         <DialogFooter className="gap-2 sm:gap-0">
@@ -400,19 +457,30 @@ const MyBookings = () => {
                 <CardContent className="p-4">
                     <div className="flex items-start justify-between">
                         <div>
-                            <p className="font-semibold text-foreground">{b.court.name}</p>
-                            <p className="text-xs text-muted-foreground">{b.venue.name}</p>
+                            <p className="font-semibold text-foreground">
+                                {b.court.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                {b.venue.name}
+                            </p>
                             <p className="text-xs text-muted-foreground mt-0.5">
                                 {format(
                                     new Date(b.bookingDate),
-                                    isUpcomingCard ? 'EEEE, MMM d' : 'MMM d, yyyy',
+                                    isUpcomingCard
+                                        ? 'EEEE, MMM d'
+                                        : 'MMM d, yyyy',
                                 )}{' '}
-                                · {formatTime(b.startTime)} – {formatTime(b.endTime)}
+                                · {formatTime(b.startTime)} –{' '}
+                                {formatTime(b.endTime)}
                             </p>
                         </div>
                         <div className="flex flex-col items-end gap-1">
-                            <Badge className={bookingStatusColors[b.status] ?? ''}>
-                                {isPendingHold ? 'Held' : b.status.replace(/_/g, ' ')}
+                            <Badge
+                                className={bookingStatusColors[b.status] ?? ''}
+                            >
+                                {isPendingHold
+                                    ? 'Held'
+                                    : b.status.replace(/_/g, ' ')}
                             </Badge>
                             {isOtcActive && (
                                 <Badge className="bg-warning/10 text-warning text-[10px]">
@@ -435,7 +503,9 @@ const MyBookings = () => {
                             <div className="flex items-center gap-1 text-xs text-amber-600 flex-1">
                                 <Clock className="h-3.5 w-3.5" />
                                 <span className="tabular-nums">
-                                    {holdMins}:{holdSecsRem.toString().padStart(2, '0')} to pay
+                                    {holdMins}:
+                                    {holdSecsRem.toString().padStart(2, '0')} to
+                                    pay
                                 </span>
                             </div>
                             <Button
@@ -499,7 +569,10 @@ const MyBookings = () => {
                 {isLoading ? (
                     <div className="space-y-3">
                         {[1, 2, 3].map((i) => (
-                            <div key={i} className="h-24 animate-pulse rounded-xl bg-muted" />
+                            <div
+                                key={i}
+                                className="h-24 animate-pulse rounded-xl bg-muted"
+                            />
                         ))}
                     </div>
                 ) : (
@@ -555,8 +628,9 @@ const MyBookings = () => {
                 onOpenChange={setOtcDialogOpen}
                 venueName={
                     selectedBookingId
-                        ? upcomingBookings.find((b) => b.id === selectedBookingId)
-                              ?.venue.name || 'this venue'
+                        ? upcomingBookings.find(
+                              (b) => b.id === selectedBookingId,
+                          )?.venue.name || 'this venue'
                         : 'this venue'
                 }
                 onConfirm={handleActivateOtc}
