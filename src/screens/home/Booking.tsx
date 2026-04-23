@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ArrowLeft, Clock, Loader2, Share2, X } from 'lucide-react';
 import { getVenueDetail } from '../../api/adapters/venues';
-import { getCourtDetail, getCourtShareText } from '../../api/adapters/courts';
+import { getCourtDetail } from '../../api/adapters/courts';
 import { holdSlot } from '../../api/adapters/bookings';
 import { DateStrip } from '../../components/DateStrip';
 import { Button } from '../../components/ui/button';
@@ -201,17 +201,60 @@ const Booking = () => {
     const [isSharing, setIsSharing] = useState(false);
 
     const handleShare = async () => {
-        if (!selectedCourt && !filteredCourts[0]?.id) return;
-        const targetCourtId = selectedCourt || filteredCourts[0].id;
+        if (!facility) return;
+
+        const formattedDate = format(selectedDate, 'EEEE, d MMMM yyyy');
+        const mapsLink =
+            facility.latitude && facility.longitude
+                ? `https://maps.google.com/?q=${facility.latitude},${facility.longitude}`
+                : `https://maps.google.com/?q=${encodeURIComponent(`${facility.name} ${facility.city}`)}`;
+
+        // Build availability rows per time slot across all courts
+        const courtNames = filteredCourts.map((c) => c.name).join('  ');
+        const rows = timeLabels.map((time) => {
+            const dots = filteredCourts
+                .map((c) => {
+                    const slot = (courtSlotsData[c.id] ?? []).find(
+                        (s) => s.startTime === time,
+                    );
+                    return slot?.status === 'available' ? '\uD83D\uDFE9' : '\uD83D\uDFE5';
+                })
+                .join('  ');
+            return `${dots}  ${formatTime(time)}`;
+        });
+
+        const lines = [
+            `\uD83C\uDFDF\uFE0F ${facility.name} \u2014 Court Availability`,
+            `\uD83D\uDCC5 ${formattedDate}`,
+            `\uD83C\uDFBE Sport: ${selectedSport}`,
+            ``,
+            `     ${courtNames}`,
+            ...rows,
+            ``,
+            `\uD83D\uDFE9 Available  \uD83D\uDFE5 Booked`,
+            ``,
+            `\uD83D\uDCCD ${facility.city}`,
+            `\uD83D\uDDFA\uFE0F Directions: ${mapsLink}`,
+            ``,
+            `\uD83D\uDC49 Book now: ${window.location.href}`,
+            ``,
+            `See you on the court! \uD83C\uDFC6`,
+        ];
+        const text = lines.join('\n');
+
         setIsSharing(true);
         try {
-            const res = await getCourtShareText(targetCourtId, dateStr);
-            const text = res.data.messageText;
-            // wa.me deep-link — opens WhatsApp with the message pre-filled
-            const waUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
-            window.open(waUrl, '_blank', 'noopener,noreferrer');
+            if (navigator.share) {
+                await navigator.share({
+                    title: `🏟️ ${facility.name} — Availability`,
+                    text,
+                });
+            } else {
+                await navigator.clipboard.writeText(text);
+                toast.success('Availability copied to clipboard!');
+            }
         } catch {
-            toast.error('Could not generate share text. Please try again.');
+            // user cancelled — ignore
         } finally {
             setIsSharing(false);
         }
@@ -290,7 +333,7 @@ const Booking = () => {
                     onClick={handleShare}
                     disabled={isSharing}
                     className="rounded-full p-2 hover:bg-primary-foreground/10 disabled:opacity-50 shrink-0"
-                    aria-label="Share availability on WhatsApp"
+                    aria-label="Share availability"
                 >
                     {isSharing ? (
                         <Loader2 className="h-5 w-5 animate-spin" />

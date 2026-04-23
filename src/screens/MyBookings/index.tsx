@@ -196,9 +196,33 @@ const MyBookings = () => {
     };
 
     const handleShare = async (b: ApiBooking) => {
-        const text = `${b.venue.name} — ${b.court.name}\n${format(new Date(b.bookingDate), 'EEEE, MMM d yyyy')} · ${b.startTime} – ${b.endTime}`;
+        const formattedDate = format(new Date(b.bookingDate), 'EEEE, d MMMM yyyy');
+        const timeRange = `${formatTime(b.startTime)} – ${formatTime(b.endTime)}`;
+        const mapsLink = `https://maps.google.com/?q=${encodeURIComponent(`${b.venue.name} ${b.venue.city ?? ''}`)}`;
+
+        const lines = [
+            `🎉 Just booked a court at ${b.venue.name}!`,
+            ``,
+            `🏟️ Venue: ${b.venue.name}`,
+            `🎾 Sport: ${b.court.sport}`,
+            `🏸 Court: ${b.court.name}`,
+            `📅 Date: ${formattedDate}`,
+            `⏰ Time: ${timeRange}`,
+            `🎫 Booking Ref: ${b.bookingRef}`,
+            ``,
+            `📍 ${b.venue.city ?? ''}`,
+            `🗺️ Directions: ${mapsLink}`,
+            ``,
+            `See you on the court! 🏆`,
+        ];
+        const text = lines.join('\n');
+
         if (navigator.share) {
-            await navigator.share({ title: 'My Booking', text });
+            try {
+                await navigator.share({ title: '🎉 My Booking', text });
+            } catch {
+                // user cancelled — ignore
+            }
         } else {
             await navigator.clipboard.writeText(text);
         }

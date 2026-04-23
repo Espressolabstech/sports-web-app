@@ -11,14 +11,3 @@ export const getCourtDetail = async (
         params: date ? { date } : undefined,
     });
 };
-
-export const getCourtShareText = async (
-    courtId: string,
-    date: string,
-): Promise<ApiResponse<{ messageText: string; date: string; isToday: boolean; slotsCount: number }>> => {
-    return apiClient({
-        url: endpoints.courtShare(courtId),
-        method: 'POST',
-        data: { date },
-    });
-};
