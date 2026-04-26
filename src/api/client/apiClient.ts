@@ -21,9 +21,11 @@ const apiClient = async <T = unknown>(
 
         return response.data;
     } catch (error: unknown) {
-        if (axios.isAxiosError(error) && error.response?.status === 401) {
+        // Only redirect to login on 401 if the request had a token
+        // (i.e., the user's session expired). Guest browsing should NOT redirect.
+        if (axios.isAxiosError(error) && error.response?.status === 401 && token) {
             removeToken();
-            window.location.href = '/login';
+            window.location.href = '/';
         }
 
         if (axios.isAxiosError(error) && error.response?.status === 403) {

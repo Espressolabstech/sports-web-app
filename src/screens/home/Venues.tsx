@@ -243,6 +243,7 @@ const Venues = () => {
     const navigate = useNavigate();
     const user = !!getToken();
     const [loginOpen, setLoginOpen] = useState(false);
+    const [pendingBookSport, setPendingBookSport] = useState<string | null>(null);
     const [perksSheetOpen, setPerksSheetOpen] = useState(false);
     const [creditsSheetOpen, setCreditsSheetOpen] = useState(false);
     const [perkDetailOpen, setPerkDetailOpen] = useState<TierPerkInfo | null>(
@@ -405,16 +406,14 @@ const Venues = () => {
     }
 
     const handleBookSport = (sport: string) => {
-        if (!user) {
-            setLoginOpen(true);
-        } else {
-            const firstCourt = allCourts.find(
-                (c: ApiCourt) => c.sport.toLowerCase() === sport.toLowerCase(),
-            );
-            navigate(
-                `/booking/${facility.id}${firstCourt ? `/${firstCourt.id}` : ''}`,
-            );
-        }
+        // Guests can browse courts and slots freely.
+        // Auth is only required when they tap "Review Booking" on the next screen.
+        const firstCourt = allCourts.find(
+            (c: ApiCourt) => c.sport.toLowerCase() === sport.toLowerCase(),
+        );
+        navigate(
+            `/booking/${facility.id}${firstCourt ? `/${firstCourt.id}` : ''}`,
+        );
     };
 
     const handleShare = async () => {
@@ -852,7 +851,23 @@ const Venues = () => {
             </div>
 
             {/* ── Modals & Sheets ── */}
-            <PhoneLoginModal open={loginOpen} onOpenChange={setLoginOpen} />
+            <PhoneLoginModal
+                open={loginOpen}
+                onOpenChange={setLoginOpen}
+                onSuccess={() => {
+                    if (pendingBookSport && facility) {
+                        const firstCourt = allCourts.find(
+                            (c: ApiCourt) =>
+                                c.sport.toLowerCase() ===
+                                pendingBookSport.toLowerCase(),
+                        );
+                        navigate(
+                            `/booking/${facility.id}${firstCourt ? `/${firstCourt.id}` : ''}`,
+                        );
+                        setPendingBookSport(null);
+                    }
+                }}
+            />
 
             {/* Perk Detail Dialog */}
             <Dialog

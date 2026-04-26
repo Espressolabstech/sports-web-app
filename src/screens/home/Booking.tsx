@@ -11,6 +11,8 @@ import { DateStrip } from '../../components/DateStrip';
 import { Button } from '../../components/ui/button';
 import { cn, formatTime } from '../../utils/twMerge';
 import { useQuery } from '@tanstack/react-query';
+import { getToken } from '../../utils/cookies.helpers';
+import { PhoneLoginModal } from '../../components/PhoneLoginModal';
 
 // slot keyed by startTime per court
 type CourtSlotMap = Record<string, ApiSlot[]>;
@@ -199,6 +201,7 @@ const Booking = () => {
     };
 
     const [isSharing, setIsSharing] = useState(false);
+    const [loginOpen, setLoginOpen] = useState(false);
 
     const handleShare = async () => {
         if (!facility) return;
@@ -590,7 +593,13 @@ const Booking = () => {
                             )}
                         </div>
                         <Button
-                            onClick={() => reviewBooking()}
+                            onClick={() => {
+                                if (!getToken()) {
+                                    setLoginOpen(true);
+                                    return;
+                                }
+                                reviewBooking();
+                            }}
                             disabled={holdLoading || belowMinimum}
                             className="shrink-0"
                         >
@@ -603,6 +612,13 @@ const Booking = () => {
                     </div>
                 </div>
             )}
+
+            {/* Login modal — shown when guest clicks Review Booking */}
+            <PhoneLoginModal
+                open={loginOpen}
+                onOpenChange={setLoginOpen}
+                onSuccess={() => reviewBooking()}
+            />
         </div>
     );
 };

@@ -18,7 +18,7 @@ export const router = createBrowserRouter([
     },
     {
         path: path.home,
-        element: <ProtectedComponentWrapper children={<Home />} />,
+        element: <Home />,
     },
     {
         path: path.MyBookings,

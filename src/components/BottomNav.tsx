@@ -1,23 +1,24 @@
-import { Home, CalendarDays, User } from 'lucide-react';
-import { NavLink } from 'react-router-dom';
+import { Home, CalendarDays, User, LogIn } from 'lucide-react';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '../utils/twMerge';
 import { path } from '../navigation/commanPaths';
-
-const tabs = [
-    { to: path.home, icon: Home, label: 'Home' },
-    { to: path.MyBookings, icon: CalendarDays, label: 'My Bookings' },
-    { to: '/profile', icon: User, label: 'Profile' },
-];
+import { getToken } from '../utils/cookies.helpers';
+import { useState } from 'react';
+import { PhoneLoginModal } from './PhoneLoginModal';
 
 export function BottomNav() {
+    const user = !!getToken();
+    const navigate = useNavigate();
+    const [loginOpen, setLoginOpen] = useState(false);
+
     return (
-        <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card">
-            <div className="mx-auto flex max-w-lg items-center justify-around py-2">
-                {tabs.map((tab) => (
+        <>
+            <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card">
+                <div className="mx-auto flex max-w-lg items-center justify-around py-2">
+                    {/* Home — always accessible */}
                     <NavLink
-                        key={tab.to}
-                        to={tab.to}
-                        end={tab.to === '/'}
+                        to={path.home}
+                        end
                         className={({ isActive }) =>
                             cn(
                                 'flex flex-col items-center gap-0.5 px-3 py-1 text-xs transition-colors',
@@ -27,11 +28,69 @@ export function BottomNav() {
                             )
                         }
                     >
-                        <tab.icon className="h-5 w-5" />
-                        <span>{tab.label}</span>
+                        <Home className="h-5 w-5" />
+                        <span>Home</span>
                     </NavLink>
-                ))}
-            </div>
-        </nav>
+
+                    {/* My Bookings — requires login */}
+                    {user ? (
+                        <NavLink
+                            to={path.MyBookings}
+                            className={({ isActive }) =>
+                                cn(
+                                    'flex flex-col items-center gap-0.5 px-3 py-1 text-xs transition-colors',
+                                    isActive
+                                        ? 'text-primary'
+                                        : 'text-muted-foreground',
+                                )
+                            }
+                        >
+                            <CalendarDays className="h-5 w-5" />
+                            <span>My Bookings</span>
+                        </NavLink>
+                    ) : (
+                        <button
+                            onClick={() => setLoginOpen(true)}
+                            className="flex flex-col items-center gap-0.5 px-3 py-1 text-xs text-muted-foreground transition-colors hover:text-primary"
+                        >
+                            <CalendarDays className="h-5 w-5" />
+                            <span>My Bookings</span>
+                        </button>
+                    )}
+
+                    {/* Profile — requires login */}
+                    {user ? (
+                        <NavLink
+                            to="/profile"
+                            className={({ isActive }) =>
+                                cn(
+                                    'flex flex-col items-center gap-0.5 px-3 py-1 text-xs transition-colors',
+                                    isActive
+                                        ? 'text-primary'
+                                        : 'text-muted-foreground',
+                                )
+                            }
+                        >
+                            <User className="h-5 w-5" />
+                            <span>Profile</span>
+                        </NavLink>
+                    ) : (
+                        <button
+                            onClick={() => navigate('/login')}
+                            className="flex flex-col items-center gap-0.5 px-3 py-1 text-xs text-muted-foreground transition-colors hover:text-primary"
+                        >
+                            <LogIn className="h-5 w-5" />
+                            <span>Sign In</span>
+                        </button>
+                    )}
+                </div>
+            </nav>
+
+            <PhoneLoginModal
+                open={loginOpen}
+                onOpenChange={setLoginOpen}
+                onSuccess={() => navigate(path.MyBookings)}
+            />
+        </>
     );
 }

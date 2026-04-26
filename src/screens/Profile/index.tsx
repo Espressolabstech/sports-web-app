@@ -58,7 +58,7 @@ const MyProfile = () => {
 
     const handleLogout = () => {
         clearCookies();
-        navigate('/login');
+        navigate('/');
     };
 
     return (
