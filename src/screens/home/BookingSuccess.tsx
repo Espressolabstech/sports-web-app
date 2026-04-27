@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { format } from 'date-fns';
 import {
     CalendarCheck,
@@ -9,9 +10,11 @@ import {
     Dumbbell,
     Home,
     ListOrdered,
+    Receipt,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { formatTime } from '../../utils/twMerge';
+import { BookingReceiptModal } from '../../components/BookingReceiptModal';
 
 interface BookingSuccessState {
     bookingRef: string;
@@ -32,6 +35,7 @@ const BookingSuccess = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const state = location.state as BookingSuccessState | null;
+    const [receiptOpen, setReceiptOpen] = useState(false);
 
     if (!state) {
         navigate('/my-bookings', { replace: true });
@@ -193,6 +197,17 @@ const BookingSuccess = () => {
 
             {/* ── Actions ── */}
             <div className="mx-auto w-full max-w-sm px-4 mt-5 space-y-3">
+                {/* Receipt */}
+                <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    size="lg"
+                    onClick={() => setReceiptOpen(true)}
+                >
+                    <Receipt className="h-4 w-4" />
+                    View Receipt
+                </Button>
+
                 {/* Share */}
                 <Button
                     className="w-full gap-2"
@@ -224,6 +239,24 @@ const BookingSuccess = () => {
                     Back to Home
                 </Button>
             </div>
+
+            <BookingReceiptModal
+                open={receiptOpen}
+                onClose={() => setReceiptOpen(false)}
+                data={{
+                    bookingRef,
+                    venueName,
+                    venueAddress,
+                    sport,
+                    courtName,
+                    bookingDate,
+                    startTime,
+                    endTime,
+                    totalAmount: totalPrice,
+                    finalAmount: totalPrice,
+                    bookedAt: new Date().toISOString(),
+                }}
+            />
         </div>
     );
 };

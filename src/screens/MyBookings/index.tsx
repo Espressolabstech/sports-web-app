@@ -22,6 +22,7 @@ import {
     Loader2,
     MapPin,
     Navigation,
+    Receipt,
     Share2,
     XCircle,
 } from 'lucide-react';
@@ -38,6 +39,7 @@ import {
 } from '../../components/ui/dialog';
 import { BottomNav } from '../../components/BottomNav';
 import { OtcConfirmationDialog } from '../../components/OtcConfirmationDialog';
+import { BookingReceiptModal } from '../../components/BookingReceiptModal';
 
 const HOLD_DURATION_MS = 7 * 60 * 1000;
 
@@ -81,6 +83,7 @@ const MyBookings = () => {
     const [tick, setTick] = useState(0);
     const [payingHoldId, setPayingHoldId] = useState<string | null>(null);
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+    const [receiptOpen, setReceiptOpen] = useState(false);
 
     // Drive per-second countdown for active holds
     useEffect(() => {
@@ -372,6 +375,14 @@ const MyBookings = () => {
                         </Button>
                     </div>
 
+                    <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => setReceiptOpen(true)}
+                    >
+                        <Receipt className="h-4 w-4 mr-2" /> View Receipt
+                    </Button>
+
                     {selectedBooking.status === 'CONFIRMED' && (
                         <Button
                             variant="outline"
@@ -436,6 +447,28 @@ const MyBookings = () => {
                 </Dialog>
 
                 <BottomNav />
+
+                <BookingReceiptModal
+                    open={receiptOpen}
+                    onClose={() => setReceiptOpen(false)}
+                    data={{
+                        bookingRef: selectedBooking.bookingRef,
+                        venueName: selectedBooking.venue.name,
+                        venueAddress: `${selectedBooking.venue.address}, ${selectedBooking.venue.city}`,
+                        sport: selectedBooking.court.sport,
+                        courtName: selectedBooking.court.name,
+                        bookingDate: selectedBooking.bookingDate.split('T')[0],
+                        startTime: selectedBooking.startTime,
+                        endTime: selectedBooking.endTime,
+                        durationMinutes: selectedBooking.durationMinutes,
+                        totalAmount: selectedBooking.totalAmount,
+                        discountAmount: selectedBooking.discountAmount,
+                        finalAmount: selectedBooking.finalAmount,
+                        paymentMethod: selectedBooking.payment?.paymentMethod,
+                        paymentStatus: selectedBooking.payment?.paymentStatus,
+                        bookedAt: selectedBooking.createdAt,
+                    }}
+                />
             </div>
         );
     }
