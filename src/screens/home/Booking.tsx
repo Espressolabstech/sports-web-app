@@ -1,9 +1,8 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
-import { useMutation } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
-import { ArrowLeft, Clock, Loader2, Share2, X } from 'lucide-react';
+import { ArrowLeft, CalendarDays, Clock, Loader2, Share2, X } from 'lucide-react';
 import { getVenueDetail } from '../../api/adapters/venues';
 import { getCourtDetail } from '../../api/adapters/courts';
 import { holdSlot } from '../../api/adapters/bookings';
@@ -14,10 +13,14 @@ import { useQuery } from '@tanstack/react-query';
 import { getToken } from '../../utils/cookies.helpers';
 import { PhoneLoginModal } from '../../components/PhoneLoginModal';
 
-// slot keyed by startTime per court
+// ── Types ────────────────────────────────────────────────────────────────────
 type CourtSlotMap = Record<string, ApiSlot[]>;
 type CourtPeakMap = Record<string, ApiPeakHourPricing[]>;
 
+// courtId → selected startTimes (contiguous per court, multiple courts allowed per date)
+type DateSelection = Record<string, string[]>;
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 function getEffectivePrice(
     startTime: string,
     date: Date,
@@ -34,20 +37,40 @@ function getEffectivePrice(
     return peak ? peak.pricePerSlot : basePrice;
 }
 
+/**
+ * Cache key encodes both sport and date so that switching sport
+ * automatically invalidates the cache without explicit clearing.
+ */
+const makeKey = (sport: string, dateStr: string) => `${sport}__${dateStr}`;
+
+// ── Component ────────────────────────────────────────────────────────────────
 const Booking = () => {
-    const { facilityId, courtId } = useParams();
+    const { facilityId, courtId: initialCourtId } = useParams();
     const navigate = useNavigate();
 
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [selectedSport, setSelectedSport] = useState('');
-    const [selectedCourt, setSelectedCourt] = useState('');
-    const [selectedSlots, setSelectedSlots] = useState<string[]>([]); // startTime keys
-    const [courtSlotsData, setCourtSlotsData] = useState<CourtSlotMap>({});
-    const [courtPeakData, setCourtPeakData] = useState<CourtPeakMap>({});
-    const [slotsLoading, setSlotsLoading] = useState(false);
+
+    // Multi-date selection: cacheKey → { courtId, slots[] }
+    const [selectionByKey, setSelectionByKey] = useState<Record<string, DateSelection>>({});
+    // Slot / peak caches: cacheKey → CourtSlotMap / CourtPeakMap
+    const [slotsCacheByKey, setSlotsCacheByKey] = useState<Record<string, CourtSlotMap>>({});
+    const [peakCacheByKey, setPeakCacheByKey] = useState<Record<string, CourtPeakMap>>({});
+    const [loadingKey, setLoadingKey] = useState<string | null>(null);
+
+    const [holdLoading, setHoldLoading] = useState(false);
+    const [isSharing, setIsSharing] = useState(false);
+    const [loginOpen, setLoginOpen] = useState(false);
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
+    const cacheKey = makeKey(selectedSport, dateStr);
 
+    // Current date's derived values
+    const courtSlotsData: CourtSlotMap = slotsCacheByKey[cacheKey] ?? {};
+    const courtPeakData: CourtPeakMap = peakCacheByKey[cacheKey] ?? {};
+    const slotsLoading = loadingKey === cacheKey;
+
+    // ── Venue query ──────────────────────────────────────────────────────────
     const { data: venueData, isLoading: venueLoading } = useQuery({
         queryKey: ['venue', facilityId],
         queryFn: () => getVenueDetail(facilityId!),
@@ -59,29 +82,26 @@ const Booking = () => {
         venueData?.data?.courtsBySport ?? {};
     const availableSports = Object.keys(courtsBySport);
 
-    // Set initial sport + court once venue loads
+    // Set initial sport once venue loads
     useEffect(() => {
         if (!availableSports.length) return;
-        const initialSport = courtId
+        const initialSport = initialCourtId
             ? (Object.entries(courtsBySport).find(([, cs]) =>
-                  cs.some((c) => c.id === courtId),
+                  cs.some((c) => c.id === initialCourtId),
               )?.[0] ?? availableSports[0])
             : availableSports[0];
         setSelectedSport(initialSport);
-        setSelectedCourt(courtId || courtsBySport[initialSport]?.[0]?.id || '');
     }, [venueData]);
 
     const filteredCourts: ApiCourt[] = courtsBySport[selectedSport] ?? [];
 
-    // Fetch slots for all filtered courts whenever sport/date changes
+    // ── Load slots for current cacheKey if not yet cached ────────────────────
     useEffect(() => {
-        if (!filteredCourts.length) return;
+        if (!selectedSport || !filteredCourts.length) return;
+        if (slotsCacheByKey[cacheKey]) return; // already cached
+
         let cancelled = false;
-        setSlotsLoading(true);
-        setCourtSlotsData({});
-        setCourtPeakData({});
-        setSelectedSlots([]);
-        setSelectedCourt(filteredCourts[0]?.id || '');
+        setLoadingKey(cacheKey);
 
         Promise.all(
             filteredCourts.map(async (c) => {
@@ -101,30 +121,32 @@ const Booking = () => {
         )
             .then((results) => {
                 if (cancelled) return;
-                setCourtSlotsData(
-                    Object.fromEntries(
+                setSlotsCacheByKey((prev) => ({
+                    ...prev,
+                    [cacheKey]: Object.fromEntries(
                         results.map((r) => [r.courtId, r.slots]),
                     ),
-                );
-                setCourtPeakData(
-                    Object.fromEntries(
+                }));
+                setPeakCacheByKey((prev) => ({
+                    ...prev,
+                    [cacheKey]: Object.fromEntries(
                         results.map((r) => [r.courtId, r.peaks]),
                     ),
-                );
+                }));
             })
             .finally(() => {
-                if (!cancelled) setSlotsLoading(false);
+                if (!cancelled) setLoadingKey(null);
             });
 
         return () => {
             cancelled = true;
         };
-    }, [filteredCourts.map((c) => c.id).join(','), dateStr]);
+    }, [cacheKey, filteredCourts.map((c) => c.id).join(',')]);
 
+    // ── Derived time labels for current date ─────────────────────────────────
     const isToday = dateStr === format(new Date(), 'yyyy-MM-dd');
     const nowMinutes = new Date().getHours() * 60 + new Date().getMinutes();
 
-    // All unique time labels from first court's slots, filtered to future slots on today
     const timeLabels = useMemo(
         () =>
             (courtSlotsData[filteredCourts[0]?.id] ?? [])
@@ -134,85 +156,174 @@ const Booking = () => {
                     return h * 60 + m > nowMinutes;
                 })
                 .map((s) => s.startTime),
-        [courtSlotsData, filteredCourts],
+        [courtSlotsData, filteredCourts, isToday, nowMinutes],
     );
 
-    const selectedCourtData = filteredCourts.find(
-        (c) => c.id === selectedCourt,
-    );
-    const basePrice = selectedCourtData?.courtPricings[0]?.pricePerSlot ?? 0;
-    const allSlotsForCourt = courtSlotsData[selectedCourt] ?? [];
-    const selectedPeaks = courtPeakData[selectedCourt] ?? [];
-    const selectedSlotObjects = allSlotsForCourt.filter((s) =>
-        selectedSlots.includes(s.startTime),
-    );
-    const totalPrice = selectedSlotObjects.reduce(
-        (sum, s) =>
-            sum +
-            getEffectivePrice(
-                s.startTime,
-                selectedDate,
-                selectedPeaks,
-                basePrice,
+    // All selected slot objects on the current date (across all courts)
+    const currentDateEntries = Object.entries(selectionByKey[cacheKey] ?? {}).map(
+        ([cId, startTimes]) => ({
+            courtId: cId,
+            slotObjs: (courtSlotsData[cId] ?? []).filter((s) =>
+                startTimes.includes(s.startTime),
             ),
-        0,
+        }),
+    );
+    // For the single-entry time-range display in the bottom bar
+    const selectedSlotObjects =
+        currentDateEntries.length === 1 ? currentDateEntries[0].slotObjs : [];
+
+    // ── All hold entries across dates+courts for current sport ───────────────
+    const allDateEntries = useMemo(() => {
+        const prefix = `${selectedSport}__`;
+        const entries: {
+            date: string;
+            courtId: string;
+            courtData: ApiCourt | undefined;
+            slotObjs: ApiSlot[];
+            price: number;
+        }[] = [];
+
+        Object.entries(selectionByKey)
+            .filter(([key]) => key.startsWith(prefix))
+            .forEach(([key, dateSel]) => {
+                const date = key.slice(prefix.length);
+                Object.entries(dateSel).forEach(([courtId, selectedStartTimes]) => {
+                    if (!selectedStartTimes.length) return;
+                    const cData = filteredCourts.find((c) => c.id === courtId);
+                    const allSlots = slotsCacheByKey[key]?.[courtId] ?? [];
+                    const slotObjs = allSlots.filter((s) =>
+                        selectedStartTimes.includes(s.startTime),
+                    );
+                    const cBase = cData?.courtPricings[0]?.pricePerSlot ?? 0;
+                    const peaks = peakCacheByKey[key]?.[courtId] ?? [];
+                    const dateObj = new Date(date);
+                    const price = slotObjs.reduce(
+                        (sum, s) =>
+                            sum + getEffectivePrice(s.startTime, dateObj, peaks, cBase),
+                        0,
+                    );
+                    entries.push({ date, courtId, courtData: cData, slotObjs, price });
+                });
+            });
+
+        return entries.sort(
+            (a, b) => a.date.localeCompare(b.date) || a.courtId.localeCompare(b.courtId),
+        );
+    }, [selectionByKey, selectedSport, filteredCourts, slotsCacheByKey, peakCacheByKey]);
+
+    const grandTotalSlots = allDateEntries.reduce((n, e) => n + e.slotObjs.length, 0);
+    const grandTotalPrice = allDateEntries.reduce((n, e) => n + e.price, 0);
+
+    // Marked dates for DateStrip badges (deduplicated)
+    const markedDates = useMemo(
+        () =>
+            [
+                ...new Set(
+                    allDateEntries
+                        .filter((e) => e.date !== dateStr)
+                        .map((e) => e.date),
+                ),
+            ],
+        [allDateEntries, dateStr],
     );
 
+    // ── Minimum slot validation ──────────────────────────────────────────────
     const minimumSlotMinutes = facility?.bookingPolicy?.minimumSlotMinutes ?? 0;
-    const selectedDurationMinutes = useMemo(() => {
-        if (!selectedSlotObjects.length) return 0;
+
+    const slotDuration = (slotObjs: ApiSlot[]) => {
+        if (!slotObjs.length) return 0;
         const toMin = (t: string) => {
             const [h, m] = t.split(':').map(Number);
             return h * 60 + m;
         };
         return (
-            toMin(selectedSlotObjects[selectedSlotObjects.length - 1].endTime) -
-            toMin(selectedSlotObjects[0].startTime)
+            toMin(slotObjs[slotObjs.length - 1].endTime) -
+            toMin(slotObjs[0].startTime)
         );
-    }, [selectedSlotObjects]);
-    const belowMinimum =
-        minimumSlotMinutes > 0 && selectedDurationMinutes < minimumSlotMinutes;
-
-    const handleSlotTap = (courtId: string, startTime: string) => {
-        const slots = courtSlotsData[courtId] ?? [];
-        const slot = slots.find((s) => s.startTime === startTime);
-        if (!slot || slot.status !== 'available') return;
-
-        // switching court resets
-        if (courtId !== selectedCourt) {
-            setSelectedCourt(courtId);
-            setSelectedSlots([startTime]);
-            return;
-        }
-
-        const idx = selectedSlots.indexOf(startTime);
-        if (idx !== -1) {
-            setSelectedSlots(selectedSlots.slice(0, idx));
-            return;
-        }
-        const lastSlot = allSlotsForCourt.find(
-            (s) => s.startTime === selectedSlots[selectedSlots.length - 1],
-        );
-        if (!lastSlot || lastSlot.endTime === startTime) {
-            setSelectedSlots([...selectedSlots, startTime]);
-        } else {
-            setSelectedSlots([startTime]);
-        }
     };
 
-    const [isSharing, setIsSharing] = useState(false);
-    const [loginOpen, setLoginOpen] = useState(false);
+    // Warn for the currently viewed date if any single court is below minimum
+    const currentDurationMinutes = Math.max(
+        0,
+        ...currentDateEntries.map((e) => slotDuration(e.slotObjs)),
+    );
+    const belowMinimumCurrent =
+        minimumSlotMinutes > 0 &&
+        currentDateEntries.length > 0 &&
+        currentDateEntries.some(
+            (e) => e.slotObjs.length > 0 && slotDuration(e.slotObjs) < minimumSlotMinutes,
+        );
+
+    // Block "Review Booking" if ANY entry is below minimum
+    const anyBelowMinimum =
+        minimumSlotMinutes > 0 &&
+        allDateEntries.some(
+            (e) => e.slotObjs.length > 0 && slotDuration(e.slotObjs) < minimumSlotMinutes,
+        );
+
+    // ── Handlers ─────────────────────────────────────────────────────────────
+    /** Helper to update just one court's slots within a date's selection */
+    const setCourtSlots = (courtId: string, newSlots: string[]) => {
+        setSelectionByKey((prev) => {
+            const dateSel = { ...(prev[cacheKey] ?? {}) };
+            if (newSlots.length === 0) {
+                delete dateSel[courtId];
+            } else {
+                dateSel[courtId] = newSlots;
+            }
+            if (Object.keys(dateSel).length === 0) {
+                const next = { ...prev };
+                delete next[cacheKey];
+                return next;
+            }
+            return { ...prev, [cacheKey]: dateSel };
+        });
+    };
+
+    const handleSlotTap = (courtId: string, startTime: string) => {
+        const allSlots = courtSlotsData[courtId] ?? [];
+        const slot = allSlots.find((s) => s.startTime === startTime);
+        if (!slot || slot.status !== 'available') return;
+
+        const prevSlots = selectionByKey[cacheKey]?.[courtId] ?? [];
+
+        const idx = prevSlots.indexOf(startTime);
+        if (idx !== -1) {
+            // Tap on already-selected slot → deselect from here onwards
+            setCourtSlots(courtId, prevSlots.slice(0, idx));
+            return;
+        }
+
+        // Append if adjacent to last selected slot on this court
+        const lastSlot = allSlots.find(
+            (s) => s.startTime === prevSlots[prevSlots.length - 1],
+        );
+        const newSlots =
+            !prevSlots.length || !lastSlot || lastSlot.endTime === startTime
+                ? [...prevSlots, startTime]
+                : [startTime]; // non-adjacent → restart from this slot
+
+        setCourtSlots(courtId, newSlots);
+    };
+
+    const clearCurrentDate = () => {
+        setSelectionByKey((prev) => {
+            const next = { ...prev };
+            delete next[cacheKey];
+            return next;
+        });
+    };
+
+    const clearAllDates = () => setSelectionByKey({});
 
     const handleShare = async () => {
         if (!facility) return;
-
         const formattedDate = format(selectedDate, 'EEEE, d MMMM yyyy');
         const mapsLink =
             facility.latitude && facility.longitude
                 ? `https://maps.google.com/?q=${facility.latitude},${facility.longitude}`
                 : `https://maps.google.com/?q=${encodeURIComponent(`${facility.name} ${facility.city}`)}`;
 
-        // Build availability rows per time slot across all courts
         const courtNames = filteredCourts.map((c) => c.name).join('  ');
         const rows = timeLabels.map((time) => {
             const dots = filteredCourts
@@ -220,42 +331,39 @@ const Booking = () => {
                     const slot = (courtSlotsData[c.id] ?? []).find(
                         (s) => s.startTime === time,
                     );
-                    return slot?.status === 'available'
-                        ? '\uD83D\uDFE9'
-                        : '\uD83D\uDFE5';
+                    return slot?.status === 'available' ? '🟩' : '🟥';
                 })
                 .join('  ');
             return `${dots}  ${formatTime(time)}`;
         });
 
         const lines = [
-            `\uD83C\uDFDF\uFE0F ${facility.name} \u2014 Court Availability`,
-            `\uD83D\uDCC5 ${formattedDate}`,
-            `\uD83C\uDFBE Sport: ${selectedSport}`,
+            `🏟️ ${facility.name} — Court Availability`,
+            `📅 ${formattedDate}`,
+            `🎾 Sport: ${selectedSport}`,
             ``,
             `     ${courtNames}`,
             ...rows,
             ``,
-            `\uD83D\uDFE9 Available  \uD83D\uDFE5 Booked`,
+            `🟩 Available  🟥 Booked`,
             ``,
-            `\uD83D\uDCCD ${facility.city}`,
-            `\uD83D\uDDFA\uFE0F Directions: ${mapsLink}`,
+            `📍 ${facility.city}`,
+            `🗺️ Directions: ${mapsLink}`,
             ``,
-            `\uD83D\uDC49 Book now: ${window.location.href}`,
+            `👉 Book now: ${window.location.href}`,
             ``,
-            `See you on the court! \uD83C\uDFC6`,
+            `See you on the court! 🏆`,
         ];
-        const text = lines.join('\n');
 
         setIsSharing(true);
         try {
             if (navigator.share) {
                 await navigator.share({
                     title: `🏟️ ${facility.name} — Availability`,
-                    text,
+                    text: lines.join('\n'),
                 });
             } else {
-                await navigator.clipboard.writeText(text);
+                await navigator.clipboard.writeText(lines.join('\n'));
                 toast.success('Availability copied to clipboard!');
             }
         } catch {
@@ -265,42 +373,90 @@ const Booking = () => {
         }
     };
 
-    const { mutate: reviewBooking, isPending: holdLoading } = useMutation({
-        mutationFn: () =>
-            holdSlot({
-                courtId: selectedCourt,
-                bookingDate: dateStr,
-                slots: selectedSlotObjects.map((s) => ({
-                    startTime: s.startTime,
-                    endTime: s.endTime,
-                })),
-            }),
-        onSuccess: (res) => {
-            const { booking } = res.data;
-            navigate('/confirm-booking', {
-                state: {
-                    holdId: booking.id,
-                    venueId: facilityId,
-                    venueName: facility!.name,
-                    venueAddress: [facility!.city, facility!.address]
-                        .filter(Boolean)
-                        .join(', '),
-                    sport: selectedSport,
-                    bookingDate: dateStr,
-                    courtName: selectedCourtData!.name,
-                    slots: selectedSlotObjects,
-                    totalPrice: Number(booking.totalAmount),
-                    discountAmount: Number(booking.discountAmount ?? 0),
-                    finalAmount: Number(booking.finalAmount),
-                    createdAt: booking.createdAt,
-                    latitude: facility!.latitude ?? null,
-                    longitude: facility!.longitude ?? null,
-                },
-            });
-        },
-        onError: () => toast.error('Could not hold slot. Please try again.'),
-    });
+    const handleReviewBooking = async () => {
+        if (!getToken()) {
+            setLoginOpen(true);
+            return;
+        }
+        if (allDateEntries.length === 0 || anyBelowMinimum) return;
 
+        setHoldLoading(true);
+        try {
+            const holdResults = await Promise.all(
+                allDateEntries.map(({ date, courtId, slotObjs }) =>
+                    holdSlot({
+                        courtId,
+                        bookingDate: date,
+                        slots: slotObjs.map((s) => ({
+                            startTime: s.startTime,
+                            endTime: s.endTime,
+                        })),
+                    }),
+                ),
+            );
+
+            if (allDateEntries.length === 1) {
+                // Single date — existing ConfirmBooking flow
+                const { booking } = holdResults[0].data;
+                const entry = allDateEntries[0];
+                navigate('/confirm-booking', {
+                    state: {
+                        holdId: booking.id,
+                        venueId: facilityId,
+                        venueName: facility!.name,
+                        venueAddress: [facility!.city, facility!.address]
+                            .filter(Boolean)
+                            .join(', '),
+                        sport: selectedSport,
+                        bookingDate: entry.date,
+                        courtName: entry.courtData!.name,
+                        slots: entry.slotObjs,
+                        totalPrice: Number(booking.totalAmount),
+                        discountAmount: Number(booking.discountAmount ?? 0),
+                        finalAmount: Number(booking.finalAmount),
+                        createdAt: booking.createdAt,
+                        latitude: facility!.latitude ?? null,
+                        longitude: facility!.longitude ?? null,
+                    },
+                });
+            } else {
+                // Multi-date — new MultiConfirmBooking flow
+                const holds = holdResults.map((res, i) => {
+                    const { booking } = res.data;
+                    const entry = allDateEntries[i];
+                    return {
+                        holdId: booking.id,
+                        bookingDate: entry.date,
+                        courtName: entry.courtData!.name,
+                        slots: entry.slotObjs,
+                        totalPrice: Number(booking.totalAmount),
+                        discountAmount: Number(booking.discountAmount ?? 0),
+                        finalAmount: Number(booking.finalAmount),
+                        createdAt: booking.createdAt,
+                    };
+                });
+                navigate('/multi-confirm-booking', {
+                    state: {
+                        holds,
+                        venueId: facilityId,
+                        venueName: facility!.name,
+                        venueAddress: [facility!.city, facility!.address]
+                            .filter(Boolean)
+                            .join(', '),
+                        sport: selectedSport,
+                        latitude: facility!.latitude ?? null,
+                        longitude: facility!.longitude ?? null,
+                    },
+                });
+            }
+        } catch {
+            toast.error('Could not hold slot. Please try again.');
+        } finally {
+            setHoldLoading(false);
+        }
+    };
+
+    // ── Render guards ────────────────────────────────────────────────────────
     if (venueLoading) {
         return (
             <div className="flex min-h-screen items-center justify-center">
@@ -308,7 +464,6 @@ const Booking = () => {
             </div>
         );
     }
-
     if (!facility) {
         return (
             <div className="flex min-h-screen items-center justify-center text-muted-foreground">
@@ -317,6 +472,7 @@ const Booking = () => {
         );
     }
 
+    // ── JSX ──────────────────────────────────────────────────────────────────
     return (
         <div className="min-h-screen bg-background pb-28">
             {/* Header */}
@@ -329,11 +485,8 @@ const Booking = () => {
                 </button>
                 <div className="flex-1 min-w-0">
                     <h1 className="font-semibold">{facility.name}</h1>
-                    <p className="text-xs opacity-80">
-                        Select Court &amp; Time
-                    </p>
+                    <p className="text-xs opacity-80">Select Court &amp; Time</p>
                 </div>
-                {/* Share button */}
                 <button
                     onClick={handleShare}
                     disabled={isSharing}
@@ -358,9 +511,6 @@ const Booking = () => {
                                 onClick={() => {
                                     if (sport === selectedSport) return;
                                     setSelectedSport(sport);
-                                    setSelectedSlots([]);
-                                    setSelectedCourt('');
-                                    setCourtSlotsData({});
                                 }}
                                 className={cn(
                                     'rounded-full px-4 py-1.5 text-sm font-semibold transition-all',
@@ -377,10 +527,8 @@ const Booking = () => {
 
                 <DateStrip
                     selected={selectedDate}
-                    onSelect={(d) => {
-                        setSelectedDate(d);
-                        setSelectedSlots([]);
-                    }}
+                    onSelect={setSelectedDate}
+                    markedDates={markedDates}
                 />
 
                 {/* Slot grid */}
@@ -422,12 +570,9 @@ const Booking = () => {
                                     key={time}
                                     className="flex gap-1 items-center"
                                 >
-                                    {/* Time label */}
                                     <div className="w-14 shrink-0 text-xs text-muted-foreground font-medium">
                                         {formatTime(time)}
                                     </div>
-
-                                    {/* Cell per court */}
                                     {filteredCourts.map((c) => {
                                         const slot = (
                                             courtSlotsData[c.id] ?? []
@@ -446,10 +591,9 @@ const Booking = () => {
                                         const isDowntime =
                                             slot.status === 'downtime';
                                         const isSelected =
-                                            selectedCourt === c.id &&
-                                            selectedSlots.includes(
-                                                slot.startTime,
-                                            );
+                                            (
+                                                selectionByKey[cacheKey]?.[c.id] ?? []
+                                            ).includes(slot.startTime);
                                         const courtBase =
                                             c.courtPricings[0]?.pricePerSlot ??
                                             0;
@@ -551,56 +695,101 @@ const Booking = () => {
                 )}
             </main>
 
-            {/* Sticky bottom bar */}
-            {selectedSlots.length > 0 && selectedCourtData && (
+            {/* ── Sticky booking summary bar ────────────────────────────── */}
+            {grandTotalSlots > 0 && (
                 <div className="fixed bottom-0 left-0 right-0 bg-background border-t shadow-lg z-50">
+                    {/* Multi-entry chips (multi-date OR multi-court on same day) */}
+                    {allDateEntries.length > 1 && (
+                        <div className="mx-auto max-w-lg px-4 pt-2 flex items-center gap-2 flex-wrap">
+                            {allDateEntries.map((entry) => (
+                                <span
+                                    key={`${entry.date}-${entry.courtId}`}
+                                    className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary"
+                                >
+                                    <CalendarDays className="h-3 w-3" />
+                                    {format(new Date(entry.date), 'dd MMM')}
+                                    {' · '}
+                                    {entry.courtData?.name ?? entry.courtId}
+                                    {' · '}
+                                    {entry.slotObjs.length} slot
+                                    {entry.slotObjs.length > 1 ? 's' : ''}
+                                </span>
+                            ))}
+                            <button
+                                onClick={clearAllDates}
+                                className="ml-auto text-xs text-muted-foreground hover:text-destructive transition-colors"
+                            >
+                                Clear all
+                            </button>
+                        </div>
+                    )}
+
                     <div className="mx-auto max-w-lg px-4 py-3 flex items-center gap-3">
+                        {/* Clear current date */}
                         <button
-                            onClick={() => setSelectedSlots([])}
+                            onClick={clearCurrentDate}
                             className="rounded-full p-1.5 bg-muted hover:bg-muted/80 shrink-0"
                         >
                             <X className="h-4 w-4 text-muted-foreground" />
                         </button>
+
                         <div className="flex-1 min-w-0">
-                            <p className="font-semibold text-sm">
-                                {selectedSlots.length} slot
-                                {selectedSlots.length > 1 ? 's' : ''} · ₹
-                                {totalPrice}
-                            </p>
-                            {belowMinimum ? (
-                                <p className="text-xs text-destructive">
-                                    Min. booking is {minimumSlotMinutes} min (
-                                    {selectedDurationMinutes} min selected)
-                                </p>
+                            {allDateEntries.length > 1 ? (
+                                <>
+                                    <p className="font-semibold text-sm">
+                                        {grandTotalSlots} slots &middot;{' '}
+                                        {allDateEntries.length} bookings &middot; ₹
+                                        {grandTotalPrice}
+                                    </p>
+                                    {anyBelowMinimum && (
+                                        <p className="text-xs text-destructive">
+                                            Some selections below min.{' '}
+                                            {minimumSlotMinutes} min
+                                        </p>
+                                    )}
+                                </>
                             ) : (
-                                <p className="text-xs text-muted-foreground truncate">
-                                    {selectedSlotObjects[0]
-                                        ? formatTime(
-                                              selectedSlotObjects[0].startTime,
-                                          )
-                                        : ''}{' '}
-                                    –{' '}
-                                    {selectedSlotObjects[
-                                        selectedSlotObjects.length - 1
-                                    ]
-                                        ? formatTime(
-                                              selectedSlotObjects[
-                                                  selectedSlotObjects.length - 1
-                                              ].endTime,
-                                          )
-                                        : ''}
-                                </p>
+                                <>
+                                    <p className="font-semibold text-sm">
+                                        {grandTotalSlots} slot
+                                        {grandTotalSlots > 1 ? 's' : ''} · ₹
+                                        {grandTotalPrice}
+                                    </p>
+                                    {belowMinimumCurrent ? (
+                                        <p className="text-xs text-destructive">
+                                            Min. booking is{' '}
+                                            {minimumSlotMinutes} min (
+                                            {currentDurationMinutes} min
+                                            selected)
+                                        </p>
+                                    ) : (
+                                        <p className="text-xs text-muted-foreground truncate">
+                                            {selectedSlotObjects[0]
+                                                ? formatTime(
+                                                      selectedSlotObjects[0]
+                                                          .startTime,
+                                                  )
+                                                : ''}{' '}
+                                            –{' '}
+                                            {selectedSlotObjects[
+                                                selectedSlotObjects.length - 1
+                                            ]
+                                                ? formatTime(
+                                                      selectedSlotObjects[
+                                                          selectedSlotObjects.length -
+                                                              1
+                                                      ].endTime,
+                                                  )
+                                                : ''}
+                                        </p>
+                                    )}
+                                </>
                             )}
                         </div>
+
                         <Button
-                            onClick={() => {
-                                if (!getToken()) {
-                                    setLoginOpen(true);
-                                    return;
-                                }
-                                reviewBooking();
-                            }}
-                            disabled={holdLoading || belowMinimum}
+                            onClick={handleReviewBooking}
+                            disabled={holdLoading || anyBelowMinimum}
                             className="shrink-0"
                         >
                             {holdLoading ? (
@@ -613,11 +802,11 @@ const Booking = () => {
                 </div>
             )}
 
-            {/* Login modal — shown when guest clicks Review Booking */}
+            {/* Login modal */}
             <PhoneLoginModal
                 open={loginOpen}
                 onOpenChange={setLoginOpen}
-                onSuccess={() => reviewBooking()}
+                onSuccess={() => handleReviewBooking()}
             />
         </div>
     );
