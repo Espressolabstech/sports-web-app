@@ -26,6 +26,18 @@ const Login = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('reason') === 'banned') {
+            toast.error(
+                'Your account has been banned. Please contact support.',
+                { duration: 6000 },
+            );
+            // Clean the URL without reloading
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    }, []);
+
+    useEffect(() => {
         if (resendTimer <= 0) return;
         const interval = setInterval(() => {
             setResendTimer((prev) => prev - 1);

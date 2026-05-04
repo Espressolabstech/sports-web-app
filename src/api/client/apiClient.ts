@@ -23,9 +23,17 @@ const apiClient = async <T = unknown>(
     } catch (error: unknown) {
         // Only redirect to login on 401 if the request had a token
         // (i.e., the user's session expired). Guest browsing should NOT redirect.
-        if (axios.isAxiosError(error) && error.response?.status === 401 && token) {
+        if (
+            axios.isAxiosError(error) &&
+            error.response?.status === 401 &&
+            token
+        ) {
             removeToken();
-            window.location.href = '/';
+            const apiMessage: string | undefined =
+                error.response?.data?.message;
+            const isBanned = apiMessage?.toLowerCase().includes('banned');
+            const redirectUrl = isBanned ? '/?reason=banned' : '/';
+            window.location.href = redirectUrl;
         }
 
         if (axios.isAxiosError(error) && error.response?.status === 403) {

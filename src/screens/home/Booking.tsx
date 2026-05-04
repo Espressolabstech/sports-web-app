@@ -61,6 +61,7 @@ const Booking = () => {
     const [holdLoading, setHoldLoading] = useState(false);
     const [isSharing, setIsSharing] = useState(false);
     const [loginOpen, setLoginOpen] = useState(false);
+    const [pollKey, setPollKey] = useState(0);
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
     const cacheKey = makeKey(selectedSport, dateStr);
@@ -141,7 +142,24 @@ const Booking = () => {
         return () => {
             cancelled = true;
         };
-    }, [cacheKey, filteredCourts.map((c) => c.id).join(',')]);
+    }, [cacheKey, filteredCourts.map((c) => c.id).join(','), pollKey]);
+
+    // Poll every 30 s when the current view has pending slots so expired holds auto-clear
+    const hasPendingSlots = Object.values(courtSlotsData).some((slots) =>
+        slots.some((s) => s.status === 'pending'),
+    );
+    useEffect(() => {
+        if (!hasPendingSlots) return;
+        const id = setInterval(() => {
+            setSlotsCacheByKey((prev) => {
+                const next = { ...prev };
+                delete next[cacheKey];
+                return next;
+            });
+            setPollKey((k) => k + 1);
+        }, 30_000);
+        return () => clearInterval(id);
+    }, [hasPendingSlots, cacheKey]);
 
     // ── Derived time labels for current date ─────────────────────────────────
     const isToday = dateStr === format(new Date(), 'yyyy-MM-dd');

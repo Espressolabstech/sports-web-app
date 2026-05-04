@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getVenues } from '../../api/adapters/venues';
-import { ChevronDown, LogIn, MapPin, Search, User, X } from 'lucide-react';
+import { ChevronDown, LogIn, MapPin, Search, X } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { SportChips } from '../../components/SportChips';
 import { BottomNav } from '../../components/BottomNav';
@@ -87,14 +87,7 @@ const Home = () => {
                                 <ChevronDown className="h-3 w-3" />
                             </button>
                         </div>
-                        {user ? (
-                            <button
-                                onClick={() => navigate('/profile')}
-                                className="flex h-9 w-9 items-center justify-center rounded-full bg-primary-foreground/20 hover:bg-primary-foreground/30 transition-colors"
-                            >
-                                <User className="h-5 w-5" />
-                            </button>
-                        ) : (
+                        {!user && (
                             <button
                                 onClick={() => navigate('/login')}
                                 className="flex items-center gap-1.5 rounded-full bg-primary-foreground/20 px-3 py-1.5 text-sm font-medium hover:bg-primary-foreground/30 transition-colors"
