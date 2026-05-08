@@ -6,7 +6,7 @@ import { ChevronDown, LogIn, MapPin, Search, X } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { SportChips } from '../../components/SportChips';
 import { BottomNav } from '../../components/BottomNav';
-import { FacilityCard } from '../../components/FacilityCard';
+import { FacilityCard } from '../../components/facilityCard';
 import { getToken } from '../../utils/cookies.helpers';
 import { Sheet, SheetContent } from '../../components/ui/sheet';
 
