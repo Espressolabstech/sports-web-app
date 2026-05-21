@@ -303,6 +303,16 @@ declare global {
         pagination: ApiPagination;
     }
 
+    interface ApiPointsTransaction {
+        id: string;
+        walletId: string;
+        type: string;
+        points: number;
+        balanceAfter: number;
+        note: string | null;
+        createdAt: string;
+    }
+
     interface ApiPointsWallet {
         id: string;
         userId: string;
@@ -311,6 +321,7 @@ declare global {
         monthlyAllocated: number;
         monthlyUsed: number;
         lastAllocationAt: string | null;
+        transactions?: ApiPointsTransaction[];
     }
 
     interface BuyPointsOrderResponse {
