@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, CalendarDays, Clock, Loader2, Share2, X } from 'lucide-react';
 import { getVenueDetail } from '../../api/adapters/venues';
 import { getCourtDetail } from '../../api/adapters/courts';
-import { holdSlot } from '../../api/adapters/bookings';
+import { holdSlot, createBooking } from '../../api/adapters/bookings';
 import { DateStrip } from '../../components/DateStrip';
 import { Button } from '../../components/ui/button';
 import { cn, formatTime } from '../../utils/twMerge';
@@ -35,6 +35,22 @@ function getEffectivePrice(
             startTime < p.endTime,
     );
     return peak ? peak.pricePerSlot : basePrice;
+}
+
+function getEffectivePointsPrice(
+    startTime: string,
+    date: Date,
+    peakPricings: ApiPeakHourPricing[],
+    basePoints: number,
+): number {
+    const dayOfWeek = date.getDay();
+    const peak = peakPricings.find(
+        (p) =>
+            (p.dayOfWeek === null || p.dayOfWeek === dayOfWeek) &&
+            startTime >= p.startTime &&
+            startTime < p.endTime,
+    );
+    return peak?.pointsPerSlot ?? basePoints;
 }
 
 /**
@@ -82,6 +98,15 @@ const Booking = () => {
     const courtsBySport: Record<string, ApiCourt[]> =
         venueData?.data?.courtsBySport ?? {};
     const availableSports = Object.keys(courtsBySport);
+
+    const isPrivateClub = !!(facility?.isPrivateClub && facility?.pointsEnabled);
+    const clubAccent = isPrivateClub
+        ? (facility?.brandColor
+              ? (facility.brandColor.startsWith('#') || facility.brandColor.startsWith('rgb')
+                    ? facility.brandColor
+                    : `hsl(${facility.brandColor})`)
+              : 'hsl(35 55% 42%)')
+        : undefined;
 
     // Set initial sport once venue loads
     useEffect(() => {
@@ -199,6 +224,7 @@ const Booking = () => {
             courtData: ApiCourt | undefined;
             slotObjs: ApiSlot[];
             price: number;
+            pointsPrice: number;
         }[] = [];
 
         Object.entries(selectionByKey)
@@ -213,6 +239,7 @@ const Booking = () => {
                         selectedStartTimes.includes(s.startTime),
                     );
                     const cBase = cData?.courtPricings[0]?.pricePerSlot ?? 0;
+                    const cBasePoints = cData?.courtPricings[0]?.pointsPerSlot ?? 0;
                     const peaks = peakCacheByKey[key]?.[courtId] ?? [];
                     const dateObj = new Date(date);
                     const price = slotObjs.reduce(
@@ -220,7 +247,12 @@ const Booking = () => {
                             sum + getEffectivePrice(s.startTime, dateObj, peaks, cBase),
                         0,
                     );
-                    entries.push({ date, courtId, courtData: cData, slotObjs, price });
+                    const pointsPrice = slotObjs.reduce(
+                        (sum, s) =>
+                            sum + getEffectivePointsPrice(s.startTime, dateObj, peaks, cBasePoints),
+                        0,
+                    );
+                    entries.push({ date, courtId, courtData: cData, slotObjs, price, pointsPrice });
                 });
             });
 
@@ -231,6 +263,7 @@ const Booking = () => {
 
     const grandTotalSlots = allDateEntries.reduce((n, e) => n + e.slotObjs.length, 0);
     const grandTotalPrice = allDateEntries.reduce((n, e) => n + e.price, 0);
+    const grandTotalPoints = allDateEntries.reduce((n, e) => n + e.pointsPrice, 0);
 
     // Marked dates for DateStrip badges (deduplicated)
     const markedDates = useMemo(
@@ -398,6 +431,59 @@ const Booking = () => {
         }
         if (allDateEntries.length === 0 || anyBelowMinimum) return;
 
+        const venueAddress = [facility!.city, facility!.address]
+            .filter(Boolean)
+            .join(', ');
+
+        // ── Private club: skip hold, navigate directly with points state ──────
+        if (isPrivateClub) {
+            if (allDateEntries.length === 1) {
+                const entry = allDateEntries[0];
+                navigate('/confirm-booking', {
+                    state: {
+                        paymentMode: 'POINTS',
+                        courtId: entry.courtId,
+                        bookingDate: entry.date,
+                        slots: entry.slotObjs,
+                        pointsAmount: entry.pointsPrice,
+                        venueId: facilityId,
+                        venueName: facility!.name,
+                        venueAddress,
+                        sport: selectedSport,
+                        courtName: entry.courtData!.name,
+                        totalPrice: 0,
+                        latitude: facility!.latitude ?? null,
+                        longitude: facility!.longitude ?? null,
+                    },
+                });
+            } else {
+                // Multi-entry: book one by one via the confirm screen
+                // Pass all entries so confirm screen can iterate
+                navigate('/confirm-booking', {
+                    state: {
+                        paymentMode: 'POINTS',
+                        pointsEntries: allDateEntries.map((entry) => ({
+                            courtId: entry.courtId,
+                            bookingDate: entry.date,
+                            slots: entry.slotObjs,
+                            pointsAmount: entry.pointsPrice,
+                            courtName: entry.courtData!.name,
+                        })),
+                        totalPointsAmount: grandTotalPoints,
+                        venueId: facilityId,
+                        venueName: facility!.name,
+                        venueAddress,
+                        sport: selectedSport,
+                        totalPrice: 0,
+                        latitude: facility!.latitude ?? null,
+                        longitude: facility!.longitude ?? null,
+                    },
+                });
+            }
+            return;
+        }
+
+        // ── Standard rupee flow ───────────────────────────────────────────────
         setHoldLoading(true);
         try {
             const holdResults = await Promise.all(
@@ -422,9 +508,7 @@ const Booking = () => {
                         holdId: booking.id,
                         venueId: facilityId,
                         venueName: facility!.name,
-                        venueAddress: [facility!.city, facility!.address]
-                            .filter(Boolean)
-                            .join(', '),
+                        venueAddress,
                         sport: selectedSport,
                         bookingDate: entry.date,
                         courtName: entry.courtData!.name,
@@ -458,9 +542,7 @@ const Booking = () => {
                         holds,
                         venueId: facilityId,
                         venueName: facility!.name,
-                        venueAddress: [facility!.city, facility!.address]
-                            .filter(Boolean)
-                            .join(', '),
+                        venueAddress,
                         sport: selectedSport,
                         latitude: facility!.latitude ?? null,
                         longitude: facility!.longitude ?? null,
@@ -494,10 +576,13 @@ const Booking = () => {
     return (
         <div className="min-h-screen bg-background pb-28">
             {/* Header */}
-            <header className="flex items-center gap-3 bg-primary px-4 pb-4 pt-10 text-primary-foreground">
+            <header
+                className="flex items-center gap-3 px-4 pb-4 pt-10 text-white"
+                style={{ background: clubAccent ?? 'hsl(var(--primary))' }}
+            >
                 <button
                     onClick={() => navigate(-1)}
-                    className="rounded-full p-1 hover:bg-primary-foreground/10"
+                    className="rounded-full p-1 hover:bg-white/10"
                 >
                     <ArrowLeft className="h-5 w-5" />
                 </button>
@@ -508,7 +593,7 @@ const Booking = () => {
                 <button
                     onClick={handleShare}
                     disabled={isSharing}
-                    className="rounded-full p-2 hover:bg-primary-foreground/10 disabled:opacity-50 shrink-0"
+                    className="rounded-full p-2 hover:bg-white/10 disabled:opacity-50 shrink-0"
                     aria-label="Share availability"
                 >
                     {isSharing ? (
@@ -523,23 +608,33 @@ const Booking = () => {
                 {/* Sport chips */}
                 {availableSports.length > 1 && (
                     <div className="flex gap-2 flex-wrap">
-                        {availableSports.map((sport) => (
-                            <button
-                                key={sport}
-                                onClick={() => {
-                                    if (sport === selectedSport) return;
-                                    setSelectedSport(sport);
-                                }}
-                                className={cn(
-                                    'rounded-full px-4 py-1.5 text-sm font-semibold transition-all',
-                                    sport === selectedSport
-                                        ? 'bg-primary text-primary-foreground shadow-sm'
-                                        : 'bg-card border text-muted-foreground hover:bg-accent',
-                                )}
-                            >
-                                {sport}
-                            </button>
-                        ))}
+                        {availableSports.map((sport) => {
+                            const active = sport === selectedSport;
+                            return (
+                                <button
+                                    key={sport}
+                                    onClick={() => {
+                                        if (active) return;
+                                        setSelectedSport(sport);
+                                    }}
+                                    className={cn(
+                                        'rounded-full px-4 py-1.5 text-sm font-semibold transition-all',
+                                        active && !clubAccent
+                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                            : !active
+                                              ? 'bg-card border text-muted-foreground hover:bg-accent'
+                                              : '',
+                                    )}
+                                    style={
+                                        active && clubAccent
+                                            ? { background: clubAccent, color: '#fff' }
+                                            : undefined
+                                    }
+                                >
+                                    {sport.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+                                </button>
+                            );
+                        })}
                     </div>
                 )}
 
@@ -547,6 +642,7 @@ const Booking = () => {
                     selected={selectedDate}
                     onSelect={setSelectedDate}
                     markedDates={markedDates}
+                    accentColor={clubAccent}
                 />
 
                 {/* Slot grid */}
@@ -572,11 +668,18 @@ const Booking = () => {
                                     <p className="text-xs font-bold text-foreground">
                                         {c.name}
                                     </p>
-                                    <p className="text-[10px] text-muted-foreground">
-                                        from ₹
-                                        {c.courtPricings[0]?.pricePerSlot ?? 0}
-                                        /slot
-                                    </p>
+                                    {isPrivateClub ? (
+                                        <p className="text-[10px] text-muted-foreground">
+                                            from {c.courtPricings[0]?.pointsPerSlot ?? 0}{' '}
+                                            pts/slot
+                                        </p>
+                                    ) : (
+                                        <p className="text-[10px] text-muted-foreground">
+                                            from ₹
+                                            {c.courtPricings[0]?.pricePerSlot ?? 0}
+                                            /slot
+                                        </p>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -613,8 +716,9 @@ const Booking = () => {
                                                 selectionByKey[cacheKey]?.[c.id] ?? []
                                             ).includes(slot.startTime);
                                         const courtBase =
-                                            c.courtPricings[0]?.pricePerSlot ??
-                                            0;
+                                            c.courtPricings[0]?.pricePerSlot ?? 0;
+                                        const courtBasePoints =
+                                            c.courtPricings[0]?.pointsPerSlot ?? 0;
                                         const isPeak =
                                             isAvailable &&
                                             getEffectivePrice(
@@ -623,6 +727,13 @@ const Booking = () => {
                                                 courtPeakData[c.id] ?? [],
                                                 courtBase,
                                             ) !== courtBase;
+
+                                        const slotPointsPrice = getEffectivePointsPrice(
+                                            slot.startTime,
+                                            selectedDate,
+                                            courtPeakData[c.id] ?? [],
+                                            courtBasePoints,
+                                        );
 
                                         return (
                                             <button
@@ -636,8 +747,10 @@ const Booking = () => {
                                                 }
                                                 className={cn(
                                                     'flex-1 min-w-[90px] h-14 rounded-lg flex flex-col items-center justify-center text-xs font-semibold transition-all border',
-                                                    isSelected &&
+                                                    isSelected && !clubAccent &&
                                                         'bg-primary text-primary-foreground border-primary shadow-sm',
+                                                    isSelected && !!clubAccent &&
+                                                        'text-white shadow-sm',
                                                     isAvailable &&
                                                         !isSelected &&
                                                         'bg-green-500/10 text-green-700 border-green-500/30 hover:bg-green-500/20 dark:text-green-400',
@@ -650,6 +763,11 @@ const Booking = () => {
                                                         !isDowntime &&
                                                         'bg-muted text-muted-foreground border-border cursor-not-allowed opacity-50',
                                                 )}
+                                                style={
+                                                    isSelected && clubAccent
+                                                        ? { background: clubAccent, borderColor: clubAccent }
+                                                        : undefined
+                                                }
                                             >
                                                 {isHeld ? (
                                                     <>
@@ -690,15 +808,14 @@ const Booking = () => {
                                                                         : 'text-green-600 dark:text-green-400',
                                                                 )}
                                                             >
-                                                                ₹
-                                                                {getEffectivePrice(
-                                                                    slot.startTime,
-                                                                    selectedDate,
-                                                                    courtPeakData[
-                                                                        c.id
-                                                                    ] ?? [],
-                                                                    courtBase,
-                                                                )}
+                                                                {isPrivateClub
+                                                                    ? `${slotPointsPrice} pts`
+                                                                    : `₹${getEffectivePrice(
+                                                                          slot.startTime,
+                                                                          selectedDate,
+                                                                          courtPeakData[c.id] ?? [],
+                                                                          courtBase,
+                                                                      )}`}
                                                             </span>
                                                         )}
                                                     </>
@@ -756,8 +873,10 @@ const Booking = () => {
                                 <>
                                     <p className="font-semibold text-sm">
                                         {grandTotalSlots} slots &middot;{' '}
-                                        {allDateEntries.length} bookings &middot; ₹
-                                        {grandTotalPrice}
+                                        {allDateEntries.length} bookings &middot;{' '}
+                                        {isPrivateClub
+                                            ? `${grandTotalPoints} pts`
+                                            : `₹${grandTotalPrice}`}
                                     </p>
                                     {anyBelowMinimum && (
                                         <p className="text-xs text-destructive">
@@ -770,8 +889,11 @@ const Booking = () => {
                                 <>
                                     <p className="font-semibold text-sm">
                                         {grandTotalSlots} slot
-                                        {grandTotalSlots > 1 ? 's' : ''} · ₹
-                                        {grandTotalPrice}
+                                        {grandTotalSlots > 1 ? 's' : ''}{' '}
+                                        &middot;{' '}
+                                        {isPrivateClub
+                                            ? `${grandTotalPoints} pts`
+                                            : `₹${grandTotalPrice}`}
                                     </p>
                                     {belowMinimumCurrent ? (
                                         <p className="text-xs text-destructive">
@@ -808,7 +930,8 @@ const Booking = () => {
                         <Button
                             onClick={handleReviewBooking}
                             disabled={holdLoading || anyBelowMinimum}
-                            className="shrink-0"
+                            className="shrink-0 text-white"
+                            style={clubAccent ? { background: clubAccent } : undefined}
                         >
                             {holdLoading ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />

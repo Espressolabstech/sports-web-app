@@ -9,6 +9,7 @@ import {
     verifyCreditPayment,
 } from '../../api/adapters/creditPackages';
 import { getWallet } from '../../api/adapters/wallet';
+import { getPointsWallet } from '../../api/adapters/pointsWallet';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -334,6 +335,14 @@ const Venues = () => {
     const walletBalance = Number(walletData?.data?.wallet?.balance ?? 0);
 
     const facility = venueData?.data?.venue;
+    const isPrivateClub = !!(facility?.isPrivateClub && facility?.pointsEnabled);
+
+    const { data: pointsWalletData } = useQuery({
+        queryKey: ['points-wallet', venueId],
+        queryFn: () => getPointsWallet(venueId!),
+        enabled: !!venueId && !!user && isPrivateClub,
+    });
+    const pointsBalance = pointsWalletData?.data?.wallet?.balance ?? null;
     const membership = venueData?.data?.membership;
     const courtsBySport = venueData?.data?.courtsBySport ?? {};
     const allCourts = Object.values(courtsBySport).flat();
@@ -374,7 +383,15 @@ const Venues = () => {
                           ),
                       )
                     : 0;
-            return { sport, courtCount: sportCourts.length, minPrice };
+            const minPoints =
+                sportCourts.length > 0
+                    ? Math.min(
+                          ...sportCourts.map(
+                              (c) => c.courtPricings[0]?.pointsPerSlot ?? 0,
+                          ),
+                      )
+                    : 0;
+            return { sport, courtCount: sportCourts.length, minPrice, minPoints };
         },
     );
 
@@ -544,7 +561,7 @@ const Venues = () => {
                         Book a Court
                     </h2>
                     <div className="space-y-2">
-                        {sportGroups.map(({ sport, courtCount, minPrice }) => (
+                        {sportGroups.map(({ sport, courtCount, minPrice, minPoints }) => (
                             <button
                                 key={sport}
                                 className="w-full flex items-center gap-3 rounded-xl border bg-card p-3 hover:shadow-md transition-all text-left group"
@@ -565,8 +582,10 @@ const Venues = () => {
                                     </p>
                                     <p className="text-xs text-muted-foreground mt-0.5">
                                         {courtCount} court
-                                        {courtCount !== 1 ? 's' : ''} · From ₹
-                                        {minPrice}/hr
+                                        {courtCount !== 1 ? 's' : ''} ·{' '}
+                                        {isPrivateClub
+                                            ? `From ${minPoints} pts/slot`
+                                            : `From ₹${minPrice}/hr`}
                                     </p>
                                 </div>
                                 <Button
@@ -587,8 +606,57 @@ const Venues = () => {
 
                 <Separator className="mb-5" />
 
-                {/* ── Section 3: Features & Perks ── */}
+                {/* ── Section 3: Features & Perks (public) / Membership (private club) ── */}
                 <section className="mb-6">
+                    {isPrivateClub ? (
+                        /* ── Private club: show points membership card ── */
+                        <div className="rounded-2xl border-2 border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-950/30 overflow-hidden">
+                            <div className="px-5 py-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-100 dark:bg-violet-900/40">
+                                        <Shield className="h-5 w-5 text-violet-600 dark:text-violet-400" />
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-foreground text-base leading-tight">
+                                            Club Membership
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            Points-based access
+                                        </p>
+                                    </div>
+                                </div>
+                                {user && pointsBalance !== null ? (
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="rounded-xl bg-white/70 dark:bg-white/5 px-4 py-3 text-center">
+                                            <p className="text-2xl font-extrabold text-violet-700 dark:text-violet-300">
+                                                {pointsBalance.toLocaleString()}
+                                            </p>
+                                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                                                pts available
+                                            </p>
+                                        </div>
+                                        <div className="rounded-xl bg-white/70 dark:bg-white/5 px-4 py-3 text-center">
+                                            <p className="text-2xl font-extrabold text-foreground">
+                                                {facility?.monthlyPointsAllowance?.toLocaleString() ?? '—'}
+                                            </p>
+                                            <p className="text-[11px] text-muted-foreground mt-0.5">
+                                                pts/month
+                                            </p>
+                                        </div>
+                                    </div>
+                                ) : !user ? (
+                                    <p className="text-sm text-muted-foreground">
+                                        Sign in to view your points balance.
+                                    </p>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">
+                                        No points wallet found. Contact the club admin.
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    ) : (
+                    <>
                     <div className="mb-3">
                         <h2 className="text-lg font-bold text-foreground">
                             Features & Perks
@@ -732,6 +800,8 @@ const Venues = () => {
                             </div>
                             <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
                         </button>
+                    )}
+                    </>
                     )}
                 </section>
 

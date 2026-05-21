@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getVenues } from '../../api/adapters/venues';
-import { ChevronDown, LogIn, MapPin, Search, X } from 'lucide-react';
+import { getMyClubs } from '../../api/adapters/pointsWallet';
+import { ChevronDown, LogIn, MapPin, Search, Shield, Sparkles, X } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { SportChips } from '../../components/SportChips';
 import { BottomNav } from '../../components/BottomNav';
@@ -44,6 +45,13 @@ const Home = () => {
     const navigate = useNavigate();
 
     const user = !!getToken();
+
+    const { data: clubsData } = useQuery({
+        queryKey: ['my-clubs'],
+        queryFn: getMyClubs,
+        enabled: user,
+    });
+    const myClubs: ApiMyClub[] = clubsData?.data?.clubs ?? [];
 
     const handleCitySelect = (c: string) => {
         setCity(c);
@@ -112,6 +120,59 @@ const Home = () => {
             {/* Content */}
             <main className="mx-auto max-w-lg px-4 pt-4">
                 <SportChips selected={sport} onSelect={setSport} />
+
+                {/* ── My Club ── */}
+                {myClubs.length > 0 && (
+                    <div className="mt-4">
+                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+                            My Club
+                        </p>
+                        <div className="space-y-2">
+                            {myClubs.map(({ venue, wallet }) => (
+                                <button
+                                    key={venue.id}
+                                    onClick={() => navigate(`/venue/${venue.id}`)}
+                                    className="w-full flex items-center gap-3 rounded-xl border-2 border-violet-200 bg-violet-50 dark:border-violet-800 dark:bg-violet-950/30 p-3.5 hover:shadow-md transition-all text-left group"
+                                >
+                                    {venue.venueImages[0] ? (
+                                        <img
+                                            src={venue.venueImages[0].url}
+                                            alt={venue.name}
+                                            className="h-12 w-12 rounded-lg object-cover shrink-0"
+                                        />
+                                    ) : (
+                                        <div className="h-12 w-12 rounded-lg bg-violet-100 dark:bg-violet-900/40 flex items-center justify-center shrink-0">
+                                            <Shield className="h-6 w-6 text-violet-600 dark:text-violet-400" />
+                                        </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-bold text-foreground text-sm leading-tight">
+                                            {venue.name}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground mt-0.5">
+                                            <MapPin className="h-3 w-3 inline mr-0.5" />
+                                            {venue.city}
+                                        </p>
+                                    </div>
+                                    <div className="text-right shrink-0">
+                                        {wallet ? (
+                                            <>
+                                                <p className="text-sm font-bold text-violet-700 dark:text-violet-300">
+                                                    {wallet.balance.toLocaleString()}
+                                                </p>
+                                                <p className="text-[10px] text-muted-foreground">
+                                                    pts available
+                                                </p>
+                                            </>
+                                        ) : (
+                                            <Sparkles className="h-4 w-4 text-violet-500" />
+                                        )}
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
 
                 <div className="mt-4 space-y-3">
                     {isLoading ? (

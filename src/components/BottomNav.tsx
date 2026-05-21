@@ -1,5 +1,5 @@
 import { Home, CalendarDays, User, LogIn } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '../utils/twMerge';
 import { path } from '../navigation/commanPaths';
 import { getToken } from '../utils/cookies.helpers';
@@ -9,6 +9,9 @@ import { PhoneLoginModal } from './PhoneLoginModal';
 export function BottomNav() {
     const user = !!getToken();
     const navigate = useNavigate();
+    const location = useLocation();
+
+    if (location.pathname.startsWith('/club/')) return null;
     const [loginOpen, setLoginOpen] = useState(false);
 
     return (

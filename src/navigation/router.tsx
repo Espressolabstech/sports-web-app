@@ -11,6 +11,10 @@ import Booking from '../screens/home/Booking';
 import ConfirmBooking from '../screens/home/ConfirmBooking';
 import MultiConfirmBooking from '../screens/home/MultiConfirmBooking';
 import BookingSuccess from '../screens/home/BookingSuccess';
+import ClubLayout from '../screens/Club/ClubLayout';
+import ClubLanding from '../screens/Club/ClubLanding';
+import ClubCredits from '../screens/Club/ClubCredits';
+import ClubLogin from '../screens/Club/ClubLogin';
 
 export const router = createBrowserRouter([
     {
@@ -52,5 +56,19 @@ export const router = createBrowserRouter([
     {
         path: path.bookingSuccess,
         element: <ProtectedComponentWrapper children={<BookingSuccess />} />,
+    },
+    {
+        path: path.clubLogin,
+        element: <ClubLogin />,
+    },
+    {
+        path: path.clubHome,
+        element: <ClubLayout />,
+        children: [
+            { index: true, element: <ClubLanding /> },
+            { path: 'credits', element: <ClubCredits /> },
+            { path: 'bookings', element: <ProtectedComponentWrapper children={<MyBookings />} /> },
+            { path: 'profile', element: <ProtectedComponentWrapper children={<MyProfile />} /> },
+        ],
     },
 ]);

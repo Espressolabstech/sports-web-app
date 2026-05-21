@@ -107,10 +107,16 @@ declare global {
     }
 
     interface ApiVenueDetail extends ApiVenue {
+        slug: string | null;
         state: string;
         phone: string;
         email: string;
         description: string;
+        isPrivateClub: boolean;
+        pointsEnabled: boolean;
+        monthlyPointsAllowance: number | null;
+        pointPrice: number | null;
+        brandColor: string | null;
         venueHours: ApiVenueHour[];
         bookingPolicy: ApiBookingPolicy;
     }
@@ -128,6 +134,8 @@ declare global {
 
     interface ApiCourtPricing {
         pricePerSlot: number;
+        pointsPerSlot?: number | null;
+        weekendPointsPerSlot?: number | null;
     }
 
     interface ApiPeakHourPricing {
@@ -137,6 +145,7 @@ declare global {
         startTime: string;
         endTime: string;
         pricePerSlot: number;
+        pointsPerSlot?: number | null;
         label: string | null;
         isActive: boolean;
     }
@@ -239,7 +248,8 @@ declare global {
         bookingDate: string;
         slots: { startTime: string; endTime: string }[];
         notes?: string;
-        paymentMethod: 'UPI' | 'CARD' | 'NET_BANKING';
+        paymentMethod?: 'UPI' | 'CARD' | 'NET_BANKING';
+        paymentMode?: 'POINTS';
     }
 
     interface VerifyBookingPaymentBody {
@@ -291,6 +301,54 @@ declare global {
     interface ApiBookingListData {
         bookings: ApiBooking[];
         pagination: ApiPagination;
+    }
+
+    interface ApiPointsWallet {
+        id: string;
+        userId: string;
+        venueId: string;
+        balance: number;
+        monthlyAllocated: number;
+        monthlyUsed: number;
+        lastAllocationAt: string | null;
+    }
+
+    interface BuyPointsOrderResponse {
+        order: {
+            orderId: string;
+            amount: number;
+            currency: string;
+            keyId: string;
+        };
+        points: number;
+        pricePerPoint: number;
+        totalAmount: number;
+    }
+
+    interface BuyPointsVerifyBody {
+        venueId: string;
+        points: number;
+        razorpayOrderId: string;
+        razorpayPaymentId: string;
+        razorpaySignature: string;
+    }
+
+    interface ApiMyClub {
+        venue: {
+            id: string;
+            slug: string | null;
+            name: string;
+            city: string;
+            address: string;
+            description: string | null;
+            monthlyPointsAllowance: number | null;
+            venueImages: ApiVenueImage[];
+        };
+        wallet: {
+            balance: number;
+            monthlyAllocated: number;
+            monthlyUsed: number;
+        } | null;
     }
 
     // ── Wallet ───────────────────────────────────────────────────────────────

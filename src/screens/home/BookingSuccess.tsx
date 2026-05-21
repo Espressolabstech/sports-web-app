@@ -27,6 +27,8 @@ interface BookingSuccessState {
     startTime: string; // 'HH:mm'
     endTime: string; // 'HH:mm'
     totalPrice: number;
+    paymentMode?: 'POINTS';
+    pointsAmount?: number;
     latitude?: number | null;
     longitude?: number | null;
 }
@@ -52,9 +54,13 @@ const BookingSuccess = () => {
         startTime,
         endTime,
         totalPrice,
+        paymentMode,
+        pointsAmount,
         latitude,
         longitude,
     } = state;
+
+    const isPointsBooking = paymentMode === 'POINTS';
 
     const formattedDate = format(new Date(bookingDate), 'EEEE, d MMMM yyyy');
     const timeRange = `${formatTime(startTime)} – ${formatTime(endTime)}`;
@@ -185,10 +191,12 @@ const BookingSuccess = () => {
                         {/* Amount */}
                         <div className="flex items-center justify-between px-4 py-3.5">
                             <p className="text-sm font-medium text-muted-foreground">
-                                Total Paid
+                                {isPointsBooking ? 'Points Deducted' : 'Total Paid'}
                             </p>
                             <p className="text-base font-bold text-foreground">
-                                ₹{totalPrice.toLocaleString('en-IN')}
+                                {isPointsBooking
+                                    ? `${(pointsAmount ?? 0).toLocaleString()} pts`
+                                    : `₹${totalPrice.toLocaleString('en-IN')}`}
                             </p>
                         </div>
                     </div>

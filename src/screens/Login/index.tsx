@@ -10,6 +10,7 @@ import {
     verifyOtp,
     updateUserName,
 } from '../../api/adapters/auth';
+import { getMyClubs } from '../../api/adapters/pointsWallet';
 import { setToken } from '../../utils/cookies.helpers';
 import { toast } from 'sonner';
 import { path } from '../../navigation/commanPaths';
@@ -66,6 +67,17 @@ const Login = () => {
                 setStep('name');
             } else {
                 toast.success('Login successful!');
+                try {
+                    const clubsRes = await getMyClubs();
+                    const firstClub = clubsRes?.data?.clubs?.[0];
+                    if (firstClub) {
+                        const clubPath = firstClub.venue.slug ?? firstClub.venue.id;
+                        navigate(`/club/${clubPath}`);
+                        return;
+                    }
+                } catch {
+                    // not a club member — fall through to home
+                }
                 navigate(path.home);
             }
         },

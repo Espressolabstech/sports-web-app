@@ -9,4 +9,8 @@ export const path = {
     confirmBooking: '/confirm-booking',
     multiConfirmBooking: '/multi-confirm-booking',
     bookingSuccess: '/booking-success',
+    // Private Club
+    clubLogin: '/club/:venueId/login',
+    clubHome: '/club/:venueId',
+    clubCredits: '/club/:venueId/credits',
 };

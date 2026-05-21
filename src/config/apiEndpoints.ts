@@ -30,6 +30,10 @@ export const endpoints = {
     wallet: '/wallet',
     walletTransactions: '/wallet/transactions',
     venueWallet: (venueId: string) => `/wallet?venueId=${venueId}`,
+    pointsWallet: (venueId: string) => `/wallet/points?venueId=${venueId}`,
+    buyPoints: '/wallet/points/buy',
+    verifyBuyPoints: '/wallet/points/buy/verify',
+    myClubs: '/private-club/my-clubs',
 
     // Credit Packages
     creditPackages: '/credit-packages',
