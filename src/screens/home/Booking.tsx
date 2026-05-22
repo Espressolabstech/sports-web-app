@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 import { ArrowLeft, CalendarDays, Clock, Loader2, Share2, X } from 'lucide-react';
 import { getVenueDetail } from '../../api/adapters/venues';
 import { getCourtDetail } from '../../api/adapters/courts';
-import { holdSlot, createBooking } from '../../api/adapters/bookings';
+import { holdSlot } from '../../api/adapters/bookings';
 import { DateStrip } from '../../components/DateStrip';
 import { Button } from '../../components/ui/button';
 import { cn, formatTime } from '../../utils/twMerge';
