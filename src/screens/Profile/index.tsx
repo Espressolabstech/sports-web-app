@@ -40,7 +40,6 @@ const MyProfile = () => {
 
     const profile = data?.data;
     const user = profile?.user;
-    const wallets = profile?.wallets ?? [];
     const purchases = profile?.purchases ?? [];
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const venueMemberships: Array<{
