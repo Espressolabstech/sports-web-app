@@ -295,7 +295,7 @@ declare global {
             paymentStatus: string;
             paymentMethod: string;
             amount: number;
-        };
+        } | null;
     }
 
     interface ApiBookingListData {

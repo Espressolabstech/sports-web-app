@@ -6,6 +6,7 @@ declare global {
 
     interface FacilityCardProps {
         facility: ApiVenue;
+        selectedSport?: string;
     }
 }
 

@@ -241,7 +241,7 @@ const BookingSuccess = () => {
                 <Button
                     variant="ghost"
                     className="w-full gap-2 text-muted-foreground"
-                    onClick={() => navigate('/', { replace: true })}
+                    onClick={() => navigate(`/venue/${state.venueId}`, { replace: true })}
                 >
                     <Home className="h-4 w-4" />
                     Back to Home

@@ -63,7 +63,7 @@ export default function ClubCredits() {
                     }
                 },
                 modal: { ondismiss: () => {} },
-                theme: { color: brandColor },
+                theme: { color: brandColor.startsWith('#') ? brandColor : '#1a1a1a' },
             });
             rzp.open();
         },
