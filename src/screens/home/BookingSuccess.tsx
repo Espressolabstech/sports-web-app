@@ -63,11 +63,7 @@ const BookingSuccess = () => {
     } = state;
 
     const isPointsBooking = paymentMode === 'POINTS';
-    const accentColor = state.brandColor
-        ? (state.brandColor.startsWith('#') || state.brandColor.startsWith('rgb')
-              ? state.brandColor
-              : `hsl(${state.brandColor})`)
-        : undefined;
+    const accentColor = state.brandColor ?? undefined;
 
     const formattedDate = format(new Date(bookingDate), 'EEEE, d MMMM yyyy');
     const timeRange = `${formatTime(startTime)} – ${formatTime(endTime)}`;
