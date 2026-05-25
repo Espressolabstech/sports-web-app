@@ -237,7 +237,13 @@ const BookingSuccess = () => {
                     variant="outline"
                     className="w-full gap-2"
                     size="lg"
-                    onClick={() => navigate('/my-bookings', { replace: true })}
+                    onClick={() => {
+                        if (isPointsBooking && state.venueSlug) {
+                            navigate(`/club/${state.venueSlug}/bookings`, { replace: true });
+                        } else {
+                            navigate('/my-bookings', { replace: true });
+                        }
+                    }}
                 >
                     <ListOrdered className="h-4 w-4" />
                     View My Bookings

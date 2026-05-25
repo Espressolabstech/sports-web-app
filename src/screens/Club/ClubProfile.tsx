@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
     Bell,
     ChevronRight,
@@ -85,6 +85,7 @@ function TransactionRow({ tx }: { tx: ApiPointsTransaction }) {
 
 export default function ClubProfile() {
     const navigate = useNavigate();
+    const { venueId } = useParams();
     const { member, wallet, brandColor, isLoading } = useClub();
     const [pushNotifications, setPushNotifications] = useState(true);
 
@@ -94,7 +95,7 @@ export default function ClubProfile() {
 
     const handleLogout = () => {
         clearCookies();
-        navigate('/');
+        navigate(`/club/${venueId}/login`);
     };
 
     return (

@@ -63,6 +63,11 @@ export const router = createBrowserRouter([
         element: <ClubLogin />,
     },
     {
+        // Club booking: same Booking.tsx UI, URL stays inside /club/...
+        path: '/club/:facilityId/book',
+        element: <ProtectedComponentWrapper children={<Booking />} />,
+    },
+    {
         path: path.clubHome,
         element: <ClubLayout />,
         children: [
