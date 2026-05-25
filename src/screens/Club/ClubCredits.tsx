@@ -7,6 +7,7 @@ import { useClub } from './ClubContext';
 import { buyPoints, verifyBuyPoints } from '../../api/adapters/pointsWallet';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { getToken } from '../../utils/cookies.helpers';
 
 export default function ClubCredits() {
     const navigate = useNavigate();
@@ -29,7 +30,13 @@ export default function ClubCredits() {
     const pct = total > 0 ? Math.min(100, Math.round((monthlyRemaining / total) * 100)) : 0;
 
     const { mutate: initBuy, isPending: initiating } = useMutation({
-        mutationFn: () => buyPoints({ venueId: realVenueId, points: quantity }),
+        mutationFn: () => {
+            if (!getToken()) {
+                navigate(`/club/${venueId}/login`);
+                return Promise.reject(new Error('Not authenticated'));
+            }
+            return buyPoints({ venueId: realVenueId, points: quantity });
+        },
         onSuccess: (data) => {
             const { order, points: pts } = data.data;
             const rzp = new window.Razorpay({
@@ -56,7 +63,7 @@ export default function ClubCredits() {
                     }
                 },
                 modal: { ondismiss: () => {} },
-                theme: { color: brandColor },
+                theme: { color: brandColor.startsWith('#') ? brandColor : '#1a1a1a' },
             });
             rzp.open();
         },

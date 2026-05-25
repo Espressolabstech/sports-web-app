@@ -3,13 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 
-export function FacilityCard({ facility }: FacilityCardProps) {
+export function FacilityCard({ facility, selectedSport }: FacilityCardProps) {
     const navigate = useNavigate();
+
+    const goToBooking = (sport?: string) => {
+        const target = sport ?? selectedSport;
+        if (target) {
+            navigate(`/booking/${facility.id}`, { state: { initialSport: target } });
+        } else {
+            navigate(`/venue/${facility.id}`);
+        }
+    };
 
     return (
         <Card
             className="overflow-hidden cursor-pointer transition-shadow hover:shadow-md"
-            onClick={() => navigate(`/venue/${facility.id}`)}
+            onClick={() => goToBooking()}
         >
             <div className="aspect-[16/10] w-full overflow-hidden bg-muted">
                 {facility.venueImages.find((img) => img.type === 'COVER') ? (
@@ -38,9 +47,13 @@ export function FacilityCard({ facility }: FacilityCardProps) {
                         <Badge
                             key={sport}
                             variant="secondary"
-                            className="text-xs"
+                            className={`text-xs cursor-pointer transition-colors hover:bg-primary hover:text-primary-foreground ${selectedSport === sport ? 'bg-primary text-primary-foreground' : ''}`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                goToBooking(sport);
+                            }}
                         >
-                            {sport}
+                            {sport.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
                         </Badge>
                     ))}
                 </div>

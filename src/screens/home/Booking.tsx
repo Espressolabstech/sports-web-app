@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -63,6 +63,8 @@ const makeKey = (sport: string, dateStr: string) => `${sport}__${dateStr}`;
 const Booking = () => {
     const { facilityId, courtId: initialCourtId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
+    const locationSport = (location.state as { initialSport?: string } | null)?.initialSport;
 
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [selectedSport, setSelectedSport] = useState('');
@@ -111,13 +113,19 @@ const Booking = () => {
     // Set initial sport once venue loads
     useEffect(() => {
         if (!availableSports.length) return;
-        const initialSport = initialCourtId
-            ? (Object.entries(courtsBySport).find(([, cs]) =>
-                  cs.some((c) => c.id === initialCourtId),
-              )?.[0] ?? availableSports[0])
-            : availableSports[0];
+        let initialSport: string;
+        if (initialCourtId) {
+            initialSport =
+                Object.entries(courtsBySport).find(([, cs]) =>
+                    cs.some((c) => c.id === initialCourtId),
+                )?.[0] ?? availableSports[0];
+        } else if (locationSport && availableSports.includes(locationSport)) {
+            initialSport = locationSport;
+        } else {
+            initialSport = availableSports[0];
+        }
         setSelectedSport(initialSport);
-    }, [venueData]);
+    }, [venueData]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const filteredCourts: ApiCourt[] = courtsBySport[selectedSport] ?? [];
 

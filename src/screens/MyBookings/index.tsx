@@ -342,14 +342,16 @@ const MyBookings = () => {
                                     <span>Total Paid</span>
                                     <span>₹{selectedBooking.finalAmount}</span>
                                 </div>
-                                <div className="flex justify-between text-xs text-muted-foreground">
-                                    <span>Payment</span>
-                                    <span>
-                                        {selectedBooking.payment.paymentMethod}{' '}
-                                        ·{' '}
-                                        {selectedBooking.payment.paymentStatus}
-                                    </span>
-                                </div>
+                                {selectedBooking.payment && (
+                                    <div className="flex justify-between text-xs text-muted-foreground">
+                                        <span>Payment</span>
+                                        <span>
+                                            {selectedBooking.payment.paymentMethod}{' '}
+                                            ·{' '}
+                                            {selectedBooking.payment.paymentStatus}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </CardContent>
                     </Card>

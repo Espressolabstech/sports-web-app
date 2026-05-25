@@ -194,7 +194,11 @@ const Home = () => {
                         </p>
                     ) : (
                         venues.map((venue) => (
-                            <FacilityCard key={venue.id} facility={venue} />
+                            <FacilityCard
+                                key={venue.id}
+                                facility={venue}
+                                selectedSport={sport !== 'All' ? sport : undefined}
+                            />
                         ))
                     )}
                 </div>

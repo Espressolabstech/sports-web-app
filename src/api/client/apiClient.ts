@@ -37,7 +37,10 @@ const apiClient = async <T = unknown>(
         }
 
         if (axios.isAxiosError(error) && error.response?.status === 403) {
-            // window.location.href = '/login';
+            const clubMatch = window.location.pathname.match(/^\/club\/([^/]+)/);
+            if (clubMatch) {
+                window.location.href = `/club/${clubMatch[1]}/login`;
+            }
         }
 
         if (error instanceof Error && error.message === 'Network Error') {
