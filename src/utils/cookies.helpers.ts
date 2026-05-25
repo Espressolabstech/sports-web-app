@@ -31,3 +31,14 @@ export const clearCookies = () => {
         cookies.remove(cookie);
     }
 };
+
+const CLUB_SLUG_KEY = '__activeClubSlug';
+
+export const setActiveClubSlug = (slug: string) =>
+    localStorage.setItem(CLUB_SLUG_KEY, slug);
+
+export const getActiveClubSlug = () =>
+    localStorage.getItem(CLUB_SLUG_KEY);
+
+export const clearActiveClubSlug = () =>
+    localStorage.removeItem(CLUB_SLUG_KEY);

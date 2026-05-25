@@ -15,7 +15,7 @@ import { Switch } from '../../components/ui/switch';
 import { Skeleton } from '../../components/ui/skeleton';
 import { Button } from '../../components/ui/button';
 import { useClub } from './ClubContext';
-import { clearCookies } from '../../utils/cookies.helpers';
+import { clearCookies, clearActiveClubSlug } from '../../utils/cookies.helpers';
 import { useState } from 'react';
 import { format } from 'date-fns';
 
@@ -95,6 +95,7 @@ export default function ClubProfile() {
 
     const handleLogout = () => {
         clearCookies();
+        clearActiveClubSlug();
         navigate(`/club/${venueId}/login`);
     };
 
