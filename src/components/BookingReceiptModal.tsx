@@ -18,6 +18,8 @@ export interface ReceiptData {
     totalAmount: number;
     discountAmount?: number;
     finalAmount: number;
+    paymentMode?: 'RUPEE' | 'POINTS';
+    pointsAmount?: number | null;
     paymentMethod?: string;
     paymentStatus?: string;
     bookedAt?: string; // ISO date of booking creation
@@ -228,24 +230,35 @@ export const BookingReceiptModal = ({ open, onClose, data }: Props) => {
                             <hr className="my-3 border-dashed border-border" />
 
                             {/* Pricing */}
-                            {(data.discountAmount ?? 0) > 0 && (
+                            {data.paymentMode === 'POINTS' ? (
+                                <div className="total-row flex items-center justify-between">
+                                    <span className="font-bold text-foreground">Points Used</span>
+                                    <span className="text-xl font-black text-primary">
+                                        {(data.pointsAmount ?? 0).toLocaleString()} pts
+                                    </span>
+                                </div>
+                            ) : (
                                 <>
-                                    <div className="mb-2 flex justify-between text-sm">
-                                        <span className="text-muted-foreground">Subtotal</span>
-                                        <span>₹{data.totalAmount.toLocaleString('en-IN')}</span>
-                                    </div>
-                                    <div className="mb-2 flex justify-between text-sm text-green-600 dark:text-green-400">
-                                        <span>Discount</span>
-                                        <span>−₹{(data.discountAmount ?? 0).toLocaleString('en-IN')}</span>
+                                    {(data.discountAmount ?? 0) > 0 && (
+                                        <>
+                                            <div className="mb-2 flex justify-between text-sm">
+                                                <span className="text-muted-foreground">Subtotal</span>
+                                                <span>₹{data.totalAmount.toLocaleString('en-IN')}</span>
+                                            </div>
+                                            <div className="mb-2 flex justify-between text-sm text-green-600 dark:text-green-400">
+                                                <span>Discount</span>
+                                                <span>−₹{(data.discountAmount ?? 0).toLocaleString('en-IN')}</span>
+                                            </div>
+                                        </>
+                                    )}
+                                    <div className="total-row flex items-center justify-between">
+                                        <span className="font-bold text-foreground">Total Paid</span>
+                                        <span className="text-xl font-black text-primary">
+                                            ₹{data.finalAmount.toLocaleString('en-IN')}
+                                        </span>
                                     </div>
                                 </>
                             )}
-                            <div className="total-row flex items-center justify-between">
-                                <span className="font-bold text-foreground">Total Paid</span>
-                                <span className="text-xl font-black text-primary">
-                                    ₹{data.finalAmount.toLocaleString('en-IN')}
-                                </span>
-                            </div>
                         </div>
 
                         {/* Footer */}
