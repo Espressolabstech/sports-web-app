@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { userLogin, verifyOtp, resendOtp } from '../../api/adapters/auth';
 import { getMyClubs } from '../../api/adapters/pointsWallet';
 import { getVenueDetail } from '../../api/adapters/venues';
-import { setToken } from '../../utils/cookies.helpers';
+import { setToken, setActiveClubSlug } from '../../utils/cookies.helpers';
 
 const RESEND_COOLDOWN = 60;
 
@@ -66,10 +66,11 @@ export default function ClubLogin() {
                 const club = res?.data?.clubs?.find(
                     (c) => c.venue.slug === slugOrId || c.venue.id === slugOrId,
                 );
-                navigate(`/club/${club?.venue.slug ?? club?.venue.id ?? slugOrId}`, {
-                    replace: true,
-                });
+                const dest = club?.venue.slug ?? club?.venue.id ?? slugOrId;
+                if (dest) setActiveClubSlug(dest);
+                navigate(`/club/${dest}`, { replace: true });
             } catch {
+                if (slugOrId) setActiveClubSlug(slugOrId);
                 navigate(`/club/${slugOrId}`, { replace: true });
             }
         },

@@ -1,10 +1,12 @@
 import { Navigate } from 'react-router-dom';
-import { getToken } from './cookies.helpers';
+import { getToken, getActiveClubSlug } from './cookies.helpers';
 import { path } from '../../src/navigation/commanPaths';
 
-// Wraps the /login route — if already logged in, redirect to Home
+// Wraps the /login route — if already logged in, redirect to club or home
 export const AuthWrapper = ({ children }: WrapperProps) => {
-    return getToken() ? <Navigate to={path.home} replace /> : children;
+    if (!getToken()) return children;
+    const clubSlug = getActiveClubSlug();
+    return <Navigate to={clubSlug ? `/club/${clubSlug}` : path.home} replace />;
 };
 
 // Wraps pages that truly require a logged-in user (My Bookings, Profile, Wallets)

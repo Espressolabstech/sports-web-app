@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getVenues } from '../../api/adapters/venues';
 import { getMyClubs } from '../../api/adapters/pointsWallet';
@@ -8,7 +8,7 @@ import { Input } from '../../components/ui/input';
 import { SportChips } from '../../components/SportChips';
 import { BottomNav } from '../../components/BottomNav';
 import { FacilityCard } from '../../components/FacilityCard';
-import { getToken } from '../../utils/cookies.helpers';
+import { getToken, getActiveClubSlug } from '../../utils/cookies.helpers';
 import { Sheet, SheetContent } from '../../components/ui/sheet';
 
 const POPULAR_CITIES = [
@@ -45,19 +45,15 @@ const Home = () => {
     const navigate = useNavigate();
 
     const user = !!getToken();
+    const savedClubSlug = getActiveClubSlug();
 
-    const { data: clubsData, isSuccess: clubsLoaded } = useQuery({
+    const { data: clubsData } = useQuery({
         queryKey: ['my-clubs'],
         queryFn: getMyClubs,
-        enabled: user,
+        enabled: user && !savedClubSlug,
     });
     const myClubs: ApiMyClub[] = clubsData?.data?.clubs ?? [];
 
-    useEffect(() => {
-        if (user && clubsLoaded && myClubs.length > 0 && myClubs[0].venue.slug) {
-            navigate(`/club/${myClubs[0].venue.slug}`, { replace: true });
-        }
-    }, [clubsLoaded, myClubs, user, navigate]);
 
     const handleCitySelect = (c: string) => {
         setCity(c);
@@ -83,6 +79,10 @@ const Home = () => {
     });
 
     const venues = Array.isArray(data?.data?.venues) ? data.data.venues : [];
+
+    if (user && savedClubSlug) {
+        return <Navigate to={`/club/${savedClubSlug}`} replace />;
+    }
 
     return (
         <div className="min-h-screen bg-background pb-20">
