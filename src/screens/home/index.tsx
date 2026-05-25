@@ -53,15 +53,12 @@ const Home = () => {
         enabled: user && !savedClubSlug,
     });
     const myClubs: ApiMyClub[] = clubsData?.data?.clubs ?? [];
+    const firstClubSlug = myClubs[0]?.venue?.slug ?? null;
 
-    // Async fallback for sessions that predate the localStorage fix
+    // Write slug to localStorage as a side effect when we first learn it
     useEffect(() => {
-        if (user && !savedClubSlug && myClubs.length > 0 && myClubs[0].venue.slug) {
-            setActiveClubSlug(myClubs[0].venue.slug);
-            navigate(`/club/${myClubs[0].venue.slug}`, { replace: true });
-        }
-    }, [myClubs, user, savedClubSlug, navigate]);
-
+        if (firstClubSlug) setActiveClubSlug(firstClubSlug);
+    }, [firstClubSlug]);
 
     const handleCitySelect = (c: string) => {
         setCity(c);
@@ -88,13 +85,12 @@ const Home = () => {
 
     const venues = Array.isArray(data?.data?.venues) ? data.data.venues : [];
 
-    if (user && savedClubSlug) {
-        return <Navigate to={`/club/${savedClubSlug}`} replace />;
-    }
-
-    // While fetching clubs for a logged-in user, show nothing (avoid flash of public home)
-    if (user && clubsLoading) {
-        return <div className="min-h-screen bg-background" />;
+    if (user) {
+        // Instant redirect if slug already known
+        const dest = savedClubSlug ?? firstClubSlug;
+        if (dest) return <Navigate to={`/club/${dest}`} replace />;
+        // Still waiting for clubs API — show blank to avoid flash of public home
+        if (clubsLoading) return <div className="min-h-screen bg-background" />;
     }
 
     return (
