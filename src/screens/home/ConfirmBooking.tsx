@@ -37,6 +37,8 @@ interface ConfirmBookingState {
     pointsAmount?: number;
     pointsEntries?: PointsEntry[];    // multi-entry points bookings
     totalPointsAmount?: number;
+    brandColor?: string | null;
+    venueSlug?: string | null;
 
     // Common fields
     venueId: string;
@@ -64,6 +66,11 @@ const PointsConfirm = ({
 }) => {
     const isMulti = !!(state.pointsEntries && state.pointsEntries.length > 0);
     const totalPoints = state.totalPointsAmount ?? state.pointsAmount ?? 0;
+    const accentColor = state.brandColor
+        ? (state.brandColor.startsWith('#') || state.brandColor.startsWith('rgb')
+              ? state.brandColor
+              : `hsl(${state.brandColor})`)
+        : undefined;
     const entries: PointsEntry[] = isMulti
         ? state.pointsEntries!
         : [
@@ -109,6 +116,8 @@ const PointsConfirm = ({
                     venueName: state.venueName,
                     venueAddress: state.venueAddress,
                     venueId: state.venueId,
+                    venueSlug: state.venueSlug,
+                    brandColor: state.brandColor,
                     sport: state.sport,
                     courtName: firstEntry.courtName,
                     bookingDate: firstEntry.bookingDate,
@@ -146,10 +155,13 @@ const PointsConfirm = ({
     return (
         <div className="min-h-screen bg-background pb-28">
             {/* Header */}
-            <header className="flex items-center gap-3 bg-primary px-4 pb-4 pt-10 text-primary-foreground">
+            <header
+                className="flex items-center gap-3 px-4 pb-4 pt-10 text-white"
+                style={{ background: accentColor ?? 'hsl(var(--primary))' }}
+            >
                 <button
                     onClick={() => navigate(-1)}
-                    className="rounded-full p-1 hover:bg-primary-foreground/10"
+                    className="rounded-full p-1 hover:bg-white/10"
                 >
                     <ArrowLeft className="h-5 w-5" />
                 </button>
@@ -303,10 +315,11 @@ const PointsConfirm = ({
             <div className="fixed bottom-0 left-0 right-0 bg-background border-t px-4 py-4 z-50">
                 <div className="mx-auto max-w-lg">
                     <Button
-                        className="w-full gap-2"
+                        className="w-full gap-2 text-white"
                         size="lg"
                         onClick={handleBookWithPoints}
                         disabled={bookLoading || walletLoading || !hasSufficientPoints}
+                        style={accentColor ? { background: accentColor } : undefined}
                     >
                         {bookLoading ? (
                             <>
