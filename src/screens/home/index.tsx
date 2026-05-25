@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getVenues } from '../../api/adapters/venues';
@@ -46,12 +46,18 @@ const Home = () => {
 
     const user = !!getToken();
 
-    const { data: clubsData } = useQuery({
+    const { data: clubsData, isSuccess: clubsLoaded } = useQuery({
         queryKey: ['my-clubs'],
         queryFn: getMyClubs,
         enabled: user,
     });
     const myClubs: ApiMyClub[] = clubsData?.data?.clubs ?? [];
+
+    useEffect(() => {
+        if (user && clubsLoaded && myClubs.length > 0 && myClubs[0].venue.slug) {
+            navigate(`/club/${myClubs[0].venue.slug}`, { replace: true });
+        }
+    }, [clubsLoaded, myClubs, user, navigate]);
 
     const handleCitySelect = (c: string) => {
         setCity(c);
