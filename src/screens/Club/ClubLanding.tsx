@@ -131,7 +131,9 @@ export default function ClubLanding() {
                                 sportKey={key}
                                 courts={courtsBySport[key]}
                                 onClick={() =>
-                                    navigate(`/booking/${realVenueId}`)
+                                    navigate(`/booking/${realVenueId}`, {
+                                        state: { initialSport: key },
+                                    })
                                 }
                             />
                         ))}

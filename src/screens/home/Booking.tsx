@@ -50,7 +50,11 @@ function getEffectivePointsPrice(
             startTime >= p.startTime &&
             startTime < p.endTime,
     );
-    return peak?.pointsPerSlot ?? basePoints;
+    if (peak) {
+        // Fall back to pricePerSlot for clubs that haven't migrated pointsPerSlot yet
+        return peak.pointsPerSlot ?? peak.pricePerSlot;
+    }
+    return basePoints;
 }
 
 /**
@@ -247,7 +251,9 @@ const Booking = () => {
                         selectedStartTimes.includes(s.startTime),
                     );
                     const cBase = cData?.courtPricings[0]?.pricePerSlot ?? 0;
-                    const cBasePoints = cData?.courtPricings[0]?.pointsPerSlot ?? 0;
+                    const cBasePoints =
+                        cData?.courtPricings[0]?.pointsPerSlot ??
+                        cData?.courtPricings[0]?.pricePerSlot ?? 0;
                     const peaks = peakCacheByKey[key]?.[courtId] ?? [];
                     const dateObj = new Date(date);
                     const price = slotObjs.reduce(
@@ -678,7 +684,7 @@ const Booking = () => {
                                     </p>
                                     {isPrivateClub ? (
                                         <p className="text-[10px] text-muted-foreground">
-                                            from {c.courtPricings[0]?.pointsPerSlot ?? 0}{' '}
+                                            from {c.courtPricings[0]?.pointsPerSlot ?? c.courtPricings[0]?.pricePerSlot ?? 0}{' '}
                                             pts/slot
                                         </p>
                                     ) : (
@@ -726,7 +732,8 @@ const Booking = () => {
                                         const courtBase =
                                             c.courtPricings[0]?.pricePerSlot ?? 0;
                                         const courtBasePoints =
-                                            c.courtPricings[0]?.pointsPerSlot ?? 0;
+                                            c.courtPricings[0]?.pointsPerSlot ??
+                                            c.courtPricings[0]?.pricePerSlot ?? 0;
                                         const isPeak =
                                             isAvailable &&
                                             getEffectivePrice(
