@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
     getUpcomingBookings,
@@ -69,6 +69,9 @@ const isActiveHold = (b: ApiBooking) => {
 
 const MyBookings = () => {
     const navigate = useNavigate();
+    const { pathname } = useLocation();
+    const clubSlugMatch = pathname.match(/^\/club\/([^/]+)/);
+    const clubSlug = clubSlugMatch?.[1] ?? null;
     const queryClient = useQueryClient();
     const [otcDialogOpen, setOtcDialogOpen] = useState(false);
     const [selectedBookingId, setSelectedBookingId] = useState<string | null>(
@@ -632,7 +635,7 @@ const MyBookings = () => {
                                         <Button
                                             variant="outline"
                                             className="mt-3"
-                                            onClick={() => navigate('/')}
+                                            onClick={() => navigate(clubSlug ? `/club/${clubSlug}` : '/')}
                                         >
                                             Book a Court
                                         </Button>
