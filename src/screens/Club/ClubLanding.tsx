@@ -65,8 +65,7 @@ function SportTile({
 export default function ClubLanding() {
     const navigate = useNavigate();
     const { venueId: slugOrId } = useParams();
-    // venueId from context is the resolved real UUID (used for Booking.tsx routing)
-    const { venueId: realVenueId } = useClub();
+    useClub();
 
     const { data } = useQuery({
         queryKey: ['venue', slugOrId],
