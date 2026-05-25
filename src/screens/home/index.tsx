@@ -131,7 +131,7 @@ const Home = () => {
                             {myClubs.map(({ venue, wallet }) => (
                                 <button
                                     key={venue.id}
-                                    onClick={() => navigate(`/venue/${venue.id}`)}
+                                    onClick={() => navigate(venue.slug ? `/club/${venue.slug}` : `/venue/${venue.id}`)}
                                     className="w-full flex items-center gap-3 rounded-xl border-2 border-violet-200 bg-violet-50 dark:border-violet-800 dark:bg-violet-950/30 p-3.5 hover:shadow-md transition-all text-left group"
                                 >
                                     {venue.venueImages[0] ? (
