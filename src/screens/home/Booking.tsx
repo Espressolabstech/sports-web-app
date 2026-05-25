@@ -319,12 +319,22 @@ const Booking = () => {
             (e) => e.slotObjs.length > 0 && slotDuration(e.slotObjs) < minimumSlotMinutes,
         );
 
-    // Block "Review Booking" if ANY entry is below minimum
+    // Warn if any entry is below minimum; block only when no valid entry exists
     const anyBelowMinimum =
         minimumSlotMinutes > 0 &&
         allDateEntries.some(
             (e) => e.slotObjs.length > 0 && slotDuration(e.slotObjs) < minimumSlotMinutes,
         );
+
+    const validEntries =
+        minimumSlotMinutes > 0
+            ? allDateEntries.filter(
+                  (e) => e.slotObjs.length === 0 || slotDuration(e.slotObjs) >= minimumSlotMinutes,
+              )
+            : allDateEntries;
+
+    // Block only when there are no valid entries at all
+    const allBelowMinimum = validEntries.length === 0 && anyBelowMinimum;
 
     // ── Handlers ─────────────────────────────────────────────────────────────
     /** Helper to update just one court's slots within a date's selection */
@@ -443,11 +453,20 @@ const Booking = () => {
             setLoginOpen(true);
             return;
         }
-        if (allDateEntries.length === 0 || anyBelowMinimum) return;
+        if (validEntries.length === 0) return;
+
+        const droppedCount = allDateEntries.length - validEntries.length;
+        if (droppedCount > 0) {
+            toast.warning(
+                `${droppedCount} selection${droppedCount > 1 ? 's' : ''} removed — below the ${minimumSlotMinutes} min minimum.`,
+            );
+        }
 
         const venueAddress = [facility!.city, facility!.address]
             .filter(Boolean)
             .join(', ');
+
+        const totalValidPoints = validEntries.reduce((n, e) => n + e.pointsPrice, 0);
 
         // ── Private club: skip hold, navigate directly with points state ──────
         if (isPrivateClub) {
@@ -463,8 +482,8 @@ const Booking = () => {
                 brandColor: clubAccent ?? null,
                 venueSlug: facility!.slug ?? null,
             };
-            if (allDateEntries.length === 1) {
-                const entry = allDateEntries[0];
+            if (validEntries.length === 1) {
+                const entry = validEntries[0];
                 navigate('/confirm-booking', {
                     state: {
                         ...clubState,
@@ -479,14 +498,14 @@ const Booking = () => {
                 navigate('/confirm-booking', {
                     state: {
                         ...clubState,
-                        pointsEntries: allDateEntries.map((entry) => ({
+                        pointsEntries: validEntries.map((entry) => ({
                             courtId: entry.courtId,
                             bookingDate: entry.date,
                             slots: entry.slotObjs,
                             pointsAmount: entry.pointsPrice,
                             courtName: entry.courtData!.name,
                         })),
-                        totalPointsAmount: grandTotalPoints,
+                        totalPointsAmount: totalValidPoints,
                     },
                 });
             }
@@ -497,7 +516,7 @@ const Booking = () => {
         setHoldLoading(true);
         try {
             const holdResults = await Promise.all(
-                allDateEntries.map(({ date, courtId, slotObjs }) =>
+                validEntries.map(({ date, courtId, slotObjs }) =>
                     holdSlot({
                         courtId,
                         bookingDate: date,
@@ -509,10 +528,10 @@ const Booking = () => {
                 ),
             );
 
-            if (allDateEntries.length === 1) {
+            if (validEntries.length === 1) {
                 // Single date — existing ConfirmBooking flow
                 const { booking } = holdResults[0].data;
-                const entry = allDateEntries[0];
+                const entry = validEntries[0];
                 navigate('/confirm-booking', {
                     state: {
                         holdId: booking.id,
@@ -535,7 +554,7 @@ const Booking = () => {
                 // Multi-date — new MultiConfirmBooking flow
                 const holds = holdResults.map((res, i) => {
                     const { booking } = res.data;
-                    const entry = allDateEntries[i];
+                    const entry = validEntries[i];
                     return {
                         holdId: booking.id,
                         bookingDate: entry.date,
@@ -940,7 +959,7 @@ const Booking = () => {
 
                         <Button
                             onClick={handleReviewBooking}
-                            disabled={holdLoading || anyBelowMinimum}
+                            disabled={holdLoading || allBelowMinimum}
                             className="shrink-0 text-white"
                             style={clubAccent ? { background: clubAccent } : undefined}
                         >

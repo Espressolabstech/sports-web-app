@@ -77,21 +77,16 @@ const BookingSuccess = () => {
     // ── Native share ────────────────────────────────────────────────────────
     const handleShare = async () => {
         const lines = [
-            `🎉 Just booked a court at ${venueName}!`,
+            `Booking Confirmed at ${venueName}`,
             ``,
-            `�️ Venue: ${venueName}`,
-            `🎾 Sport: ${sport}`,
-            `� Court: ${courtName}`,
-            `📅 Date: ${formattedDate}`,
-            `⏰ Time: ${timeRange}`,
-            `🎫 Booking Ref: ${bookingRef}`,
+            `Sport: ${sport}`,
+            `Court: ${courtName}`,
+            `Date: ${formattedDate}`,
+            `Time: ${timeRange}`,
             ``,
-            `📍 ${venueAddress}`,
-            `🗺️ Directions: ${mapsLink}`,
-            ``,
-            `� Book yours: ${window.location.origin}/venue/${state.venueId}`,
-            ``,
-            `See you on the court! 🏆`,
+            `Location:`,
+            `${venueName}, ${venueAddress}`,
+            mapsLink,
         ];
         const text = lines.join('\n');
         if (navigator.share) {
@@ -280,6 +275,8 @@ const BookingSuccess = () => {
                     endTime,
                     totalAmount: totalPrice,
                     finalAmount: totalPrice,
+                    paymentMode: paymentMode ?? 'RUPEE',
+                    pointsAmount: pointsAmount,
                     bookedAt: new Date().toISOString(),
                 }}
             />

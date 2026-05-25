@@ -327,33 +327,44 @@ const MyBookings = () => {
                                 </div>
                             </div>
                             <div className="border-t pt-3 space-y-1 text-sm">
-                                <div className="flex justify-between">
-                                    <span className="text-muted-foreground">
-                                        Amount
-                                    </span>
-                                    <span>₹{selectedBooking.totalAmount}</span>
-                                </div>
-                                {selectedBooking.discountAmount > 0 && (
-                                    <div className="flex justify-between text-green-600">
-                                        <span>Discount</span>
+                                {selectedBooking.paymentMode === 'POINTS' ? (
+                                    <div className="flex justify-between font-semibold">
+                                        <span>Points Used</span>
                                         <span>
-                                            -₹{selectedBooking.discountAmount}
+                                            {(selectedBooking.pointsAmount ?? 0).toLocaleString()} pts
                                         </span>
                                     </div>
-                                )}
-                                <div className="flex justify-between font-semibold pt-1 border-t">
-                                    <span>Total Paid</span>
-                                    <span>₹{selectedBooking.finalAmount}</span>
-                                </div>
-                                {selectedBooking.payment && (
-                                    <div className="flex justify-between text-xs text-muted-foreground">
-                                        <span>Payment</span>
-                                        <span>
-                                            {selectedBooking.payment.paymentMethod}{' '}
-                                            ·{' '}
-                                            {selectedBooking.payment.paymentStatus}
-                                        </span>
-                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex justify-between">
+                                            <span className="text-muted-foreground">
+                                                Amount
+                                            </span>
+                                            <span>₹{selectedBooking.totalAmount}</span>
+                                        </div>
+                                        {selectedBooking.discountAmount > 0 && (
+                                            <div className="flex justify-between text-green-600">
+                                                <span>Discount</span>
+                                                <span>
+                                                    -₹{selectedBooking.discountAmount}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <div className="flex justify-between font-semibold pt-1 border-t">
+                                            <span>Total Paid</span>
+                                            <span>₹{selectedBooking.finalAmount}</span>
+                                        </div>
+                                        {selectedBooking.payment && (
+                                            <div className="flex justify-between text-xs text-muted-foreground">
+                                                <span>Payment</span>
+                                                <span>
+                                                    {selectedBooking.payment.paymentMethod}{' '}
+                                                    ·{' '}
+                                                    {selectedBooking.payment.paymentStatus}
+                                                </span>
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </CardContent>
@@ -469,6 +480,8 @@ const MyBookings = () => {
                         totalAmount: selectedBooking.totalAmount,
                         discountAmount: selectedBooking.discountAmount,
                         finalAmount: selectedBooking.finalAmount,
+                        paymentMode: selectedBooking.paymentMode,
+                        pointsAmount: selectedBooking.pointsAmount,
                         paymentMethod: selectedBooking.payment?.paymentMethod,
                         paymentStatus: selectedBooking.payment?.paymentStatus,
                         bookedAt: selectedBooking.createdAt,
@@ -529,8 +542,14 @@ const MyBookings = () => {
                     </div>
 
                     <div className="mt-2 flex justify-between text-sm">
-                        <span className="text-muted-foreground">Total</span>
-                        <span className="font-medium">₹{b.finalAmount}</span>
+                        <span className="text-muted-foreground">
+                            {b.paymentMode === 'POINTS' ? 'Points Used' : 'Total'}
+                        </span>
+                        <span className="font-medium">
+                            {b.paymentMode === 'POINTS'
+                                ? `${(b.pointsAmount ?? 0).toLocaleString()} pts`
+                                : `₹${b.finalAmount}`}
+                        </span>
                     </div>
 
                     {isPendingHold && (

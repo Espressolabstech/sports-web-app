@@ -271,6 +271,8 @@ declare global {
         totalAmount: number;
         discountAmount: number;
         finalAmount: number;
+        paymentMode: 'RUPEE' | 'POINTS';
+        pointsAmount: number | null;
         status: 'PENDING' | 'CONFIRMED' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
         notes: string | null;
         cancelledAt: string | null;
