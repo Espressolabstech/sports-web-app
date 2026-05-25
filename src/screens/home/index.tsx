@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Navigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getVenues } from '../../api/adapters/venues';
@@ -8,7 +8,7 @@ import { Input } from '../../components/ui/input';
 import { SportChips } from '../../components/SportChips';
 import { BottomNav } from '../../components/BottomNav';
 import { FacilityCard } from '../../components/FacilityCard';
-import { getToken, getActiveClubSlug } from '../../utils/cookies.helpers';
+import { getToken, getActiveClubSlug, setActiveClubSlug } from '../../utils/cookies.helpers';
 import { Sheet, SheetContent } from '../../components/ui/sheet';
 
 const POPULAR_CITIES = [
@@ -47,12 +47,20 @@ const Home = () => {
     const user = !!getToken();
     const savedClubSlug = getActiveClubSlug();
 
-    const { data: clubsData } = useQuery({
+    const { data: clubsData, isLoading: clubsLoading } = useQuery({
         queryKey: ['my-clubs'],
         queryFn: getMyClubs,
         enabled: user && !savedClubSlug,
     });
     const myClubs: ApiMyClub[] = clubsData?.data?.clubs ?? [];
+
+    // Async fallback for sessions that predate the localStorage fix
+    useEffect(() => {
+        if (user && !savedClubSlug && myClubs.length > 0 && myClubs[0].venue.slug) {
+            setActiveClubSlug(myClubs[0].venue.slug);
+            navigate(`/club/${myClubs[0].venue.slug}`, { replace: true });
+        }
+    }, [myClubs, user, savedClubSlug, navigate]);
 
 
     const handleCitySelect = (c: string) => {
@@ -82,6 +90,11 @@ const Home = () => {
 
     if (user && savedClubSlug) {
         return <Navigate to={`/club/${savedClubSlug}`} replace />;
+    }
+
+    // While fetching clubs for a logged-in user, show nothing (avoid flash of public home)
+    if (user && clubsLoading) {
+        return <div className="min-h-screen bg-background" />;
     }
 
     return (

@@ -1,10 +1,11 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getPointsWallet } from '../../api/adapters/pointsWallet';
 import { getMe } from '../../api/adapters/auth';
 import { createBooking } from '../../api/adapters/bookings';
 import { getVenueDetail } from '../../api/adapters/venues';
+import { setActiveClubSlug } from '../../utils/cookies.helpers';
 import { type ClubMember, type ClubSlot } from './mock-club';
 
 interface PendingBooking {
@@ -42,6 +43,11 @@ const Ctx = createContext<ClubCtx | null>(null);
 export function ClubProvider({ children }: { children: ReactNode }) {
     const { venueId: slugOrId = '' } = useParams();
     const [pending, setPending] = useState<PendingBooking | null>(null);
+
+    // Persist slug so home page can redirect instantly on next visit
+    useEffect(() => {
+        if (slugOrId) setActiveClubSlug(slugOrId);
+    }, [slugOrId]);
     const [lastBooking, setLastBooking] = useState<ConfirmedBooking | null>(null);
 
     const { data: venueData, isLoading: venueLoading } = useQuery({
