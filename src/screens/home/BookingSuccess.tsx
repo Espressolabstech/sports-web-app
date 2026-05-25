@@ -29,6 +29,8 @@ interface BookingSuccessState {
     totalPrice: number;
     paymentMode?: 'POINTS';
     pointsAmount?: number;
+    venueSlug?: string | null;
+    brandColor?: string | null;
     latitude?: number | null;
     longitude?: number | null;
 }
@@ -61,6 +63,11 @@ const BookingSuccess = () => {
     } = state;
 
     const isPointsBooking = paymentMode === 'POINTS';
+    const accentColor = state.brandColor
+        ? (state.brandColor.startsWith('#') || state.brandColor.startsWith('rgb')
+              ? state.brandColor
+              : `hsl(${state.brandColor})`)
+        : undefined;
 
     const formattedDate = format(new Date(bookingDate), 'EEEE, d MMMM yyyy');
     const timeRange = `${formatTime(startTime)} – ${formatTime(endTime)}`;
@@ -105,7 +112,10 @@ const BookingSuccess = () => {
     return (
         <div className="min-h-screen bg-background flex flex-col">
             {/* ── Hero ── */}
-            <div className="bg-primary px-6 pt-16 pb-10 text-primary-foreground flex flex-col items-center text-center">
+            <div
+                className="px-6 pt-16 pb-10 text-white flex flex-col items-center text-center"
+                style={{ background: accentColor ?? 'hsl(var(--primary))' }}
+            >
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-foreground/15">
                     <CheckCircle2 className="h-9 w-9" />
                 </div>
@@ -241,7 +251,13 @@ const BookingSuccess = () => {
                 <Button
                     variant="ghost"
                     className="w-full gap-2 text-muted-foreground"
-                    onClick={() => navigate(`/venue/${state.venueId}`, { replace: true })}
+                    onClick={() => {
+                        if (isPointsBooking && state.venueSlug) {
+                            navigate(`/club/${state.venueSlug}`, { replace: true });
+                        } else {
+                            navigate('/', { replace: true });
+                        }
+                    }}
                 >
                     <Home className="h-4 w-4" />
                     Back to Home

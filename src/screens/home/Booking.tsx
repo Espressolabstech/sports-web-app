@@ -451,31 +451,34 @@ const Booking = () => {
 
         // ── Private club: skip hold, navigate directly with points state ──────
         if (isPrivateClub) {
+            const clubState = {
+                paymentMode: 'POINTS' as const,
+                venueId: facility!.id,
+                venueName: facility!.name,
+                venueAddress,
+                sport: selectedSport,
+                totalPrice: 0,
+                latitude: facility!.latitude ?? null,
+                longitude: facility!.longitude ?? null,
+                brandColor: facility!.brandColor ?? null,
+                venueSlug: facility!.slug ?? null,
+            };
             if (allDateEntries.length === 1) {
                 const entry = allDateEntries[0];
                 navigate('/confirm-booking', {
                     state: {
-                        paymentMode: 'POINTS',
+                        ...clubState,
                         courtId: entry.courtId,
                         bookingDate: entry.date,
                         slots: entry.slotObjs,
                         pointsAmount: entry.pointsPrice,
-                        venueId: facilityId,
-                        venueName: facility!.name,
-                        venueAddress,
-                        sport: selectedSport,
                         courtName: entry.courtData!.name,
-                        totalPrice: 0,
-                        latitude: facility!.latitude ?? null,
-                        longitude: facility!.longitude ?? null,
                     },
                 });
             } else {
-                // Multi-entry: book one by one via the confirm screen
-                // Pass all entries so confirm screen can iterate
                 navigate('/confirm-booking', {
                     state: {
-                        paymentMode: 'POINTS',
+                        ...clubState,
                         pointsEntries: allDateEntries.map((entry) => ({
                             courtId: entry.courtId,
                             bookingDate: entry.date,
@@ -484,13 +487,6 @@ const Booking = () => {
                             courtName: entry.courtData!.name,
                         })),
                         totalPointsAmount: grandTotalPoints,
-                        venueId: facilityId,
-                        venueName: facility!.name,
-                        venueAddress,
-                        sport: selectedSport,
-                        totalPrice: 0,
-                        latitude: facility!.latitude ?? null,
-                        longitude: facility!.longitude ?? null,
                     },
                 });
             }
