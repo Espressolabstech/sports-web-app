@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Navigate } from 'react-router-dom';
 import { ArrowLeft, ShieldCheck } from 'lucide-react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Input } from '../../components/ui/input';
@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { userLogin, verifyOtp, resendOtp } from '../../api/adapters/auth';
 import { getMyClubs } from '../../api/adapters/pointsWallet';
 import { getVenueDetail } from '../../api/adapters/venues';
-import { setToken, setActiveClubSlug } from '../../utils/cookies.helpers';
+import { setToken, setActiveClubSlug, getToken } from '../../utils/cookies.helpers';
 
 const RESEND_COOLDOWN = 60;
 
@@ -76,6 +76,10 @@ export default function ClubLogin() {
         },
         onError: (err: Error) => toast.error(err.message),
     });
+
+    if (getToken()) {
+        return <Navigate to={`/club/${slugOrId}`} replace />;
+    }
 
     return (
         <div className="club-root min-h-screen flex flex-col items-center justify-between bg-[hsl(var(--club-bg))] text-[hsl(var(--club-ink))] px-6 py-10">
