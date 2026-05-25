@@ -16,6 +16,9 @@ import ClubLanding from '../screens/Club/ClubLanding';
 import ClubCredits from '../screens/Club/ClubCredits';
 import ClubLogin from '../screens/Club/ClubLogin';
 import ClubProfile from '../screens/Club/ClubProfile';
+import ClubBookingSport from '../screens/Club/ClubBookingSport';
+import ClubConfirm from '../screens/Club/ClubConfirm';
+import ClubSuccess from '../screens/Club/ClubSuccess';
 
 export const router = createBrowserRouter([
     {
@@ -70,6 +73,9 @@ export const router = createBrowserRouter([
             { path: 'credits', element: <ClubCredits /> },
             { path: 'bookings', element: <ProtectedComponentWrapper children={<MyBookings />} /> },
             { path: 'profile', element: <ProtectedComponentWrapper children={<ClubProfile />} /> },
+            { path: 'book/:sport', element: <ProtectedComponentWrapper children={<ClubBookingSport />} /> },
+            { path: 'book/:sport/confirm', element: <ProtectedComponentWrapper children={<ClubConfirm />} /> },
+            { path: 'book/:sport/success', element: <ProtectedComponentWrapper children={<ClubSuccess />} /> },
         ],
     },
 ]);
