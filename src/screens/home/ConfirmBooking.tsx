@@ -66,11 +66,7 @@ const PointsConfirm = ({
 }) => {
     const isMulti = !!(state.pointsEntries && state.pointsEntries.length > 0);
     const totalPoints = state.totalPointsAmount ?? state.pointsAmount ?? 0;
-    const accentColor = state.brandColor
-        ? (state.brandColor.startsWith('#') || state.brandColor.startsWith('rgb')
-              ? state.brandColor
-              : `hsl(${state.brandColor})`)
-        : undefined;
+    const accentColor = state.brandColor ?? undefined;
     const entries: PointsEntry[] = isMulti
         ? state.pointsEntries!
         : [

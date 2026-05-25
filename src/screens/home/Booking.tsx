@@ -460,7 +460,7 @@ const Booking = () => {
                 totalPrice: 0,
                 latitude: facility!.latitude ?? null,
                 longitude: facility!.longitude ?? null,
-                brandColor: facility!.brandColor ?? null,
+                brandColor: clubAccent ?? null,
                 venueSlug: facility!.slug ?? null,
             };
             if (allDateEntries.length === 1) {
