@@ -509,7 +509,10 @@ const MyBookings = () => {
                     <div className="flex items-start justify-between">
                         <div>
                             <p className="font-semibold text-foreground">
-                                {b.court.name}
+                                {b.court.sport === 'PICKELBALL'
+                                    ? 'Pickleball'
+                                    : b.court.sport.charAt(0) + b.court.sport.slice(1).toLowerCase()}{' '}
+                                | {b.court.name}
                             </p>
                             <p className="text-xs text-muted-foreground">
                                 {b.venue.name}
