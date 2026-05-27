@@ -16,6 +16,15 @@ import { Button } from '../../components/ui/button';
 import { formatTime } from '../../utils/twMerge';
 import { BookingReceiptModal } from '../../components/BookingReceiptModal';
 
+interface BookingEntry {
+    bookingRef: string;
+    courtName: string;
+    bookingDate: string;
+    startTime: string;
+    endTime: string;
+    pointsAmount: number;
+}
+
 interface BookingSuccessState {
     bookingRef: string;
     venueName: string;
@@ -33,6 +42,9 @@ interface BookingSuccessState {
     brandColor?: string | null;
     latitude?: number | null;
     longitude?: number | null;
+    // Multi-court fields
+    bookings?: BookingEntry[];
+    totalPointsAmount?: number;
 }
 
 const BookingSuccess = () => {
@@ -60,13 +72,20 @@ const BookingSuccess = () => {
         pointsAmount,
         latitude,
         longitude,
+        bookings,
+        totalPointsAmount,
     } = state;
 
     const isPointsBooking = paymentMode === 'POINTS';
     const accentColor = state.brandColor ?? undefined;
+    const isMulti = bookings && bookings.length > 1;
 
     const formattedDate = format(new Date(bookingDate), 'EEEE, d MMMM yyyy');
     const timeRange = `${formatTime(startTime)} – ${formatTime(endTime)}`;
+
+    const displayPoints = isMulti
+        ? (totalPointsAmount ?? bookings.reduce((n, b) => n + b.pointsAmount, 0))
+        : (pointsAmount ?? 0);
 
     // ── Build Google Maps link ──────────────────────────────────────────────
     const mapsLink =
@@ -76,18 +95,32 @@ const BookingSuccess = () => {
 
     // ── Native share ────────────────────────────────────────────────────────
     const handleShare = async () => {
-        const lines = [
+        const lines: string[] = [
             `Booking Confirmed at ${venueName}`,
             ``,
             `Sport: ${sport}`,
-            `Court: ${courtName}`,
-            `Date: ${formattedDate}`,
-            `Time: ${timeRange}`,
-            ``,
-            `Location:`,
-            `${venueName}, ${venueAddress}`,
-            mapsLink,
         ];
+
+        if (isMulti) {
+            bookings.forEach((b) => {
+                lines.push(
+                    `Court: ${b.courtName}`,
+                    `Date: ${format(new Date(b.bookingDate), 'EEEE, d MMMM yyyy')}`,
+                    `Time: ${formatTime(b.startTime)} – ${formatTime(b.endTime)}`,
+                    ``,
+                );
+            });
+        } else {
+            lines.push(
+                `Court: ${courtName}`,
+                `Date: ${formattedDate}`,
+                `Time: ${timeRange}`,
+                ``,
+            );
+        }
+
+        lines.push(`Location:`, `${venueName}, ${venueAddress}`, mapsLink);
+
         const text = lines.join('\n');
         if (navigator.share) {
             try {
@@ -110,13 +143,17 @@ const BookingSuccess = () => {
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-foreground/15">
                     <CheckCircle2 className="h-9 w-9" />
                 </div>
-                <h1 className="text-2xl font-bold">Booking Confirmed!</h1>
-                <p className="mt-1 text-sm text-primary-foreground/70">
-                    Ref:{' '}
-                    <span className="font-semibold text-primary-foreground">
-                        {bookingRef}
-                    </span>
-                </p>
+                <h1 className="text-2xl font-bold">
+                    {isMulti ? `${bookings.length} Bookings Confirmed!` : 'Booking Confirmed!'}
+                </h1>
+                {!isMulti && (
+                    <p className="mt-1 text-sm text-primary-foreground/70">
+                        Ref:{' '}
+                        <span className="font-semibold text-primary-foreground">
+                            {bookingRef}
+                        </span>
+                    </p>
+                )}
             </div>
 
             {/* ── Details card ── */}
@@ -129,9 +166,7 @@ const BookingSuccess = () => {
                                 <MapPin className="h-4 w-4 text-primary" />
                             </div>
                             <div className="min-w-0">
-                                <p className="text-xs text-muted-foreground">
-                                    Venue
-                                </p>
+                                <p className="text-xs text-muted-foreground">Venue</p>
                                 <p className="font-semibold text-foreground text-sm">
                                     {venueName}
                                 </p>
@@ -141,53 +176,81 @@ const BookingSuccess = () => {
                             </div>
                         </div>
 
-                        {/* Sport + Court */}
+                        {/* Sport & Court */}
                         <div className="flex items-start gap-3 px-4 py-3.5">
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                                 <Dumbbell className="h-4 w-4 text-primary" />
                             </div>
                             <div>
                                 <p className="text-xs text-muted-foreground">
-                                    Sport &amp; Court
+                                    {isMulti ? 'Sport' : 'Sport & Court'}
                                 </p>
                                 <p className="font-semibold text-foreground text-sm">
                                     {sport}
                                 </p>
-                                <p className="text-xs text-muted-foreground">
-                                    {courtName}
-                                </p>
+                                {!isMulti && (
+                                    <p className="text-xs text-muted-foreground">
+                                        {courtName}
+                                    </p>
+                                )}
                             </div>
                         </div>
 
-                        {/* Date */}
-                        <div className="flex items-start gap-3 px-4 py-3.5">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                                <CalendarCheck className="h-4 w-4 text-primary" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-muted-foreground">
-                                    Date
-                                </p>
-                                <p className="font-semibold text-foreground text-sm">
-                                    {formattedDate}
-                                </p>
-                            </div>
-                        </div>
+                        {isMulti ? (
+                            /* ── Multi-court: one row per booking ── */
+                            bookings.map((b, i) => (
+                                <div key={i} className="px-4 py-3.5 space-y-1">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-sm font-semibold text-foreground">
+                                            {b.courtName}
+                                        </p>
+                                        <p className="text-xs font-medium text-primary">
+                                            {b.pointsAmount.toLocaleString()} pts
+                                        </p>
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                        <CalendarCheck className="h-3.5 w-3.5 shrink-0" />
+                                        {format(new Date(b.bookingDate), 'EEE, d MMM yyyy')}
+                                    </div>
+                                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                                        <Clock className="h-3.5 w-3.5 shrink-0" />
+                                        {formatTime(b.startTime)} – {formatTime(b.endTime)}
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground/60">
+                                        Ref: {b.bookingRef}
+                                    </p>
+                                </div>
+                            ))
+                        ) : (
+                            /* ── Single booking: original layout ── */
+                            <>
+                                {/* Date */}
+                                <div className="flex items-start gap-3 px-4 py-3.5">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                        <CalendarCheck className="h-4 w-4 text-primary" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Date</p>
+                                        <p className="font-semibold text-foreground text-sm">
+                                            {formattedDate}
+                                        </p>
+                                    </div>
+                                </div>
 
-                        {/* Time */}
-                        <div className="flex items-start gap-3 px-4 py-3.5">
-                            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-                                <Clock className="h-4 w-4 text-primary" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-muted-foreground">
-                                    Time
-                                </p>
-                                <p className="font-semibold text-foreground text-sm">
-                                    {timeRange}
-                                </p>
-                            </div>
-                        </div>
+                                {/* Time */}
+                                <div className="flex items-start gap-3 px-4 py-3.5">
+                                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                                        <Clock className="h-4 w-4 text-primary" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-muted-foreground">Time</p>
+                                        <p className="font-semibold text-foreground text-sm">
+                                            {timeRange}
+                                        </p>
+                                    </div>
+                                </div>
+                            </>
+                        )}
 
                         {/* Amount */}
                         <div className="flex items-center justify-between px-4 py-3.5">
@@ -196,7 +259,7 @@ const BookingSuccess = () => {
                             </p>
                             <p className="text-base font-bold text-foreground">
                                 {isPointsBooking
-                                    ? `${(pointsAmount ?? 0).toLocaleString()} pts`
+                                    ? `${displayPoints.toLocaleString()} pts`
                                     : `₹${totalPrice.toLocaleString('en-IN')}`}
                             </p>
                         </div>
@@ -206,16 +269,18 @@ const BookingSuccess = () => {
 
             {/* ── Actions ── */}
             <div className="mx-auto w-full max-w-sm px-4 mt-5 space-y-3">
-                {/* Receipt */}
-                <Button
-                    variant="outline"
-                    className="w-full gap-2"
-                    size="lg"
-                    onClick={() => setReceiptOpen(true)}
-                >
-                    <Receipt className="h-4 w-4" />
-                    View Receipt
-                </Button>
+                {/* Receipt — only for single bookings */}
+                {!isMulti && (
+                    <Button
+                        variant="outline"
+                        className="w-full gap-2"
+                        size="lg"
+                        onClick={() => setReceiptOpen(true)}
+                    >
+                        <Receipt className="h-4 w-4" />
+                        View Receipt
+                    </Button>
+                )}
 
                 {/* Share */}
                 <Button
@@ -261,25 +326,27 @@ const BookingSuccess = () => {
                 </Button>
             </div>
 
-            <BookingReceiptModal
-                open={receiptOpen}
-                onClose={() => setReceiptOpen(false)}
-                data={{
-                    bookingRef,
-                    venueName,
-                    venueAddress,
-                    sport,
-                    courtName,
-                    bookingDate,
-                    startTime,
-                    endTime,
-                    totalAmount: totalPrice,
-                    finalAmount: totalPrice,
-                    paymentMode: paymentMode ?? 'RUPEE',
-                    pointsAmount: pointsAmount,
-                    bookedAt: new Date().toISOString(),
-                }}
-            />
+            {!isMulti && (
+                <BookingReceiptModal
+                    open={receiptOpen}
+                    onClose={() => setReceiptOpen(false)}
+                    data={{
+                        bookingRef,
+                        venueName,
+                        venueAddress,
+                        sport,
+                        courtName,
+                        bookingDate,
+                        startTime,
+                        endTime,
+                        totalAmount: totalPrice,
+                        finalAmount: totalPrice,
+                        paymentMode: paymentMode ?? 'RUPEE',
+                        pointsAmount: pointsAmount,
+                        bookedAt: new Date().toISOString(),
+                    }}
+                />
+            )}
         </div>
     );
 };

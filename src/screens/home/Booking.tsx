@@ -319,22 +319,18 @@ const Booking = () => {
             (e) => e.slotObjs.length > 0 && slotDuration(e.slotObjs) < minimumSlotMinutes,
         );
 
-    // Warn if any entry is below minimum; block only when no valid entry exists
+    const isMultiCourt = allDateEntries.length > 1;
+
+    // Only enforce minimum duration for single-court bookings
     const anyBelowMinimum =
+        !isMultiCourt &&
         minimumSlotMinutes > 0 &&
         allDateEntries.some(
             (e) => e.slotObjs.length > 0 && slotDuration(e.slotObjs) < minimumSlotMinutes,
         );
 
-    const validEntries =
-        minimumSlotMinutes > 0
-            ? allDateEntries.filter(
-                  (e) => e.slotObjs.length === 0 || slotDuration(e.slotObjs) >= minimumSlotMinutes,
-              )
-            : allDateEntries;
-
-    // Block only when there are no valid entries at all
-    const allBelowMinimum = validEntries.length === 0 && anyBelowMinimum;
+    const validEntries = allDateEntries;
+    const allBelowMinimum = anyBelowMinimum;
 
     // ── Handlers ─────────────────────────────────────────────────────────────
     /** Helper to update just one court's slots within a date's selection */
@@ -453,20 +449,11 @@ const Booking = () => {
             setLoginOpen(true);
             return;
         }
-        if (validEntries.length === 0) return;
-
-        const droppedCount = allDateEntries.length - validEntries.length;
-        if (droppedCount > 0) {
-            toast.warning(
-                `${droppedCount} selection${droppedCount > 1 ? 's' : ''} removed — below the ${minimumSlotMinutes} min minimum.`,
-            );
-        }
+        if (allDateEntries.length === 0) return;
 
         const venueAddress = [facility!.city, facility!.address]
             .filter(Boolean)
             .join(', ');
-
-        const totalValidPoints = validEntries.reduce((n, e) => n + e.pointsPrice, 0);
 
         // ── Private club: skip hold, navigate directly with points state ──────
         if (isPrivateClub) {
@@ -482,8 +469,8 @@ const Booking = () => {
                 brandColor: clubAccent ?? null,
                 venueSlug: facility!.slug ?? null,
             };
-            if (validEntries.length === 1) {
-                const entry = validEntries[0];
+            if (allDateEntries.length === 1) {
+                const entry = allDateEntries[0];
                 navigate('/confirm-booking', {
                     state: {
                         ...clubState,
@@ -498,14 +485,15 @@ const Booking = () => {
                 navigate('/confirm-booking', {
                     state: {
                         ...clubState,
-                        pointsEntries: validEntries.map((entry) => ({
+                        pointsEntries: allDateEntries.map((entry) => ({
                             courtId: entry.courtId,
                             bookingDate: entry.date,
                             slots: entry.slotObjs,
                             pointsAmount: entry.pointsPrice,
                             courtName: entry.courtData!.name,
+                            multiCourt: true,
                         })),
-                        totalPointsAmount: totalValidPoints,
+                        totalPointsAmount: grandTotalPoints,
                     },
                 });
             }
@@ -516,7 +504,7 @@ const Booking = () => {
         setHoldLoading(true);
         try {
             const holdResults = await Promise.all(
-                validEntries.map(({ date, courtId, slotObjs }) =>
+                allDateEntries.map(({ date, courtId, slotObjs }) =>
                     holdSlot({
                         courtId,
                         bookingDate: date,
@@ -524,6 +512,7 @@ const Booking = () => {
                             startTime: s.startTime,
                             endTime: s.endTime,
                         })),
+                        ...(isMultiCourt && { multiCourt: true }),
                     }),
                 ),
             );

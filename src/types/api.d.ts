@@ -241,6 +241,7 @@ declare global {
         courtId: string;
         bookingDate: string;
         slots: { startTime: string; endTime: string }[];
+        multiCourt?: boolean;
     }
 
     interface CreateBookingBody {
@@ -250,6 +251,7 @@ declare global {
         notes?: string;
         paymentMethod?: 'UPI' | 'CARD' | 'NET_BANKING';
         paymentMode?: 'POINTS';
+        multiCourt?: boolean;
     }
 
     interface VerifyBookingPaymentBody {

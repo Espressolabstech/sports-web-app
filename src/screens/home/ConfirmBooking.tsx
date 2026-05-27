@@ -21,6 +21,7 @@ interface PointsEntry {
     slots: Array<{ startTime: string; endTime: string }>;
     pointsAmount: number;
     courtName: string;
+    multiCourt?: boolean;
 }
 
 interface ConfirmBookingState {
@@ -99,16 +100,17 @@ const PointsConfirm = ({
                         bookingDate: entry.bookingDate,
                         slots: entry.slots,
                         paymentMode: 'POINTS',
+                        ...(entry.multiCourt && { multiCourt: true }),
                     }),
                 ),
             );
             toast.success('Booking confirmed with points!');
-            const first = results[0].data.booking;
+            const firstResult = results[0].data.booking;
             const firstEntry = entries[0];
             navigate('/booking-success', {
                 replace: true,
                 state: {
-                    bookingRef: first.bookingRef ?? first.id,
+                    bookingRef: firstResult.bookingRef ?? firstResult.id,
                     venueName: state.venueName,
                     venueAddress: state.venueAddress,
                     venueId: state.venueId,
@@ -124,6 +126,17 @@ const PointsConfirm = ({
                     pointsAmount: totalPoints,
                     latitude: state.latitude,
                     longitude: state.longitude,
+                    ...(entries.length > 1 && {
+                        bookings: results.map((res, i) => ({
+                            bookingRef: res.data.booking.bookingRef ?? res.data.booking.id,
+                            courtName: entries[i].courtName,
+                            bookingDate: entries[i].bookingDate,
+                            startTime: entries[i].slots[0]?.startTime ?? '',
+                            endTime: entries[i].slots[entries[i].slots.length - 1]?.endTime ?? '',
+                            pointsAmount: entries[i].pointsAmount,
+                        })),
+                        totalPointsAmount: totalPoints,
+                    }),
                 },
             });
         } catch (err: any) {
