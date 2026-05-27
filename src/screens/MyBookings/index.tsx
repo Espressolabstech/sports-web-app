@@ -41,6 +41,20 @@ import { BottomNav } from '../../components/BottomNav';
 import { OtcConfirmationDialog } from '../../components/OtcConfirmationDialog';
 import { BookingReceiptModal } from '../../components/BookingReceiptModal';
 
+const SPORT_DISPLAY: Record<string, string> = {
+    TENNIS: 'Tennis',
+    FOOTBALL: 'Football',
+    BADMINTON: 'Badminton',
+    TABLE_TENNIS: 'Table Tennis',
+    SQUASH: 'Squash',
+    RIFLE_SHOOTING: 'Rifle Shooting',
+    BOX_CRICKET: 'Box Cricket',
+    CRICKET: 'Cricket',
+    PADEL: 'Padel',
+    PICKLEBALL: 'Pickleball',
+    PICKELBALL: 'Pickleball',
+};
+
 const HOLD_DURATION_MS = 7 * 60 * 1000;
 
 const bookingStatusColors: Record<string, string> = {
@@ -291,7 +305,7 @@ const MyBookings = () => {
                             <div className="flex items-start justify-between">
                                 <div>
                                     <p className="text-lg font-bold text-foreground">
-                                        {selectedBooking.court.name}
+                                        {SPORT_DISPLAY[selectedBooking.court.sport] ?? selectedBooking.court.sport} · {selectedBooking.court.name}
                                     </p>
                                     <p className="text-sm text-muted-foreground">
                                         {selectedBooking.venue.name}
