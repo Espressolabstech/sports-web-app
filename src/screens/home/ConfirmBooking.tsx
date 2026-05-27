@@ -1,6 +1,20 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
+
+const SPORT_DISPLAY: Record<string, string> = {
+    TENNIS: 'Tennis',
+    FOOTBALL: 'Football',
+    BADMINTON: 'Badminton',
+    TABLE_TENNIS: 'Table Tennis',
+    SQUASH: 'Squash',
+    RIFLE_SHOOTING: 'Rifle Shooting',
+    BOX_CRICKET: 'Box Cricket',
+    CRICKET: 'Cricket',
+    PADEL: 'Padel',
+    PICKLEBALL: 'Pickleball',
+    PICKELBALL: 'Pickleball',
+};
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ArrowLeft, Clock, Loader2, MapPin, Sparkles, Wallet } from 'lucide-react';
@@ -225,7 +239,7 @@ const PointsConfirm = ({
                                     Court:
                                 </span>
                                 <span className="font-medium">
-                                    {firstEntry?.courtName}
+                                    {SPORT_DISPLAY[state.sport] ?? state.sport} · {firstEntry?.courtName}
                                 </span>
                             </div>
                             <div className="flex items-center gap-2 text-sm">
@@ -249,7 +263,7 @@ const PointsConfirm = ({
                             {entries.map((e, i) => (
                                 <div key={i} className="flex items-center justify-between text-sm border-t pt-2 first:border-0 first:pt-0">
                                     <div>
-                                        <p className="font-medium">{e.courtName}</p>
+                                        <p className="font-medium">{SPORT_DISPLAY[state.sport] ?? state.sport} · {e.courtName}</p>
                                         <p className="text-xs text-muted-foreground">
                                             {format(new Date(e.bookingDate), 'dd MMM')}
                                             {' · '}
@@ -584,7 +598,7 @@ const ConfirmBooking = () => {
                         </p>
                         <div className="flex items-center justify-between text-sm">
                             <span className="font-medium">
-                                {state.courtName}{' '}
+                                {SPORT_DISPLAY[state.sport] ?? state.sport} · {state.courtName}{' '}
                                 <span className="text-muted-foreground font-normal">
                                     {startTime} – {endTime}
                                 </span>

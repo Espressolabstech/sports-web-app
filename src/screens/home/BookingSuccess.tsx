@@ -1,5 +1,19 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+
+const SPORT_DISPLAY: Record<string, string> = {
+    TENNIS: 'Tennis',
+    FOOTBALL: 'Football',
+    BADMINTON: 'Badminton',
+    TABLE_TENNIS: 'Table Tennis',
+    SQUASH: 'Squash',
+    RIFLE_SHOOTING: 'Rifle Shooting',
+    BOX_CRICKET: 'Box Cricket',
+    CRICKET: 'Cricket',
+    PADEL: 'Padel',
+    PICKLEBALL: 'Pickleball',
+    PICKELBALL: 'Pickleball',
+};
 import { format } from 'date-fns';
 import {
     CalendarCheck,
@@ -186,13 +200,10 @@ const BookingSuccess = () => {
                                     {isMulti ? 'Sport' : 'Sport & Court'}
                                 </p>
                                 <p className="font-semibold text-foreground text-sm">
-                                    {sport}
+                                    {!isMulti
+                                        ? `${SPORT_DISPLAY[sport] ?? sport} · ${courtName}`
+                                        : (SPORT_DISPLAY[sport] ?? sport)}
                                 </p>
-                                {!isMulti && (
-                                    <p className="text-xs text-muted-foreground">
-                                        {courtName}
-                                    </p>
-                                )}
                             </div>
                         </div>
 
@@ -202,7 +213,7 @@ const BookingSuccess = () => {
                                 <div key={i} className="px-4 py-3.5 space-y-1">
                                     <div className="flex items-center justify-between">
                                         <p className="text-sm font-semibold text-foreground">
-                                            {b.courtName}
+                                            {SPORT_DISPLAY[sport] ?? sport} · {b.courtName}
                                         </p>
                                         <p className="text-xs font-medium text-primary">
                                             {b.pointsAmount.toLocaleString()} pts
