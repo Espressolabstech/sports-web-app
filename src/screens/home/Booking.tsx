@@ -482,6 +482,7 @@ const Booking = () => {
                     },
                 });
             } else {
+                const pointsGroupId = `grp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
                 navigate('/confirm-booking', {
                     state: {
                         ...clubState,
@@ -492,6 +493,7 @@ const Booking = () => {
                             pointsAmount: entry.pointsPrice,
                             courtName: entry.courtData!.name,
                             multiCourt: true,
+                            groupId: pointsGroupId,
                         })),
                         totalPointsAmount: grandTotalPoints,
                     },
@@ -503,6 +505,10 @@ const Booking = () => {
         // ── Standard rupee flow ───────────────────────────────────────────────
         setHoldLoading(true);
         try {
+            const groupId = isMultiCourt
+                ? `grp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+                : undefined;
+
             const holdResults = await Promise.all(
                 allDateEntries.map(({ date, courtId, slotObjs }) =>
                     holdSlot({
@@ -513,6 +519,7 @@ const Booking = () => {
                             endTime: s.endTime,
                         })),
                         ...(isMultiCourt && { multiCourt: true }),
+                        ...(groupId && { groupId }),
                     }),
                 ),
             );

@@ -91,9 +91,7 @@ const MyBookings = () => {
     const [selectedBookingId, setSelectedBookingId] = useState<string | null>(
         null,
     );
-    const [selectedBooking, setSelectedBooking] = useState<ApiBooking | null>(
-        null,
-    );
+    const [selectedBooking, setSelectedBooking] = useState<{ booking: ApiBooking; siblings: ApiBooking[] } | null>(null);
     const [otcActiveBookings, setOtcActiveBookings] = useState<Set<string>>(
         new Set(),
     );
@@ -207,7 +205,6 @@ const MyBookings = () => {
     const allUpcoming = [...(upcomingData?.data?.bookings ?? [])].filter(
         (b) => {
             if (b.status !== 'PENDING') return true;
-            // hide expired holds (use tick so this re-evaluates every second)
             return tick >= 0 && isActiveHold(b);
         },
     );
@@ -223,6 +220,30 @@ const MyBookings = () => {
             `${a.bookingDate}${a.startTime}`,
         ),
     );
+
+    // Group bookings by bookingGroupId — returns de-duped list where the first
+    // booking in a group is the "primary" and carries the full sibling list.
+    type BookingGroup = { primary: ApiBooking; siblings: ApiBooking[] };
+
+    const groupBookings = (list: ApiBooking[]): BookingGroup[] => {
+        const seen = new Set<string>();
+        const groups: BookingGroup[] = [];
+        for (const b of list) {
+            if (!b.bookingGroupId) {
+                groups.push({ primary: b, siblings: [] });
+            } else if (!seen.has(b.bookingGroupId)) {
+                seen.add(b.bookingGroupId);
+                const siblings = list.filter(
+                    (s) => s.bookingGroupId === b.bookingGroupId && s.id !== b.id,
+                );
+                groups.push({ primary: b, siblings });
+            }
+        }
+        return groups;
+    };
+
+    const upcomingGroups = groupBookings(upcomingBookings);
+    const pastGroups = groupBookings(pastBookings);
 
     const isOtcEligible = (booking: ApiBooking) => {
         if (booking.status !== 'CONFIRMED') return false;
@@ -288,6 +309,11 @@ const MyBookings = () => {
 
     // Detail overlay
     if (selectedBooking) {
+        const { booking: sb, siblings: selSiblings } = selectedBooking;
+        const allInGroup = [sb, ...selSiblings];
+        const totalPoints = allInGroup.reduce((s, x) => s + (x.pointsAmount ?? 0), 0);
+        const totalFinal = allInGroup.reduce((s, x) => s + x.finalAmount, 0);
+
         return (
             <div className="min-h-screen bg-background pb-20">
                 <header className="flex items-center gap-3 bg-primary px-4 pb-4 pt-10 text-primary-foreground">
@@ -304,78 +330,50 @@ const MyBookings = () => {
                         <CardContent className="p-5 space-y-4">
                             <div className="flex items-start justify-between">
                                 <div>
-                                    <p className="text-lg font-bold text-foreground">
-                                        {SPORT_DISPLAY[selectedBooking.court.sport] ?? selectedBooking.court.sport} · {selectedBooking.court.name}
-                                    </p>
+                                    {allInGroup.map((x, i) => (
+                                        <p key={x.id} className={i === 0 ? 'text-lg font-bold text-foreground' : 'text-sm font-medium text-foreground'}>
+                                            {SPORT_DISPLAY[x.court.sport] ?? x.court.sport} · {x.court.name}
+                                            {allInGroup.length > 1 && <span className="text-xs font-normal text-muted-foreground ml-1">{formatTime(x.startTime)}–{formatTime(x.endTime)}</span>}
+                                        </p>
+                                    ))}
                                     <p className="text-sm text-muted-foreground">
-                                        {selectedBooking.venue.name}
+                                        {sb.venue.name}
                                     </p>
                                 </div>
-                                <Badge
-                                    className={
-                                        bookingStatusColors[
-                                            selectedBooking.status
-                                        ] ?? ''
-                                    }
-                                >
-                                    {selectedBooking.status.replace(/_/g, ' ')}
+                                <Badge className={bookingStatusColors[sb.status] ?? ''}>
+                                    {sb.status.replace(/_/g, ' ')}
                                 </Badge>
                             </div>
                             <div className="space-y-2">
                                 <div className="flex items-center gap-2 text-sm text-foreground">
                                     <Calendar className="h-4 w-4 text-muted-foreground" />
-                                    {format(
-                                        new Date(selectedBooking.bookingDate),
-                                        'EEEE, MMMM d, yyyy',
-                                    )}
+                                    {format(new Date(sb.bookingDate), 'EEEE, MMMM d, yyyy')}
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-foreground">
                                     <Clock className="h-4 w-4 text-muted-foreground" />
-                                    {formatTime(selectedBooking.startTime)} –{' '}
-                                    {formatTime(selectedBooking.endTime)}
+                                    {formatTime(sb.startTime)} – {formatTime(sb.endTime)}
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-foreground">
                                     <MapPin className="h-4 w-4 text-muted-foreground" />
-                                    {selectedBooking.venue.address},{' '}
-                                    {selectedBooking.venue.city}
+                                    {sb.venue.address}, {sb.venue.city}
                                 </div>
                             </div>
                             <div className="border-t pt-3 space-y-1 text-sm">
-                                {selectedBooking.paymentMode === 'POINTS' ? (
+                                {sb.paymentMode === 'POINTS' ? (
                                     <div className="flex justify-between font-semibold">
                                         <span>Points Used</span>
-                                        <span>
-                                            {(selectedBooking.pointsAmount ?? 0).toLocaleString()} pts
-                                        </span>
+                                        <span>{totalPoints.toLocaleString()} pts</span>
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="flex justify-between">
-                                            <span className="text-muted-foreground">
-                                                Amount
-                                            </span>
-                                            <span>₹{selectedBooking.totalAmount}</span>
-                                        </div>
-                                        {selectedBooking.discountAmount > 0 && (
-                                            <div className="flex justify-between text-green-600">
-                                                <span>Discount</span>
-                                                <span>
-                                                    -₹{selectedBooking.discountAmount}
-                                                </span>
-                                            </div>
-                                        )}
-                                        <div className="flex justify-between font-semibold pt-1 border-t">
+                                        <div className="flex justify-between font-semibold pt-1">
                                             <span>Total Paid</span>
-                                            <span>₹{selectedBooking.finalAmount}</span>
+                                            <span>₹{totalFinal}</span>
                                         </div>
-                                        {selectedBooking.payment && (
+                                        {sb.payment && (
                                             <div className="flex justify-between text-xs text-muted-foreground">
                                                 <span>Payment</span>
-                                                <span>
-                                                    {selectedBooking.payment.paymentMethod}{' '}
-                                                    ·{' '}
-                                                    {selectedBooking.payment.paymentStatus}
-                                                </span>
+                                                <span>{sb.payment.paymentMethod} · {sb.payment.paymentStatus}</span>
                                             </div>
                                         )}
                                     </>
@@ -389,7 +387,7 @@ const MyBookings = () => {
                             className="flex-1"
                             onClick={() =>
                                 window.open(
-                                    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedBooking.venue.name + ' ' + selectedBooking.venue.city)}`,
+                                    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(sb.venue.name + ' ' + sb.venue.city)}`,
                                     '_blank',
                                 )
                             }
@@ -399,7 +397,7 @@ const MyBookings = () => {
                         <Button
                             variant="outline"
                             className="flex-1"
-                            onClick={() => handleShare(selectedBooking)}
+                            onClick={() => handleShare(sb)}
                         >
                             <Share2 className="h-4 w-4 mr-2" /> Share
                         </Button>
@@ -413,45 +411,45 @@ const MyBookings = () => {
                         <Receipt className="h-4 w-4 mr-2" /> View Receipt
                     </Button>
 
-                    {selectedBooking.status === 'CONFIRMED' && (
+                    {sb.status === 'CONFIRMED' && (
                         <Button
                             variant="outline"
                             className="w-full border-destructive/40 text-destructive hover:bg-destructive/5"
                             onClick={() => setCancelDialogOpen(true)}
                         >
                             <XCircle className="h-4 w-4 mr-2" />
-                            Cancel Booking
+                            {selSiblings.length > 0 ? `Cancel All ${allInGroup.length} Courts` : 'Cancel Booking'}
                         </Button>
                     )}
                 </main>
 
                 {/* Cancel confirmation dialog */}
-                <Dialog
-                    open={cancelDialogOpen}
-                    onOpenChange={setCancelDialogOpen}
-                >
+                <Dialog open={cancelDialogOpen} onOpenChange={setCancelDialogOpen}>
                     <DialogContent className="max-w-sm">
                         <DialogHeader>
                             <DialogTitle className="flex items-center gap-2">
                                 <AlertTriangle className="h-5 w-5 text-destructive" />
-                                Cancel Booking?
+                                {selSiblings.length > 0 ? 'Cancel All Courts?' : 'Cancel Booking?'}
                             </DialogTitle>
                             <DialogDescription>
-                                You are cancelling your booking for{' '}
-                                <span className="font-medium text-foreground">
-                                    {selectedBooking.court.name}
-                                </span>{' '}
-                                at{' '}
-                                <span className="font-medium text-foreground">
-                                    {selectedBooking.venue.name}
-                                </span>{' '}
-                                on{' '}
-                                {format(
-                                    new Date(selectedBooking.bookingDate),
-                                    'EEE, MMM d',
+                                {selSiblings.length > 0 ? (
+                                    <>
+                                        This will cancel all {allInGroup.length} courts booked together at{' '}
+                                        <span className="font-medium text-foreground">{sb.venue.name}</span>{' '}
+                                        on {format(new Date(sb.bookingDate), 'EEE, MMM d')}:{' '}
+                                        {allInGroup.map((x) => x.court.name).join(', ')}.
+                                        Refunds are subject to the venue's cancellation policy.
+                                    </>
+                                ) : (
+                                    <>
+                                        You are cancelling your booking for{' '}
+                                        <span className="font-medium text-foreground">{sb.court.name}</span>{' '}
+                                        at{' '}
+                                        <span className="font-medium text-foreground">{sb.venue.name}</span>{' '}
+                                        on {format(new Date(sb.bookingDate), 'EEE, MMM d')}.
+                                        Refunds are subject to the venue's cancellation policy.
+                                    </>
                                 )}
-                                . Refunds are subject to the venue's
-                                cancellation policy.
                             </DialogDescription>
                         </DialogHeader>
                         <DialogFooter className="gap-2 sm:gap-0">
@@ -464,7 +462,7 @@ const MyBookings = () => {
                             </Button>
                             <Button
                                 variant="destructive"
-                                onClick={() => directCancel(selectedBooking.id)}
+                                onClick={() => directCancel(sb.id)}
                                 disabled={directCancelLoading}
                             >
                                 {directCancelLoading ? (
@@ -482,30 +480,31 @@ const MyBookings = () => {
                     open={receiptOpen}
                     onClose={() => setReceiptOpen(false)}
                     data={{
-                        bookingRef: selectedBooking.bookingRef,
-                        venueName: selectedBooking.venue.name,
-                        venueAddress: `${selectedBooking.venue.address}, ${selectedBooking.venue.city}`,
-                        sport: selectedBooking.court.sport,
-                        courtName: selectedBooking.court.name,
-                        bookingDate: selectedBooking.bookingDate.split('T')[0],
-                        startTime: selectedBooking.startTime,
-                        endTime: selectedBooking.endTime,
-                        durationMinutes: selectedBooking.durationMinutes,
-                        totalAmount: selectedBooking.totalAmount,
-                        discountAmount: selectedBooking.discountAmount,
-                        finalAmount: selectedBooking.finalAmount,
-                        paymentMode: selectedBooking.paymentMode,
-                        pointsAmount: selectedBooking.pointsAmount,
-                        paymentMethod: selectedBooking.payment?.paymentMethod,
-                        paymentStatus: selectedBooking.payment?.paymentStatus,
-                        bookedAt: selectedBooking.createdAt,
+                        bookingRef: sb.bookingRef,
+                        venueName: sb.venue.name,
+                        venueAddress: `${sb.venue.address}, ${sb.venue.city}`,
+                        sport: sb.court.sport,
+                        courtName: sb.court.name,
+                        bookingDate: sb.bookingDate.split('T')[0],
+                        startTime: sb.startTime,
+                        endTime: sb.endTime,
+                        durationMinutes: sb.durationMinutes,
+                        totalAmount: sb.totalAmount,
+                        discountAmount: sb.discountAmount,
+                        finalAmount: sb.finalAmount,
+                        paymentMode: sb.paymentMode,
+                        pointsAmount: sb.pointsAmount,
+                        paymentMethod: sb.payment?.paymentMethod,
+                        paymentStatus: sb.payment?.paymentStatus,
+                        bookedAt: sb.createdAt,
                     }}
                 />
             </div>
         );
     }
 
-    const renderBookingCard = (b: ApiBooking, isUpcomingCard: boolean) => {
+    const renderBookingCard = (b: ApiBooking, isUpcomingCard: boolean, siblings: ApiBooking[] = []) => {
+        const isGroupBooking = siblings.length > 0;
         const isOtcActive = otcActiveBookings.has(b.id);
         const canActivateOtc = isOtcEligible(b);
         const holdSecs = getHoldSecondsLeft(b);
@@ -517,7 +516,7 @@ const MyBookings = () => {
             <Card
                 key={b.id}
                 className={`cursor-pointer hover:shadow-md transition-shadow ${!isUpcomingCard ? 'opacity-80' : ''} ${isPendingHold ? 'border-amber-300' : ''}`}
-                onClick={() => !isPendingHold && setSelectedBooking(b)}
+                onClick={() => !isPendingHold && setSelectedBooking({ booking: b, siblings })}
             >
                 <CardContent className="p-4">
                     <div className="flex items-start justify-between">
@@ -528,6 +527,11 @@ const MyBookings = () => {
                                     : b.court.sport.charAt(0) + b.court.sport.slice(1).toLowerCase()}{' '}
                                 | {b.court.name}
                             </p>
+                            {isGroupBooking && siblings.map((s) => (
+                                <p key={s.id} className="text-xs text-muted-foreground">
+                                    + {s.court.sport === 'PICKELBALL' ? 'Pickleball' : s.court.sport.charAt(0) + s.court.sport.slice(1).toLowerCase()} | {s.court.name} · {formatTime(s.startTime)}–{formatTime(s.endTime)}
+                                </p>
+                            ))}
                             <p className="text-xs text-muted-foreground">
                                 {b.venue.name}
                             </p>
@@ -550,6 +554,11 @@ const MyBookings = () => {
                                     ? 'Held'
                                     : b.status.replace(/_/g, ' ')}
                             </Badge>
+                            {isGroupBooking && (
+                                <Badge variant="outline" className="text-[10px]">
+                                    {siblings.length + 1} courts
+                                </Badge>
+                            )}
                             {isOtcActive && (
                                 <Badge className="bg-warning/10 text-warning text-[10px]">
                                     OTC Active
@@ -564,8 +573,8 @@ const MyBookings = () => {
                         </span>
                         <span className="font-medium">
                             {b.paymentMode === 'POINTS'
-                                ? `${(b.pointsAmount ?? 0).toLocaleString()} pts`
-                                : `₹${b.finalAmount}`}
+                                ? `${([b, ...siblings].reduce((s, x) => s + (x.pointsAmount ?? 0), 0)).toLocaleString()} pts`
+                                : `₹${[b, ...siblings].reduce((s, x) => s + x.finalAmount, 0)}`}
                         </span>
                     </div>
 
@@ -656,10 +665,10 @@ const MyBookings = () => {
                             <h2 className="text-lg font-bold text-foreground mb-3">
                                 Upcoming
                             </h2>
-                            {upcomingBookings.length > 0 ? (
+                            {upcomingGroups.length > 0 ? (
                                 <div className="space-y-2">
-                                    {upcomingBookings.map((b) =>
-                                        renderBookingCard(b, true),
+                                    {upcomingGroups.map(({ primary, siblings }) =>
+                                        renderBookingCard(primary, true, siblings),
                                     )}
                                 </div>
                             ) : (
@@ -681,14 +690,14 @@ const MyBookings = () => {
                         </div>
 
                         {/* Past */}
-                        {pastBookings.length > 0 && (
+                        {pastGroups.length > 0 && (
                             <div>
                                 <h2 className="text-lg font-bold text-foreground mb-3">
                                     Past Bookings
                                 </h2>
                                 <div className="space-y-2">
-                                    {pastBookings.map((b) =>
-                                        renderBookingCard(b, false),
+                                    {pastGroups.map(({ primary, siblings }) =>
+                                        renderBookingCard(primary, false, siblings),
                                     )}
                                 </div>
                             </div>
