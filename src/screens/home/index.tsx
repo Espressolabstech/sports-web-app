@@ -53,9 +53,11 @@ const Home = () => {
         enabled: user && !savedClubSlug,
     });
     const myClubs: ApiMyClub[] = clubsData?.data?.clubs ?? [];
+    // Prefer slug for clean URL; fall back to id so redirect works for clubs without a slug yet
     const firstClubSlug = myClubs[0]?.venue?.slug ?? null;
+    const firstClubDest = myClubs[0]?.venue?.slug ?? myClubs[0]?.venue?.id ?? null;
 
-    // Write slug to localStorage as a side effect when we first learn it
+    // Cache slug to localStorage so the next visit to / redirects instantly
     useEffect(() => {
         if (firstClubSlug) setActiveClubSlug(firstClubSlug);
     }, [firstClubSlug]);
@@ -85,12 +87,15 @@ const Home = () => {
 
     const venues = Array.isArray(data?.data?.venues) ? data.data.venues : [];
 
+    // If a club slug is stored, always redirect — even when logged out.
+    // This prevents private club members from ever landing on the public home.
+    if (savedClubSlug) return <Navigate to={`/club/${savedClubSlug}`} replace />;
+
     if (user) {
-        // Instant redirect if slug already known
-        const dest = savedClubSlug ?? firstClubSlug;
-        if (dest) return <Navigate to={`/club/${dest}`} replace />;
-        // Still waiting for clubs API — show blank to avoid flash of public home
+        // First visit (no cached slug yet): wait for clubs API
         if (clubsLoading) return <div className="min-h-screen bg-background" />;
+        // API returned a club — redirect and the useEffect will cache the slug
+        if (firstClubDest) return <Navigate to={`/club/${firstClubDest}`} replace />;
     }
 
     return (

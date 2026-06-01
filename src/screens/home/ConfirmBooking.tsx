@@ -36,6 +36,7 @@ interface PointsEntry {
     pointsAmount: number;
     courtName: string;
     multiCourt?: boolean;
+    groupId?: string;
 }
 
 interface ConfirmBookingState {
@@ -115,6 +116,7 @@ const PointsConfirm = ({
                         slots: entry.slots,
                         paymentMode: 'POINTS',
                         ...(entry.multiCourt && { multiCourt: true }),
+                        ...(entry.groupId && { groupId: entry.groupId }),
                     }),
                 ),
             );
