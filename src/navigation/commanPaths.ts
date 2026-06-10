@@ -5,6 +5,7 @@ export const path = {
     profile: '/profile',
     wallets: '/wallets',
     venue: '/venue/:venueId',
+    venueAbout: '/venue/:venueId/about',
     booking: '/booking/:facilityId/:courtId?',
     confirmBooking: '/confirm-booking',
     multiConfirmBooking: '/multi-confirm-booking',

@@ -22,7 +22,6 @@ import {
 import {
     ArrowLeft,
     Crown,
-    ExternalLink,
     MapPin,
     Percent,
     Share2,
@@ -31,14 +30,14 @@ import {
     Unlock,
     Lock,
     Zap,
-    Info,
     ChevronRight,
     Clock,
     RefreshCw,
     Check,
-    Sparkles,
     Wallet,
     LogOut,
+    Rocket,
+    Coins,
 } from 'lucide-react';
 import {
     DropdownMenu,
@@ -64,7 +63,9 @@ import {
     SheetTitle,
 } from '../../components/ui/sheet';
 import { getToken } from '../../utils/cookies.helpers';
-import { formatTime } from '../../utils/twMerge';
+import padelIcon from '../../assets/padel-Icon.png';
+import pickleballIcon from '../../assets/pickleball-Icon.png';
+import tennisIcon from '../../assets/tennis-Icon.png';
 
 // ── Tier Metadata ──────────────────────────────────────────────────────────────
 const TIER_META: Record<
@@ -187,55 +188,14 @@ const TIER_PERKS: Record<string, TierPerkInfo[]> = Object.fromEntries(
     ]),
 );
 
-// ── Sport SVG Icons ────────────────────────────────────────────────────────────
-function PadelIcon({ className }: { className?: string }) {
-    return (
-        <svg
-            className={className}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <ellipse cx="12" cy="9" rx="5.5" ry="7" />
-            <line x1="12" y1="16" x2="12" y2="23" />
-            <line x1="9" y1="5" x2="9" y2="13" />
-            <line x1="15" y1="5" x2="15" y2="13" />
-            <line x1="7" y1="9" x2="17" y2="9" />
-            <circle cx="12" cy="9" r="1" fill="currentColor" stroke="none" />
-        </svg>
-    );
-}
-
-function PickleballIcon({ className }: { className?: string }) {
-    return (
-        <svg
-            className={className}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <rect x="6" y="1" width="12" height="14" rx="6" />
-            <line x1="12" y1="15" x2="12" y2="23" />
-            <circle cx="10" cy="7" r="0.8" fill="currentColor" stroke="none" />
-            <circle cx="14" cy="7" r="0.8" fill="currentColor" stroke="none" />
-            <circle cx="10" cy="11" r="0.8" fill="currentColor" stroke="none" />
-            <circle cx="14" cy="11" r="0.8" fill="currentColor" stroke="none" />
-            <circle cx="12" cy="9" r="0.8" fill="currentColor" stroke="none" />
-        </svg>
-    );
-}
-
-const SPORT_ICONS: Record<string, React.ReactNode> = {
-    PADEL: <PadelIcon className="h-6 w-6" />,
-    PICKELBALL: <PickleballIcon className="h-6 w-6" />,
-    Padel: <PadelIcon className="h-6 w-6" />,
-    Pickleball: <PickleballIcon className="h-6 w-6" />,
+const SPORT_IMAGES: Record<string, string> = {
+    PADEL: padelIcon,
+    PICKLEBALL: pickleballIcon,
+    PICKELBALL: pickleballIcon,
+    TENNIS: tennisIcon,
+    Padel: padelIcon,
+    Pickleball: pickleballIcon,
+    Tennis: tennisIcon,
 };
 
 const Venues = () => {
@@ -344,24 +304,16 @@ const Venues = () => {
     const currentTierName = membership?.tier
         ? membership.tier.toLowerCase()
         : null;
-    const spendProgress =
-        membership?.tierProgress?.spendProgressPct ??
-        (currentTierName === 'elite' ? 100 : 0);
-    const remainSpend = membership?.tierProgress?.remainingSpend ?? 0;
 
     const tierOrder = ['club', 'pro', 'elite'];
     const currentTierIndex = currentTierName
         ? tierOrder.indexOf(currentTierName)
         : -1;
-    const nextTierName = membership?.tierProgress?.nextTier
-        ? membership.tierProgress.nextTier.toLowerCase()
-        : currentTierIndex >= 0 && currentTierIndex < 2
-          ? tierOrder[currentTierIndex + 1]
-          : null;
-    const nextLabel = nextTierName ? TIER_META[nextTierName]?.label : null;
 
     const meta = currentTierName ? TIER_META[currentTierName] : null;
-    const perks = currentTierName ? TIER_PERKS[currentTierName] : [];
+
+    const cancellationPolicy =
+        facility?.bookingPolicy?.cancellationPolicy ?? '';
 
     // Group courts by sport
     const sportGroups = Object.entries(courtsBySport).map(
@@ -377,17 +329,6 @@ const Venues = () => {
             return { sport, courtCount: sportCourts.length, minPrice };
         },
     );
-
-    // Hours from API
-    const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const venueHours = (facility?.venueHours ?? []).map((h) => ({
-        day: DAY_NAMES[h.dayOfWeek],
-        time: h.isClosed
-            ? 'Closed'
-            : `${formatTime(h.openTime)} – ${formatTime(h.closeTime)}`,
-    }));
-    const cancellationPolicy =
-        facility?.bookingPolicy?.cancellationPolicy ?? '';
 
     if (venueLoading) {
         return (
@@ -406,8 +347,6 @@ const Venues = () => {
     }
 
     const handleBookSport = (sport: string) => {
-        // Guests can browse courts and slots freely.
-        // Auth is only required when they tap "Review Booking" on the next screen.
         const firstCourt = allCourts.find(
             (c: ApiCourt) => c.sport.toLowerCase() === sport.toLowerCase(),
         );
@@ -443,7 +382,7 @@ const Venues = () => {
                     text,
                 });
             } catch {
-                // user cancelled — ignore
+                // user cancelled
             }
         } else {
             await navigator.clipboard.writeText(text);
@@ -452,6 +391,20 @@ const Venues = () => {
 
     return (
         <div className="min-h-screen bg-background pb-10">
+            {/* SVG gradient defs for icon strokes */}
+            <svg width="0" height="0" className="absolute" aria-hidden="true">
+                <defs>
+                    <linearGradient id="icon-grad-orange" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="hsl(25 90% 58%)" />
+                        <stop offset="100%" stopColor="hsl(15 80% 50%)" />
+                    </linearGradient>
+                    <linearGradient id="icon-grad-green" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="hsl(150 55% 48%)" />
+                        <stop offset="100%" stopColor="hsl(160 60% 36%)" />
+                    </linearGradient>
+                </defs>
+            </svg>
+
             {/* ── Hero ── */}
             <div className="relative mx-auto max-w-5xl">
                 <div className="aspect-[21/9] max-h-[45vh] w-full overflow-hidden bg-muted md:rounded-b-2xl">
@@ -495,7 +448,7 @@ const Venues = () => {
                                 <DropdownMenuItem
                                     onClick={() => navigate('/profile')}
                                 >
-                                    Profile & Bookings
+                                    Profile &amp; Bookings
                                 </DropdownMenuItem>
                                 <DropdownMenuItem className="text-destructive">
                                     <LogOut className="h-4 w-4 mr-2" />
@@ -509,7 +462,7 @@ const Venues = () => {
 
             <div className="mx-auto max-w-lg px-4">
                 {/* ── Section 1: Venue Identity ── */}
-                <div className="pt-2 pb-5">
+                <div className="pt-3 pb-5">
                     <div className="flex items-start gap-2">
                         <h1 className="text-2xl font-bold text-foreground flex-1">
                             {facility.name}
@@ -526,327 +479,176 @@ const Venues = () => {
                             </button>
                         )}
                     </div>
-                    <button className="mt-1 inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:underline text-left">
-                        <MapPin className="h-3.5 w-3.5 shrink-0" />
-                        <span>{facility.city}</span>
-                        <ExternalLink className="h-3 w-3 opacity-60" />
-                    </button>
-                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                        {facility.description}
-                    </p>
+                    <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                        <button
+                            onClick={() => {
+                                const loc = [facility.address, facility.city]
+                                    .filter(Boolean)
+                                    .join(', ');
+                                const url =
+                                    facility.latitude && facility.longitude
+                                        ? `https://maps.google.com/?q=${facility.latitude},${facility.longitude}`
+                                        : `https://maps.google.com/?q=${encodeURIComponent(loc)}`;
+                                window.open(url, '_blank');
+                            }}
+                            className="inline-flex items-center gap-1.5 hover:underline text-left"
+                        >
+                            <MapPin className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{facility.city}</span>
+                        </button>
+                        <span className="text-muted-foreground/40">·</span>
+                        <button
+                            onClick={() => navigate(`/venue/${venueId}/about`)}
+                            className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline shrink-0"
+                        >
+                            About
+                            <ChevronRight className="h-3 w-3" />
+                        </button>
+                    </div>
                 </div>
 
                 <Separator className="mb-5" />
 
                 {/* ── Section 2: Book a Court ── */}
                 <section className="mb-6">
-                    <h2 className="text-lg font-bold text-foreground mb-3">
+                    <h2 className="text-[15px] font-medium text-muted-foreground mb-3 tracking-tight">
                         Book a Court
                     </h2>
-                    <div className="space-y-2">
-                        {sportGroups.map(({ sport, courtCount, minPrice }) => (
-                            <button
-                                key={sport}
-                                className="w-full flex items-center gap-3 rounded-xl border bg-card p-3 hover:shadow-md transition-all text-left group"
-                                onClick={() => handleBookSport(sport)}
-                            >
-                                <div className="text-muted-foreground/60 shrink-0">
-                                    {SPORT_ICONS[sport] || (
-                                        <Shield className="h-6 w-6" />
-                                    )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="font-bold text-foreground text-[15px] leading-tight">
-                                        {sport === 'PADEL'
-                                            ? 'Padel'
-                                            : sport === 'PICKELBALL'
-                                              ? 'Pickleball'
-                                              : sport}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-0.5">
-                                        {courtCount} court
-                                        {courtCount !== 1 ? 's' : ''} · From ₹
-                                        {minPrice}/hr
-                                    </p>
-                                </div>
-                                <Button
-                                    size="default"
-                                    className="shrink-0 gap-1.5 px-5 font-semibold shadow-sm group-hover:shadow-md transition-shadow"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleBookSport(sport);
-                                    }}
+                    <div className="space-y-2.5">
+                        {sportGroups.map(({ sport, courtCount, minPrice }) => {
+                            const sportLabel =
+                                sport === 'PADEL'
+                                    ? 'Padel'
+                                    : sport === 'PICKELBALL' ||
+                                        sport === 'PICKLEBALL'
+                                      ? 'Pickleball'
+                                      : sport === 'TENNIS'
+                                        ? 'Tennis'
+                                        : sport;
+                            const sportImg = SPORT_IMAGES[sport];
+                            return (
+                                <button
+                                    key={sport}
+                                    className="w-full flex items-center gap-4 rounded-2xl border bg-card p-3.5 pr-4 hover:shadow-md hover:border-foreground/20 transition-all text-left group"
+                                    onClick={() => handleBookSport(sport)}
                                 >
-                                    Book
-                                    <ChevronRight className="h-4 w-4" />
-                                </Button>
-                            </button>
-                        ))}
-                    </div>
-                </section>
-
-                <Separator className="mb-5" />
-
-                {/* ── Section 3: Features & Perks ── */}
-                <section className="mb-6">
-                    <div className="mb-3">
-                        <h2 className="text-lg font-bold text-foreground">
-                            Features & Perks
-                        </h2>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                            Play more, unlock more at this venue
-                        </p>
-                    </div>
-
-                    {(membership?.totalBookings ?? 0) === 0 ? (
-                        /* No bookings yet — unlock prompt only */
-                        <div className="rounded-2xl bg-card border px-5 py-4">
-                            <div className="flex items-center gap-2 mb-2">
-                                <Sparkles className="h-5 w-5 text-primary" />
-                                <p className="text-base font-bold text-foreground">
-                                    Unlock Perks
-                                </p>
-                            </div>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                                Make your first booking to start unlocking
-                                exclusive perks like flexible cancellations,
-                                rental discounts, and early access to slots.
-                            </p>
-                            <button
-                                onClick={() => setPerksSheetOpen(true)}
-                                className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary hover:underline"
-                            >
-                                See all tiers &amp; perks
-                                <ChevronRight className="h-3 w-3" />
-                            </button>
-                        </div>
-                    ) : (
-                        /* Has bookings — show tier card */
-                        <div
-                            className={`rounded-2xl overflow-hidden relative ${meta ? meta.bgGradient : 'bg-card border'}`}
-                        >
-                            {meta && (
-                                <>
-                                    <div className="absolute -top-6 -right-6 h-24 w-24 rounded-full opacity-[0.07] bg-current" />
-                                    <div className="absolute -bottom-4 -left-4 h-16 w-16 rounded-full opacity-[0.05] bg-current" />
-                                </>
-                            )}
-                            <div className="relative px-5 py-4">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div
-                                            className={`flex items-center justify-center h-9 w-9 rounded-xl ${meta!.bgClass} ${meta!.color}`}
-                                        >
-                                            {meta!.icon}
-                                        </div>
-                                        <p
-                                            className={`text-2xl font-extrabold tracking-tight ${meta!.color}`}
-                                        >
-                                            {meta!.label}
-                                        </p>
-                                    </div>
-                                    <button
-                                        onClick={() => setPerksSheetOpen(true)}
-                                        className="text-muted-foreground/40 hover:text-muted-foreground/70 transition-colors mt-1"
-                                        aria-label="View all tiers"
-                                    >
-                                        <Info className="h-4 w-4" />
-                                    </button>
-                                </div>
-                                {currentTierName === 'elite' && (
-                                    <p className="text-xs font-medium text-muted-foreground mt-1 ml-11">
-                                        Highest tier — all perks unlocked
-                                    </p>
-                                )}
-                                {nextTierName && (
-                                    <div className="mt-3">
-                                        <div className="h-2 w-full rounded-full bg-black/[0.06] dark:bg-white/[0.08] overflow-hidden">
-                                            <div
-                                                className={`h-full rounded-full transition-all duration-500 ${meta!.gradient}`}
-                                                style={{
-                                                    width: `${spendProgress}%`,
-                                                }}
+                                    <div className="shrink-0 h-14 w-14 flex items-center justify-center overflow-hidden">
+                                        {sportImg ? (
+                                            <img
+                                                src={sportImg}
+                                                alt={sportLabel}
+                                                className="h-14 w-14 object-contain"
                                             />
-                                        </div>
-                                        {remainSpend > 0 && (
-                                            <p className="text-xs text-muted-foreground mt-2">
-                                                Spend ₹
-                                                {remainSpend.toLocaleString(
-                                                    'en-IN',
-                                                )}{' '}
-                                                more to upgrade to {nextLabel}
-                                            </p>
+                                        ) : (
+                                            <Shield className="h-6 w-6 text-muted-foreground" />
                                         )}
                                     </div>
-                                )}
-                                {perks.length > 0 && (
-                                    <div className="mt-4">
-                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70 mb-2">
-                                            Perks you've unlocked
+                                    <div className="flex-1 min-w-0">
+                                        <p className="font-semibold text-foreground text-[15px] leading-tight tracking-tight">
+                                            {sportLabel}
                                         </p>
-                                        <div className="space-y-1.5">
-                                            {perks.map((perk) => (
-                                                <button
-                                                    key={perk.key}
-                                                    onClick={() =>
-                                                        setPerkDetailOpen(perk)
-                                                    }
-                                                    className="flex items-center gap-2.5 w-full text-left rounded-xl bg-white/60 dark:bg-white/[0.06] hover:bg-white/80 dark:hover:bg-white/[0.1] px-3 py-2 transition-colors group"
-                                                >
-                                                    <div
-                                                        className={`flex items-center justify-center h-6 w-6 rounded-lg ${meta!.bgClass} ${meta!.color} shrink-0`}
-                                                    >
-                                                        {perk.icon}
-                                                    </div>
-                                                    <span className="text-sm font-medium text-foreground flex-1">
-                                                        {perk.name}
-                                                    </span>
-                                                    <Check className="h-3.5 w-3.5 text-muted-foreground/40 group-hover:text-muted-foreground/70" />
-                                                </button>
-                                            ))}
-                                        </div>
+                                        <p className="text-xs text-muted-foreground mt-1">
+                                            {courtCount} court
+                                            {courtCount !== 1 ? 's' : ''} · From{' '}
+                                            <span className="font-semibold text-foreground/80">
+                                                ₹{minPrice}
+                                            </span>
+                                            /hr
+                                        </p>
                                     </div>
-                                )}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Credit Packages row — always visible */}
-                    {creditPackages.length > 0 && (
-                        <button
-                            onClick={() => setCreditsSheetOpen(true)}
-                            className="w-full flex items-center justify-between gap-3 rounded-xl border bg-card p-4 hover:bg-accent/50 transition-colors text-left mt-3"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 shrink-0">
-                                    <Wallet className="h-4 w-4 text-primary" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-semibold text-foreground">
-                                        Credit Packages
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                        Buy credits &amp; fast-track your tier
-                                    </p>
-                                </div>
-                            </div>
-                            <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
-                        </button>
-                    )}
+                                    <span className="shrink-0 inline-flex items-center gap-1.5 rounded-full px-5 h-10 text-sm font-semibold text-primary-foreground bg-gradient-to-b from-primary to-[hsl(var(--primary)/0.85)] shadow-[0_1px_0_hsl(var(--primary-foreground)/0.25)_inset,0_6px_16px_-6px_hsl(var(--primary)/0.55)] ring-1 ring-primary/40 group-hover:shadow-[0_1px_0_hsl(var(--primary-foreground)/0.25)_inset,0_10px_22px_-8px_hsl(var(--primary)/0.6)] group-hover:-translate-y-px transition-all">
+                                        Book
+                                        <ChevronRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                                    </span>
+                                </button>
+                            );
+                        })}
+                    </div>
                 </section>
 
-                <Separator className="mb-5" />
-
-                {/* ── Bottom info card: Amenities + Hours + Location + Policies ── */}
-                <div className="rounded-2xl border bg-card overflow-hidden mb-6">
-                    {/* Amenities */}
-                    <div className="p-4 pb-3">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2.5">
-                            Amenities
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                            {facility.venueAmenities.map((a) => (
-                                <span
-                                    key={a.name}
-                                    className="rounded-full bg-accent px-2.5 py-1 text-[11px] font-medium text-accent-foreground"
-                                >
-                                    {a.name}
+                {/* ── Tinted Band: Level Up + Credits ── */}
+                <div className="-mx-4 px-4 pt-5 pb-2 mt-2 rounded-t-3xl bg-gradient-to-b from-muted/80 via-muted/45 to-muted/10">
+                    <div className="space-y-3">
+                        {/* Level Up card */}
+                        <button
+                            onClick={() => setPerksSheetOpen(true)}
+                            className="group text-left rounded-2xl border border-border/50 bg-card px-4 pt-3.5 pb-3 hover:border-foreground/20 hover:shadow-sm transition-all w-full"
+                        >
+                            <div className="flex items-center gap-2.5">
+                                <Rocket
+                                    className="h-[18px] w-[18px] shrink-0 [&_path]:[stroke:url(#icon-grad-orange)] [&_polygon]:[stroke:url(#icon-grad-orange)]"
+                                    strokeWidth={2.25}
+                                />
+                                <div className="flex-1 min-w-0">
+                                    <p className="text-[15px] font-semibold text-foreground tracking-tight leading-tight">
+                                        Level Up
+                                    </p>
+                                    <p className="text-[12.5px] text-muted-foreground mt-0.5 leading-snug">
+                                        Unlock perks as you play
+                                    </p>
+                                </div>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-foreground/70 group-hover:translate-x-0.5 transition-all shrink-0" />
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 mt-3 pl-[26px]">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-foreground/[0.05] px-2 py-0.5 text-[11px] font-medium text-foreground/75">
+                                    <RefreshCw className="h-2.5 w-2.5 text-foreground/45" />
+                                    Flexible cancellation
                                 </span>
-                            ))}
-                        </div>
-                    </div>
-
-                    <Separator />
-
-                    {/* Hours & Location side by side */}
-                    <div className="grid grid-cols-2 divide-x divide-border">
-                        <div className="p-4">
-                            <div className="flex items-center gap-1.5 mb-2">
-                                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span className="text-xs font-semibold text-foreground">
-                                    Hours
+                                <span className="inline-flex items-center gap-1 rounded-full bg-foreground/[0.05] px-2 py-0.5 text-[11px] font-medium text-foreground/75">
+                                    <Percent className="h-2.5 w-2.5 text-foreground/45" />
+                                    Rental discount
+                                </span>
+                                <span className="inline-flex items-center gap-1 rounded-full bg-foreground/[0.05] px-2 py-0.5 text-[11px] font-medium text-foreground/75">
+                                    <Zap className="h-2.5 w-2.5 text-foreground/45" />
+                                    Early access
                                 </span>
                             </div>
-                            <div className="space-y-1">
-                                {venueHours.map((h, i) => (
-                                    <div key={i}>
-                                        <p className="text-[11px] text-muted-foreground">
-                                            {h.day}
+                        </button>
+
+                        {/* Club Credits card */}
+                        {creditPackages.length > 0 && (
+                            <button
+                                onClick={() => setCreditsSheetOpen(true)}
+                                className="group text-left rounded-2xl border border-border/50 bg-card px-4 pt-3.5 pb-3 hover:border-foreground/20 hover:shadow-sm transition-all w-full"
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    <Coins
+                                        className="h-[18px] w-[18px] shrink-0 [&_path]:[stroke:url(#icon-grad-green)] [&_circle]:[stroke:url(#icon-grad-green)] [&_ellipse]:[stroke:url(#icon-grad-green)] [&_line]:[stroke:url(#icon-grad-green)]"
+                                        strokeWidth={2.25}
+                                    />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[15px] font-semibold text-foreground tracking-tight leading-tight">
+                                            Club Credits
                                         </p>
-                                        <p className="text-[11px] font-medium text-foreground">
-                                            {h.time}
+                                        <p className="text-[12.5px] text-muted-foreground mt-0.5 leading-snug">
+                                            Pay less, play more
                                         </p>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        <button className="p-4 text-left hover:bg-accent/30 transition-colors">
-                            <div className="flex items-center gap-1.5 mb-2">
-                                <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span className="text-xs font-semibold text-foreground">
-                                    Location
-                                </span>
-                            </div>
-                            <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                {facility.city}
-                            </p>
-                            <div className="mt-1.5 flex items-center gap-1 text-[11px] text-muted-foreground font-medium">
-                                <span>Directions</span>
-                                <ExternalLink className="h-2.5 w-2.5" />
-                            </div>
-                        </button>
+                                    <ChevronRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-foreground/70 group-hover:translate-x-0.5 transition-all shrink-0" />
+                                </div>
+                                <div className="flex flex-wrap gap-1.5 mt-3 pl-[26px]">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-foreground/[0.05] px-2 py-0.5 text-[11px] font-medium text-foreground/75">
+                                        {user
+                                            ? `₹${walletBalance.toLocaleString('en-IN')} balance`
+                                            : 'Bonus credits on purchase'}
+                                    </span>
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-foreground/[0.05] px-2 py-0.5 text-[11px] font-medium text-foreground/75">
+                                        Fast-track your tier
+                                    </span>
+                                </div>
+                            </button>
+                        )}
                     </div>
 
-                    <Separator />
-
-                    {/* Policies */}
-                    <div className="p-4 space-y-3">
-                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                            Policies
-                        </p>
+                    {/* Footer */}
+                    <div className="text-center pt-6 pb-2">
                         <button
-                            onClick={() => setPoliciesSheetOpen(true)}
-                            className="w-full flex items-start gap-2 text-left hover:opacity-75 transition-opacity"
+                            onClick={() => navigate('/')}
+                            className="text-xs text-muted-foreground hover:text-foreground hover:underline"
                         >
-                            <Shield className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[11px] font-semibold text-foreground">
-                                    Cancellation
-                                </p>
-                                <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
-                                    {cancellationPolicy ||
-                                        'Contact venue for cancellation details.'}
-                                </p>
-                            </div>
-                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
-                        </button>
-                        <button
-                            onClick={() => setPoliciesSheetOpen(true)}
-                            className="w-full flex items-start gap-2 text-left hover:opacity-75 transition-opacity"
-                        >
-                            <RefreshCw className="h-3.5 w-3.5 text-muted-foreground mt-0.5 shrink-0" />
-                            <div className="flex-1 min-w-0">
-                                <p className="text-[11px] font-semibold text-foreground">
-                                    Cancellation + Rescheduling
-                                </p>
-                                <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                    Tap to view full policies
-                                </p>
-                            </div>
-                            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0 mt-0.5" />
+                            Powered by BookEase · Explore more venues
                         </button>
                     </div>
-                </div>
-
-                {/* Footer */}
-                <div className="text-center pb-2">
-                    <button
-                        onClick={() => navigate('/')}
-                        className="text-xs text-muted-foreground hover:text-foreground hover:underline"
-                    >
-                        Powered by EasyBook · Explore more venues
-                    </button>
                 </div>
             </div>
 
@@ -922,7 +724,6 @@ const Venues = () => {
                     </SheetHeader>
 
                     <div className="space-y-5 pb-8">
-                        {/* Cancellation Policy */}
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
                                 <div className="rounded-full bg-red-100 dark:bg-red-950/30 p-1.5">
@@ -940,7 +741,6 @@ const Venues = () => {
 
                         <Separator />
 
-                        {/* Minimum Notice */}
                         {facility.bookingPolicy && (
                             <div className="space-y-2">
                                 <div className="flex items-center gap-2">
@@ -962,7 +762,6 @@ const Venues = () => {
 
                         <Separator />
 
-                        {/* Rescheduling */}
                         <div className="space-y-2">
                             <div className="flex items-center gap-2">
                                 <div className="rounded-full bg-blue-100 dark:bg-blue-950/30 p-1.5">
@@ -981,7 +780,6 @@ const Venues = () => {
 
                         <Separator />
 
-                        {/* Auto Confirm */}
                         {facility.bookingPolicy && (
                             <div className="space-y-2">
                                 <div className="flex items-center gap-2">
@@ -1004,7 +802,6 @@ const Venues = () => {
                             </div>
                         )}
 
-                        {/* Advance Booking */}
                         {facility.bookingPolicy &&
                             facility.bookingPolicy.adavanceBookingDays > 0 && (
                                 <>
@@ -1036,20 +833,14 @@ const Venues = () => {
                 </SheetContent>
             </Sheet>
 
-            {/* Features & Perks Sheet */}
-            <Sheet open={perksSheetOpen} onOpenChange={setPerksSheetOpen}>
-                <SheetContent
-                    side="bottom"
-                    className="rounded-t-2xl max-h-[85vh] overflow-y-auto"
-                >
-                    <SheetHeader className="mb-1">
-                        <SheetTitle>
-                            Features & Perks at {facility.name}
-                        </SheetTitle>
-                    </SheetHeader>
-                    <p className="text-sm text-muted-foreground mb-5">
-                        Spend more to level up and unlock exclusive features at
-                        this venue.
+            {/* Level Up Dialog */}
+            <Dialog open={perksSheetOpen} onOpenChange={setPerksSheetOpen}>
+                <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+                    <DialogHeader className="mb-1">
+                        <DialogTitle>Level Up</DialogTitle>
+                    </DialogHeader>
+                    <p className="text-sm text-muted-foreground -mt-3 mb-4">
+                        Book to unlock tiers and rewards
                     </p>
 
                     <div className="space-y-3 pb-8">
@@ -1060,24 +851,32 @@ const Venues = () => {
                             const config = tierConfigs.find(
                                 (c: ApiTierConfig) => c.tier_name === tierKey,
                             );
-                            const tPerks = TIER_PERKS[tierKey] || [];
 
-                            const noBookings =
-                                (membership?.totalBookings ?? 0) === 0;
-                            const isDimmed =
-                                noBookings ||
-                                (!isUnlocked && currentTierIndex >= 0);
+                            const prevTierKey = i > 0 ? tierOrder[i - 1] : null;
+                            const prevPerkKeys = prevTierKey
+                                ? TIER_PERK_KEYS[prevTierKey] ?? []
+                                : [];
+                            const newPerks = (TIER_PERKS[tierKey] ?? []).filter(
+                                (p) => !prevPerkKeys.includes(p.key),
+                            );
+
+                            const fastTrackPkg =
+                                creditPackages.find(
+                                    (p: CreditPackage) =>
+                                        (p as any).tier_grant === tierKey,
+                                ) ?? null;
 
                             return (
                                 <div
                                     key={tierKey}
-                                    className={`rounded-xl border bg-card overflow-hidden transition-all ${isCurrentTier ? 'shadow-md ring-1 ring-primary/20' : ''} ${isDimmed ? 'opacity-40' : ''}`}
+                                    className={`rounded-xl border bg-card overflow-hidden ${isCurrentTier ? 'ring-1 ring-primary/20' : ''}`}
                                 >
-                                    <div
-                                        className={`h-1 w-full ${tMeta.gradient}`}
-                                    />
+                                    {/* Colored top line */}
+                                    <div className={`h-1 w-full ${tMeta.gradient}`} />
+
                                     <div className="p-4">
-                                        <div className="flex items-start justify-between mb-2">
+                                        {/* Tier header row */}
+                                        <div className="flex items-center justify-between mb-3">
                                             <div className="flex items-center gap-2">
                                                 <span className={tMeta.color}>
                                                     {tMeta.icon}
@@ -1091,86 +890,75 @@ const Venues = () => {
                                                     </span>
                                                 )}
                                             </div>
+
+                                            {/* Spend badge — with Fast Track if not yet unlocked */}
                                             {config && config.min_spend > 0 && (
-                                                <span className="text-xs text-muted-foreground bg-muted rounded-full px-2 py-0.5 shrink-0 ml-2">
-                                                    ₹
-                                                    {Number(
-                                                        config.min_spend,
-                                                    ).toLocaleString(
-                                                        'en-IN',
-                                                    )}{' '}
-                                                    spend
-                                                </span>
+                                                !isUnlocked && fastTrackPkg ? (
+                                                    <button
+                                                        onClick={() => {
+                                                            setPerksSheetOpen(false);
+                                                            setTimeout(() => setCreditsSheetOpen(true), 300);
+                                                        }}
+                                                        className="rounded-lg border border-primary/25 bg-primary/5 px-2.5 py-1.5 text-right hover:bg-primary/10 transition-colors shrink-0"
+                                                    >
+                                                        <p className="text-[11px] text-muted-foreground leading-tight">
+                                                            ₹{Number(config.min_spend).toLocaleString('en-IN')} spend
+                                                        </p>
+                                                        <p className="text-[11px] font-semibold text-primary flex items-center justify-end gap-0.5 mt-0.5">
+                                                            <Zap className="h-3 w-3" />
+                                                            Fast Track
+                                                        </p>
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-xs text-muted-foreground bg-muted rounded-full px-2.5 py-0.5 shrink-0">
+                                                        ₹{Number(config.min_spend).toLocaleString('en-IN')} spend
+                                                    </span>
+                                                )
                                             )}
                                         </div>
 
-                                        <div className="space-y-1.5 mt-3">
-                                            {tPerks.map((perk) => (
+                                        {/* "Everything in X, plus:" */}
+                                        {prevTierKey && (
+                                            <p className="text-xs text-muted-foreground mb-2.5">
+                                                Everything in{' '}
+                                                <span className="font-semibold text-foreground">
+                                                    {TIER_META[prevTierKey].label}
+                                                </span>
+                                                , plus:
+                                            </p>
+                                        )}
+
+                                        {/* Perk rows — outlined cards */}
+                                        <div className="space-y-2">
+                                            {newPerks.map((perk) => (
                                                 <button
-                                                    key={perk.name}
-                                                    onClick={() =>
-                                                        setPerkDetailOpen(perk)
-                                                    }
-                                                    className="flex items-start gap-2 w-full text-left hover:bg-accent/40 rounded-lg px-2 py-1.5 -mx-2 transition-colors"
+                                                    key={perk.key}
+                                                    onClick={() => setPerkDetailOpen(perk)}
+                                                    className={`flex items-start gap-2.5 w-full text-left rounded-lg border px-3 py-2.5 hover:bg-accent/30 transition-colors ${!isUnlocked && currentTierIndex >= 0 ? 'opacity-50' : ''}`}
                                                 >
                                                     <span
                                                         className={`mt-0.5 shrink-0 ${isUnlocked || currentTierIndex < 0 ? tMeta.color : 'text-muted-foreground'}`}
                                                     >
                                                         {perk.icon}
                                                     </span>
-                                                    <div>
-                                                        <p className="text-sm font-medium text-foreground">
+                                                    <div className="min-w-0">
+                                                        <p className="text-sm font-semibold text-foreground leading-tight">
                                                             {perk.name}
                                                         </p>
-                                                        <p className="text-xs text-muted-foreground">
+                                                        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                                                             {perk.description}
                                                         </p>
                                                     </div>
                                                 </button>
                                             ))}
                                         </div>
-
-                                        {!isUnlocked &&
-                                            creditPackages.length > 0 &&
-                                            (() => {
-                                                const fastTrackPkg =
-                                                    creditPackages.find(
-                                                        (p: CreditPackage) =>
-                                                            (p as any)
-                                                                .tier_grant ===
-                                                            tierKey,
-                                                    );
-                                                if (!fastTrackPkg) return null;
-                                                return (
-                                                    <button
-                                                        onClick={() => {
-                                                            setPerksSheetOpen(
-                                                                false,
-                                                            );
-                                                            setTimeout(
-                                                                () =>
-                                                                    setCreditsSheetOpen(
-                                                                        true,
-                                                                    ),
-                                                                300,
-                                                            );
-                                                        }}
-                                                        className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
-                                                    >
-                                                        <Wallet className="h-3 w-3" />
-                                                        Fast-track with a credit
-                                                        package
-                                                        <ChevronRight className="h-3 w-3" />
-                                                    </button>
-                                                );
-                                            })()}
                                     </div>
                                 </div>
                             );
                         })}
                     </div>
-                </SheetContent>
-            </Sheet>
+                </DialogContent>
+            </Dialog>
 
             {/* Credit Packages Sheet */}
             <Sheet open={creditsSheetOpen} onOpenChange={setCreditsSheetOpen}>
@@ -1238,48 +1026,31 @@ const Venues = () => {
                             return (
                                 <Card
                                     key={pkg.id}
-                                    className={`overflow-hidden ${tierAlreadyUnlocked ? 'border-primary/30 bg-primary/5' : ''}`}
+                                    className="overflow-hidden"
                                 >
-                                    <CardContent className="p-4">
-                                        <div className="flex items-start justify-between gap-3">
+                                    <CardContent className="p-3">
+                                        <div className="flex items-center gap-3">
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 mb-0.5">
-                                                    <p className="font-bold text-foreground">
+                                                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                                                    <p className="font-semibold text-sm text-foreground">
                                                         {pkg.name}
                                                     </p>
-                                                    {tierAlreadyUnlocked && (
-                                                        <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
-                                                            <Check className="h-2.5 w-2.5" />{' '}
-                                                            Active
+                                                    {tierMeta && (
+                                                        <span
+                                                            className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${tierMeta.chipText} border-current/20`}
+                                                        >
+                                                            <span className="[&>svg]:h-2.5 [&>svg]:w-2.5">
+                                                                {tierMeta.icon}
+                                                            </span>
+                                                            {tierAlreadyUnlocked
+                                                                ? `${tierMeta.label} Tier`
+                                                                : `→ ${tierMeta.label} Tier`}
                                                         </span>
                                                     )}
                                                 </div>
-                                                <p className="text-xs text-muted-foreground mb-2">
-                                                    ₹
-                                                    {Number(
-                                                        pkg.amount,
-                                                    ).toLocaleString(
-                                                        'en-IN',
-                                                    )}{' '}
-                                                    added to wallet
-                                                    {tierAlreadyUnlocked
-                                                        ? ' (tier already unlocked)'
-                                                        : pkg.tierUnlock
-                                                          ? ` + unlock ${pkg.tierUnlock.toLowerCase()} perks`
-                                                          : ''}
+                                                <p className="text-xs text-muted-foreground">
+                                                    ₹{Number(pkg.amount).toLocaleString('en-IN')} added to wallet
                                                 </p>
-                                                {tierMeta && (
-                                                    <div
-                                                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold ${tierMeta.chipBg} ${tierMeta.chipText}`}
-                                                    >
-                                                        <span className="[&>svg]:h-2.5 [&>svg]:w-2.5">
-                                                            {tierMeta.icon}
-                                                        </span>
-                                                        {tierAlreadyUnlocked
-                                                            ? `${tierMeta.label} Tier`
-                                                            : `Unlocks ${tierMeta.label} Tier`}
-                                                    </div>
-                                                )}
                                             </div>
                                             <Button
                                                 size="sm"
@@ -1288,7 +1059,7 @@ const Venues = () => {
                                                         ? 'outline'
                                                         : 'default'
                                                 }
-                                                className="shrink-0 mt-1"
+                                                className="shrink-0 h-8 text-xs px-3"
                                                 onClick={() => {
                                                     if (!user) {
                                                         setCreditsSheetOpen(
@@ -1300,13 +1071,8 @@ const Venues = () => {
                                                     setConfirmPkg(pkg);
                                                 }}
                                             >
-                                                {isUpgrade
-                                                    ? 'Upgrade'
-                                                    : 'Top Up'}{' '}
-                                                ₹
-                                                {Number(
-                                                    pkg.amount,
-                                                ).toLocaleString('en-IN')}
+                                                {isUpgrade ? 'Upgrade' : 'Buy'}{' '}
+                                                ₹{Number(pkg.amount).toLocaleString('en-IN')}
                                             </Button>
                                         </div>
                                     </CardContent>
