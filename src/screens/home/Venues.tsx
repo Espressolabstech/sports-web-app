@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { getSportLabel } from '../../utils/sports';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -516,15 +517,7 @@ const Venues = () => {
                     </h2>
                     <div className="space-y-2.5">
                         {sportGroups.map(({ sport, courtCount, minPrice }) => {
-                            const sportLabel =
-                                sport === 'PADEL'
-                                    ? 'Padel'
-                                    : sport === 'PICKELBALL' ||
-                                        sport === 'PICKLEBALL'
-                                      ? 'Pickleball'
-                                      : sport === 'TENNIS'
-                                        ? 'Tennis'
-                                        : sport;
+                            const sportLabel = getSportLabel(sport);
                             const sportImg = SPORT_IMAGES[sport];
                             return (
                                 <button

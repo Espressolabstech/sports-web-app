@@ -1,4 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
+import { getSportLabel } from '../../utils/sports';
 import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
@@ -537,7 +538,7 @@ const Booking = () => {
                                         : 'bg-card border text-muted-foreground hover:bg-accent',
                                 )}
                             >
-                                {sport}
+                                {getSportLabel(sport)}
                             </button>
                         ))}
                     </div>
