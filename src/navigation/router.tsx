@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { path } from './commanPaths';
 import { AuthWrapper, ProtectedComponentWrapper } from '../utils/wrapper';
 import Login from '../screens/Login';
@@ -57,5 +57,9 @@ export const router = createBrowserRouter([
     {
         path: path.bookingSuccess,
         element: <ProtectedComponentWrapper children={<BookingSuccess />} />,
+    },
+    {
+        path: '*',
+        element: <Navigate to={path.home} replace />,
     },
 ]);
