@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getVenues } from '../../api/adapters/venues';
-import { ChevronDown, LogIn, MapPin, Search, X } from 'lucide-react';
+import { ChevronDown, MapPin, Search, X } from 'lucide-react';
 import { Input } from '../../components/ui/input';
 import { SportChips } from '../../components/SportChips';
 import { BottomNav } from '../../components/BottomNav';
@@ -71,80 +71,96 @@ const Home = () => {
     const venues = Array.isArray(data?.data?.venues) ? data.data.venues : [];
 
     return (
-        <div className="min-h-screen bg-background pb-20">
-            {/* Header */}
-            <header className="bg-primary px-4 pb-6 pt-10 text-primary-foreground">
-                <div className="mx-auto max-w-lg">
-                    <div className="flex items-center justify-between">
+        <div className="min-h-screen bg-background pb-24">
+            {/* ═══════ HEADER ═══════ */}
+            <div className="mx-auto max-w-4xl">
+                <div className="relative px-5 pb-9 pt-[2.1rem] rounded-b-3xl overflow-hidden bg-[linear-gradient(90deg,rgba(38,117,148,1)_0%,rgba(16,45,69,1)_70%)]">
+                    <div className="flex items-center justify-between gap-3">
                         <div>
-                            <h1 className="text-xl font-bold">BookEase</h1>
+                            <h1 className="text-[22px] font-bold tracking-tight text-white leading-none">
+                                BookEase
+                            </h1>
                             <button
                                 onClick={() => setCityOpen(true)}
-                                className="mt-0.5 flex items-center gap-1 text-sm opacity-90 hover:opacity-100"
+                                className="mt-2.5 inline-flex items-center gap-1 text-xs font-medium text-white/80 hover:text-white transition-colors"
                             >
-                                <MapPin className="h-3.5 w-3.5" />
-                                <span className="font-medium">{city}</span>
-                                <ChevronDown className="h-3 w-3" />
+                                <MapPin className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{city}</span>
+                                <ChevronDown className="h-3 w-3 shrink-0 text-white/60" />
                             </button>
                         </div>
                         {!user && (
                             <button
                                 onClick={() => navigate('/login')}
-                                className="flex items-center gap-1.5 rounded-full bg-primary-foreground/20 px-3 py-1.5 text-sm font-medium hover:bg-primary-foreground/30 transition-colors"
+                                className="shrink-0 rounded-full bg-white px-3.5 py-1.5 text-xs font-semibold text-[#0F172A] shadow-sm transition-colors hover:bg-white/90"
                             >
-                                <LogIn className="h-4 w-4" />
-                                Sign In
+                                Log in
                             </button>
                         )}
                     </div>
-                    <div className="relative mt-4">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                            placeholder="Search facilities..."
-                            value={search}
-                            onChange={(e) => setSearch(e.target.value)}
-                            className="border-0 bg-card pl-10 text-foreground shadow-sm"
-                        />
-                    </div>
                 </div>
-            </header>
+            </div>
 
-            {/* Content */}
-            <main className="mx-auto max-w-lg px-4 pt-4">
-                <SportChips selected={sport} onSelect={setSport} />
+            <main className="mx-auto max-w-xl px-4">
+                {/* ═══════ SEARCH (overlaps header) ═══════ */}
+                <div className="-mt-5 relative">
+                    <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                        placeholder="Search venues or locations"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        className="h-12 rounded-2xl border bg-card pl-11 text-[15px] shadow-md focus-visible:ring-1"
+                    />
+                </div>
 
-                <div className="mt-4 space-y-3">
-                    {isLoading ? (
-                        <div className="space-y-3">
-                            {[1, 2, 3].map((i) => (
+                {/* ═══════ SPORTS ═══════ */}
+                <section className="mt-6">
+                    <SportChips selected={sport} onSelect={setSport} />
+                </section>
+
+                {/* ═══════ VENUES ═══════ */}
+                <section className="mt-6">
+                    {!isLoading && !isError && (
+                        <div className="mb-3 flex items-baseline justify-between">
+                            <h2 className="text-[15px] font-medium tracking-tight text-muted-foreground">
+                                Venues near you
+                            </h2>
+                            <span className="text-xs text-muted-foreground/70">
+                                {venues.length} {venues.length === 1 ? 'result' : 'results'}
+                            </span>
+                        </div>
+                    )}
+
+                    <div className="space-y-3">
+                        {isLoading ? (
+                            [1, 2, 3].map((i) => (
                                 <div
                                     key={i}
                                     className="h-48 animate-pulse rounded-xl bg-muted"
                                 />
-                            ))}
-                        </div>
-                    ) : isError ? (
-                        <p className="py-12 text-center text-muted-foreground">
-                            Failed to load venues. Please try again.
-                        </p>
-                    ) : venues.length === 0 ? (
-                        <p className="py-12 text-center text-muted-foreground">
-                            No facilities found
-                        </p>
-                    ) : (
-                        venues.map((venue) => (
-                            <FacilityCard key={venue.id} facility={venue} />
-                        ))
-                    )}
-                </div>
+                            ))
+                        ) : isError ? (
+                            <p className="py-12 text-center text-sm text-muted-foreground">
+                                Failed to load venues. Please try again.
+                            </p>
+                        ) : venues.length === 0 ? (
+                            <p className="py-12 text-center text-sm text-muted-foreground">
+                                No venues match your filters
+                            </p>
+                        ) : (
+                            venues.map((venue) => (
+                                <FacilityCard key={venue.id} facility={venue} />
+                            ))
+                        )}
+                    </div>
+                </section>
             </main>
 
             <BottomNav />
 
-            {/* City picker sheet */}
+            {/* ═══════ CITY PICKER ═══════ */}
             <Sheet open={cityOpen} onOpenChange={setCityOpen}>
                 <SheetContent side="bottom" className="rounded-t-2xl max-h-[80vh] flex flex-col p-0">
-                    {/* Header */}
                     <div className="flex items-center justify-between px-4 pt-5 pb-3 shrink-0">
                         <h2 className="text-base font-bold text-foreground">Select City</h2>
                         <button
@@ -155,7 +171,6 @@ const Home = () => {
                         </button>
                     </div>
 
-                    {/* Search */}
                     <div className="px-4 pb-3 shrink-0">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -171,7 +186,6 @@ const Home = () => {
 
                     <div className="overflow-y-auto flex-1 px-4 pb-8">
                         {filteredCities ? (
-                            /* Search results */
                             filteredCities.length === 0 ? (
                                 <p className="py-8 text-center text-sm text-muted-foreground">
                                     No cities found
@@ -195,7 +209,6 @@ const Home = () => {
                             )
                         ) : (
                             <>
-                                {/* Popular cities */}
                                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                                     Popular Cities
                                 </p>
@@ -215,7 +228,6 @@ const Home = () => {
                                     ))}
                                 </div>
 
-                                {/* All cities A–Z */}
                                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                                     All Cities
                                 </p>

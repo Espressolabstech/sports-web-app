@@ -78,6 +78,7 @@ declare global {
         id: string;
         name: string;
         address: string;
+        area?: string;
         city: string;
         latitude: number | null;
         longitude: number | null;
