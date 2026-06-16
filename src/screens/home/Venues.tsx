@@ -495,7 +495,9 @@ const Venues = () => {
                             className="inline-flex items-center gap-1.5 hover:underline text-left"
                         >
                             <MapPin className="h-3.5 w-3.5 shrink-0" />
-                            <span className="truncate">{facility.city}</span>
+                            <span className="truncate">
+                                {[facility.area, facility.city].filter(Boolean).join(' · ')}
+                            </span>
                         </button>
                         <span className="text-muted-foreground/40">·</span>
                         <button
