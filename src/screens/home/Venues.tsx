@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AnimatedLoader } from '../../components/AnimatedLoader';
 import { getSportLabel } from '../../utils/sports';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -333,8 +334,8 @@ const Venues = () => {
 
     if (venueLoading) {
         return (
-            <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-                Loading venue…
+            <div className="flex min-h-screen items-center justify-center">
+                <AnimatedLoader label="Loading venue…" />
             </div>
         );
     }

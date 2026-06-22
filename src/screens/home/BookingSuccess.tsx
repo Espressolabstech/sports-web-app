@@ -99,7 +99,7 @@ const BookingSuccess = () => {
     return (
         <div className="min-h-screen bg-background flex flex-col">
             {/* ── Hero ── */}
-            <div className="bg-primary px-6 pt-16 pb-10 text-primary-foreground flex flex-col items-center text-center">
+            <div className="bg-[linear-gradient(90deg,rgba(38,117,148,1)_0%,rgba(16,45,69,1)_70%)] px-6 pt-16 pb-10 text-primary-foreground flex flex-col items-center text-center">
                 <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-foreground/15">
                     <CheckCircle2 className="h-9 w-9" />
                 </div>

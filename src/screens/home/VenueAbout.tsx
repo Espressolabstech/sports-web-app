@@ -59,23 +59,23 @@ export default function VenueAbout() {
     return (
         <div className="min-h-screen bg-background pb-10">
             {/* Top bar */}
-            <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-sm border-b">
+            <div className="sticky top-0 z-10 bg-[linear-gradient(90deg,rgba(38,117,148,1)_0%,rgba(16,45,69,1)_70%)]">
                 <div className="mx-auto max-w-lg px-4 py-3 flex items-center gap-3">
                     <button
                         onClick={() => navigate(-1)}
-                        className="rounded-full hover:bg-accent p-1.5 -ml-1.5 transition-colors"
+                        className="rounded-full hover:bg-white/10 p-1.5 -ml-1.5 transition-colors"
                         aria-label="Back to venue"
                     >
-                        <ArrowLeft className="h-5 w-5 text-foreground" />
+                        <ArrowLeft className="h-5 w-5 text-white" />
                     </button>
                     <div className="min-w-0">
-                        <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+                        <p className="text-[11px] font-medium text-white/60 uppercase tracking-wider">
                             About
                         </p>
                         {isLoading ? (
-                            <div className="h-4 w-32 animate-pulse rounded bg-muted mt-0.5" />
+                            <div className="h-4 w-32 animate-pulse rounded bg-white/20 mt-0.5" />
                         ) : (
-                            <h1 className="text-base font-bold text-foreground truncate">
+                            <h1 className="text-base font-bold text-white truncate">
                                 {facility?.name ?? ''}
                             </h1>
                         )}

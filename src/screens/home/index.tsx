@@ -9,6 +9,7 @@ import { BottomNav } from '../../components/BottomNav';
 import { FacilityCard } from '../../components/FacilityCard';
 import { getToken } from '../../utils/cookies.helpers';
 import { Sheet, SheetContent } from '../../components/ui/sheet';
+import { AnimatedLoader } from '../../components/AnimatedLoader';
 
 const POPULAR_CITIES = [
     'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai',
@@ -133,12 +134,9 @@ const Home = () => {
 
                     <div className="space-y-3">
                         {isLoading ? (
-                            [1, 2, 3].map((i) => (
-                                <div
-                                    key={i}
-                                    className="h-48 animate-pulse rounded-xl bg-muted"
-                                />
-                            ))
+                            <div className="flex justify-center py-12">
+                                <AnimatedLoader label="Finding venues…" />
+                            </div>
                         ) : isError ? (
                             <p className="py-12 text-center text-sm text-muted-foreground">
                                 Failed to load venues. Please try again.

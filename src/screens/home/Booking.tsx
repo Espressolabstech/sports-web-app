@@ -4,6 +4,8 @@ import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ArrowLeft, CalendarDays, Clock, Loader2, Share2, X } from 'lucide-react';
+import { AnimatedLoader } from '../../components/AnimatedLoader';
+import { SlotsLoader } from '../../components/SlotsLoader';
 import { getVenueDetail } from '../../api/adapters/venues';
 import { getCourtDetail } from '../../api/adapters/courts';
 import { holdSlot } from '../../api/adapters/bookings';
@@ -479,7 +481,7 @@ const Booking = () => {
     if (venueLoading) {
         return (
             <div className="flex min-h-screen items-center justify-center">
-                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                <AnimatedLoader label="Loading venue…" />
             </div>
         );
     }
@@ -495,7 +497,7 @@ const Booking = () => {
     return (
         <div className="min-h-screen bg-background pb-28">
             {/* Header */}
-            <header className="flex items-center gap-3 bg-primary px-4 pb-4 pt-10 text-primary-foreground">
+            <header className="flex items-center gap-3 bg-[linear-gradient(90deg,rgba(38,117,148,1)_0%,rgba(16,45,69,1)_70%)] px-4 pb-4 pt-10 text-primary-foreground">
                 <button
                     onClick={() => navigate(-1)}
                     className="rounded-full p-1 hover:bg-primary-foreground/10"
@@ -552,8 +554,8 @@ const Booking = () => {
 
                 {/* Slot grid */}
                 {slotsLoading ? (
-                    <div className="flex justify-center py-16">
-                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                    <div className="flex justify-center py-10">
+                        <SlotsLoader />
                     </div>
                 ) : timeLabels.length === 0 ? (
                     <div className="py-16 text-center text-muted-foreground">

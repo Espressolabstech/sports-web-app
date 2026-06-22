@@ -63,7 +63,7 @@ const MyProfile = () => {
 
     return (
         <div className="min-h-screen bg-background pb-20">
-            <header className="bg-primary px-4 pb-6 pt-10 text-primary-foreground">
+            <header className="bg-[linear-gradient(90deg,rgba(38,117,148,1)_0%,rgba(16,45,69,1)_70%)] px-4 pb-6 pt-10 text-primary-foreground">
                 <h1 className="text-xl font-bold">Profile</h1>
             </header>
 

@@ -184,7 +184,7 @@ const ConfirmBooking = () => {
     return (
         <div className="min-h-screen bg-background pb-28">
             {/* Header */}
-            <header className="flex items-center gap-3 bg-primary px-4 pb-4 pt-10 text-primary-foreground">
+            <header className="flex items-center gap-3 bg-[linear-gradient(90deg,rgba(38,117,148,1)_0%,rgba(16,45,69,1)_70%)] px-4 pb-4 pt-10 text-primary-foreground">
                 <button
                     onClick={() => navigate(-1)}
                     className="rounded-full p-1 hover:bg-primary-foreground/10"
