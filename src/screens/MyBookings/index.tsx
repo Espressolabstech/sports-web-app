@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -82,6 +82,7 @@ const MyBookings = () => {
     );
     const [tick, setTick] = useState(0);
     const [payingHoldId, setPayingHoldId] = useState<string | null>(null);
+    const payingBookingRef = useRef<ApiBooking | null>(null);
     const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
     const [receiptOpen, setReceiptOpen] = useState(false);
 
@@ -155,15 +156,26 @@ const MyBookings = () => {
                             razorpayOrderId: payment.razorpay_order_id,
                             razorpaySignature: payment.razorpay_signature,
                         });
-                        toast.success('Booking confirmed!');
-                        queryClient.invalidateQueries({
-                            queryKey: ['bookings'],
+                        queryClient.invalidateQueries({ queryKey: ['bookings'] });
+                        const b = payingBookingRef.current;
+                        navigate('/booking-success', {
+                            replace: true,
+                            state: {
+                                bookingRef: b?.bookingRef ?? booking.bookingRef ?? booking.id,
+                                venueName: b?.venue.name ?? '',
+                                venueAddress: b ? `${b.venue.address}, ${b.venue.city}` : '',
+                                venueId: b?.venue.id ?? '',
+                                sport: b?.court.sport ?? '',
+                                courtName: b?.court.name ?? '',
+                                bookingDate: (b?.bookingDate ?? '').split('T')[0],
+                                startTime: b?.startTime ?? '',
+                                endTime: b?.endTime ?? '',
+                                totalPrice: b?.finalAmount ?? 0,
+                            },
                         });
                     } catch {
                         toast.error('Payment verification failed.');
-                        queryClient.invalidateQueries({
-                            queryKey: ['bookings'],
-                        });
+                        queryClient.invalidateQueries({ queryKey: ['bookings'] });
                     }
                 },
                 modal: {
@@ -545,7 +557,10 @@ const MyBookings = () => {
                                 size="sm"
                                 className="text-xs"
                                 disabled={payingHoldId === b.id}
-                                onClick={() => payHold(b.id)}
+                                onClick={() => {
+                                    payingBookingRef.current = b;
+                                    payHold(b.id);
+                                }}
                             >
                                 {payingHoldId === b.id ? (
                                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
