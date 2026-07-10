@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { ArrowLeft, Clock, Loader2, MapPin, Wallet } from 'lucide-react';
 import {
+    cancelBooking,
     initiatePayment,
     verifyBookingPayment,
 } from '../../api/adapters/bookings';
@@ -143,7 +144,12 @@ const ConfirmBooking = () => {
                         toast.error('Payment verification failed.');
                     }
                 },
-                modal: { ondismiss: () => toast.error('Payment cancelled.') },
+                modal: {
+                    ondismiss: () => {
+                        cancelBooking(booking.id).catch(() => {});
+                        toast.error('Payment cancelled.');
+                    },
+                },
                 theme: { color: '#2563eb' },
             });
             rzp.open();

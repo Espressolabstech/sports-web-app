@@ -180,6 +180,7 @@ const MyBookings = () => {
                 },
                 modal: {
                     ondismiss: () => {
+                        cancelBooking(booking.id).catch(() => {});
                         toast.error('Payment cancelled.');
                         queryClient.invalidateQueries({
                             queryKey: ['bookings'],
