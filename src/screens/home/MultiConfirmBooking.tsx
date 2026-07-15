@@ -9,6 +9,7 @@ import {
     verifyBookingPayment,
 } from '../../api/adapters/bookings';
 import { getWallet } from '../../api/adapters/wallet';
+import { AnimatedLoader } from '../../components/AnimatedLoader';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { formatTime } from '../../utils/twMerge';
@@ -50,6 +51,7 @@ const MultiConfirmBooking = () => {
     // Track which hold index is currently being paid (for sequential processing)
     const [payingIndex, setPayingIndex] = useState<number | null>(null);
     const [confirmedCount, setConfirmedCount] = useState(0);
+    const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
 
     // Use the earliest expiry across all holds
     const earliestCreatedAt = state?.holds
@@ -123,6 +125,7 @@ const MultiConfirmBooking = () => {
                 } else {
                     // Razorpay — open modal and wait for user
                     await new Promise<void>((resolve, reject) => {
+                        let paymentReceived = false;
                         const rzp = new window.Razorpay({
                             key: razorpay.keyId,
                             amount: razorpay.amount,
@@ -131,6 +134,8 @@ const MultiConfirmBooking = () => {
                             name: state.venueName,
                             description: `${hold.courtName} — ${hold.slots.length} slot(s)`,
                             handler: async (payment: any) => {
+                                paymentReceived = true;
+                                setIsVerifyingPayment(true);
                                 try {
                                     await verifyBookingPayment(booking.id, {
                                         razorpayPaymentId:
@@ -144,16 +149,20 @@ const MultiConfirmBooking = () => {
                                         booking.bookingRef ?? booking.id,
                                     );
                                     setConfirmedCount((n) => n + 1);
+                                    setIsVerifyingPayment(false);
                                     resolve();
                                 } catch {
+                                    setIsVerifyingPayment(false);
                                     reject(
                                         new Error('Payment verification failed'),
                                     );
                                 }
                             },
                             modal: {
-                                ondismiss: () =>
-                                    reject(new Error('Payment cancelled')),
+                                ondismiss: () => {
+                                    if (paymentReceived) return;
+                                    reject(new Error('Payment cancelled'));
+                                },
                             },
                             theme: { color: '#2563eb' },
                         });
@@ -216,6 +225,16 @@ const MultiConfirmBooking = () => {
 
     return (
         <div className="min-h-screen bg-background pb-32">
+            {isVerifyingPayment && (
+                <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-2 bg-background/95 backdrop-blur-sm">
+                    <AnimatedLoader label="Confirming your payment" />
+                    <p className="text-sm text-muted-foreground text-center px-6 max-w-xs">
+                        Please don't close or refresh this page while we
+                        confirm your payment with Razorpay.
+                    </p>
+                </div>
+            )}
+
             {/* Header */}
             <header className="flex items-center gap-3 bg-[linear-gradient(90deg,rgba(38,117,148,1)_0%,rgba(16,45,69,1)_70%)] px-4 pb-4 pt-10 text-primary-foreground">
                 <button

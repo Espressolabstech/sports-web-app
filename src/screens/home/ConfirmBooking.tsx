@@ -10,6 +10,7 @@ import {
     verifyBookingPayment,
 } from '../../api/adapters/bookings';
 import { getWallet } from '../../api/adapters/wallet';
+import { AnimatedLoader } from '../../components/AnimatedLoader';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { formatTime } from '../../utils/twMerge';
@@ -42,6 +43,7 @@ const ConfirmBooking = () => {
 
     const [secondsLeft, setSecondsLeft] = useState(0);
     const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('UPI');
+    const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
 
     useEffect(() => {
         if (!state?.createdAt) return;
@@ -106,6 +108,7 @@ const ConfirmBooking = () => {
             }
 
             // Razorpay flow
+            let paymentReceived = false;
             const rzp = new window.Razorpay({
                 key: razorpay.keyId,
                 amount: razorpay.amount,
@@ -114,6 +117,8 @@ const ConfirmBooking = () => {
                 name: state!.venueName,
                 description: `${state!.courtName} — ${state!.slots.length} slot(s)`,
                 handler: async (payment: any) => {
+                    paymentReceived = true;
+                    setIsVerifyingPayment(true);
                     try {
                         await verifyBookingPayment(booking.id, {
                             razorpayPaymentId: payment.razorpay_payment_id,
@@ -141,11 +146,13 @@ const ConfirmBooking = () => {
                             },
                         });
                     } catch {
+                        setIsVerifyingPayment(false);
                         toast.error('Payment verification failed.');
                     }
                 },
                 modal: {
                     ondismiss: () => {
+                        if (paymentReceived) return;
                         cancelBooking(booking.id).catch(() => {});
                         toast.error('Payment cancelled.');
                     },
@@ -189,6 +196,16 @@ const ConfirmBooking = () => {
 
     return (
         <div className="min-h-screen bg-background pb-28">
+            {isVerifyingPayment && (
+                <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-2 bg-background/95 backdrop-blur-sm">
+                    <AnimatedLoader label="Confirming your payment" />
+                    <p className="text-sm text-muted-foreground text-center px-6 max-w-xs">
+                        Please don't close or refresh this page while we
+                        confirm your payment with Razorpay.
+                    </p>
+                </div>
+            )}
+
             {/* Header */}
             <header className="flex items-center gap-3 bg-[linear-gradient(90deg,rgba(38,117,148,1)_0%,rgba(16,45,69,1)_70%)] px-4 pb-4 pt-10 text-primary-foreground">
                 <button
