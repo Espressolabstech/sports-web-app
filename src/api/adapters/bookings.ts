@@ -42,6 +42,15 @@ export const cancelBooking = async (
     });
 };
 
+export const activateOtc = async (
+    bookingId: string,
+): Promise<ApiResponse<ApiBooking>> => {
+    return apiClient({
+        url: endpoints.activateOtc(bookingId),
+        method: 'PATCH',
+    });
+};
+
 export const getMyBookings = async (): Promise<ApiResponse<ApiBooking[]>> => {
     return apiClient({ url: endpoints.myBookings, method: 'GET' });
 };

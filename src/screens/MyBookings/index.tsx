@@ -6,6 +6,7 @@ import {
     getPastBookings,
 } from '../../api/adapters/myBookings';
 import {
+    activateOtc,
     cancelBooking,
     initiatePayment,
     verifyBookingPayment,
@@ -18,12 +19,14 @@ import {
     AlertTriangle,
     ArrowLeft,
     Calendar,
+    ChevronRight,
     Clock,
     Loader2,
     MapPin,
     Navigation,
     Receipt,
     Share2,
+    Shield,
     XCircle,
 } from 'lucide-react';
 import { Card, CardContent } from '../../components/ui/card';
@@ -103,9 +106,10 @@ const MyBookings = () => {
     });
 
     const { mutate: cancel, isPending: cancelLoading } = useMutation({
-        mutationFn: (bookingId: string) => cancelBooking(bookingId),
-        onSuccess: () => {
+        mutationFn: (bookingId: string) => activateOtc(bookingId),
+        onSuccess: (_, bookingId) => {
             queryClient.invalidateQueries({ queryKey: ['bookings'] });
+            setOtcActiveBookings((prev) => new Set(prev).add(bookingId));
             setOtcDialogOpen(false);
             setSelectedBookingId(null);
             toast.success('Open to Cancel activated', {
@@ -113,7 +117,12 @@ const MyBookings = () => {
                     "We'll refund you automatically if someone else books this slot.",
             });
         },
-        onError: () => toast.error('Failed to activate Open to Cancel'),
+        onError: (err: any) => {
+            const msg =
+                err?.response?.data?.message ??
+                'Failed to activate Open to Cancel';
+            toast.error(msg);
+        },
     });
 
     const { mutate: directCancel, isPending: directCancelLoading } =
@@ -397,14 +406,51 @@ const MyBookings = () => {
                     </Button>
 
                     {selectedBooking.status === 'CONFIRMED' && (
-                        <Button
-                            variant="outline"
-                            className="w-full border-destructive/40 text-destructive hover:bg-destructive/5"
-                            onClick={() => setCancelDialogOpen(true)}
-                        >
-                            <XCircle className="h-4 w-4 mr-2" />
-                            Cancel Booking
-                        </Button>
+                        <>
+                            {otcActiveBookings.has(selectedBooking.id) ? (
+                                <div className="flex items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/5 p-3">
+                                    <div className="flex items-center gap-2 text-sm text-warning">
+                                        <Shield className="h-4 w-4" />
+                                        Open to Cancel is active
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="text-xs border-warning/40 text-warning hover:bg-warning/10"
+                                        onClick={() =>
+                                            handleCancelOtc(selectedBooking.id)
+                                        }
+                                    >
+                                        Cancel OTC
+                                    </Button>
+                                </div>
+                            ) : (
+                                isOtcEligible(selectedBooking) && (
+                                    <Button
+                                        variant="outline"
+                                        className="w-full"
+                                        onClick={() => {
+                                            setSelectedBookingId(
+                                                selectedBooking.id,
+                                            );
+                                            setOtcDialogOpen(true);
+                                        }}
+                                    >
+                                        <Shield className="h-4 w-4 mr-2" />
+                                        Open to Cancel
+                                    </Button>
+                                )
+                            )}
+
+                            <Button
+                                variant="outline"
+                                className="w-full border-destructive/40 text-destructive hover:bg-destructive/5"
+                                onClick={() => setCancelDialogOpen(true)}
+                            >
+                                <XCircle className="h-4 w-4 mr-2" />
+                                Cancel Booking
+                            </Button>
+                        </>
                     )}
                 </main>
 
@@ -488,7 +534,6 @@ const MyBookings = () => {
 
     const renderBookingCard = (b: ApiBooking, isUpcomingCard: boolean) => {
         const isOtcActive = otcActiveBookings.has(b.id);
-        const canActivateOtc = isOtcEligible(b);
         const holdSecs = getHoldSecondsLeft(b);
         const isPendingHold = holdSecs !== null && holdSecs > 0;
         const holdMins = holdSecs !== null ? Math.floor(holdSecs / 60) : 0;
@@ -501,106 +546,92 @@ const MyBookings = () => {
                 onClick={() => !isPendingHold && setSelectedBooking(b)}
             >
                 <CardContent className="p-4">
-                    <div className="flex items-start justify-between">
-                        <div>
-                            <p className="font-semibold text-foreground">
-                                {b.court.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                {b.venue.name}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                                {format(
-                                    new Date(b.bookingDate),
-                                    isUpcomingCard
-                                        ? 'EEEE, MMM d'
-                                        : 'MMM d, yyyy',
-                                )}{' '}
-                                · {formatTime(b.startTime)} –{' '}
-                                {formatTime(b.endTime)}
-                            </p>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                            <Badge
-                                className={bookingStatusColors[b.status] ?? ''}
-                            >
-                                {isPendingHold
-                                    ? 'Held'
-                                    : b.status.replace(/_/g, ' ')}
-                            </Badge>
-                            {isOtcActive && (
-                                <Badge className="bg-warning/10 text-warning text-[10px]">
-                                    OTC Active
-                                </Badge>
-                            )}
-                        </div>
-                    </div>
+                    <div className="flex items-start gap-2">
+                        <div className="min-w-0 flex-1">
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <p className="font-semibold text-foreground">
+                                        {b.court.name}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        {b.venue.name}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                        {format(
+                                            new Date(b.bookingDate),
+                                            isUpcomingCard
+                                                ? 'EEEE, MMM d'
+                                                : 'MMM d, yyyy',
+                                        )}{' '}
+                                        · {formatTime(b.startTime)} –{' '}
+                                        {formatTime(b.endTime)}
+                                    </p>
+                                </div>
+                                <div className="flex flex-col items-end gap-1">
+                                    <Badge
+                                        className={
+                                            bookingStatusColors[b.status] ?? ''
+                                        }
+                                    >
+                                        {isPendingHold
+                                            ? 'Held'
+                                            : b.status.replace(/_/g, ' ')}
+                                    </Badge>
+                                    {isOtcActive && (
+                                        <Badge className="bg-warning/10 text-warning text-[10px]">
+                                            OTC Active
+                                        </Badge>
+                                    )}
+                                </div>
+                            </div>
 
-                    <div className="mt-2 flex justify-between text-sm">
-                        <span className="text-muted-foreground">Total</span>
-                        <span className="font-medium">₹{b.finalAmount}</span>
-                    </div>
-
-                    {isPendingHold && (
-                        <div
-                            className="mt-3 flex items-center gap-2"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <div className="flex items-center gap-1 text-xs text-amber-600 flex-1">
-                                <Clock className="h-3.5 w-3.5" />
-                                <span className="tabular-nums">
-                                    {holdMins}:
-                                    {holdSecsRem.toString().padStart(2, '0')} to
-                                    pay
+                            <div className="mt-2 flex justify-between text-sm">
+                                <span className="text-muted-foreground">
+                                    Total
+                                </span>
+                                <span className="font-medium">
+                                    ₹{b.finalAmount}
                                 </span>
                             </div>
-                            <Button
-                                size="sm"
-                                className="text-xs"
-                                disabled={payingHoldId === b.id}
-                                onClick={() => {
-                                    payingBookingRef.current = b;
-                                    payHold(b.id);
-                                }}
-                            >
-                                {payingHoldId === b.id ? (
-                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                    'Pay Now'
-                                )}
-                            </Button>
-                        </div>
-                    )}
 
-                    {isUpcomingCard && b.status === 'CONFIRMED' && (
-                        <div
-                            className="mt-3 flex gap-2"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            {isOtcActive ? (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-xs border-warning/40 text-warning hover:bg-warning/5"
-                                    onClick={() => handleCancelOtc(b.id)}
+                            {isPendingHold && (
+                                <div
+                                    className="mt-3 flex items-center gap-2"
+                                    onClick={(e) => e.stopPropagation()}
                                 >
-                                    Cancel OTC
-                                </Button>
-                            ) : canActivateOtc ? (
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    className="text-xs"
-                                    onClick={() => {
-                                        setSelectedBookingId(b.id);
-                                        setOtcDialogOpen(true);
-                                    }}
-                                >
-                                    Open to Cancel
-                                </Button>
-                            ) : null}
+                                    <div className="flex items-center gap-1 text-xs text-amber-600 flex-1">
+                                        <Clock className="h-3.5 w-3.5" />
+                                        <span className="tabular-nums">
+                                            {holdMins}:
+                                            {holdSecsRem
+                                                .toString()
+                                                .padStart(2, '0')}{' '}
+                                            to pay
+                                        </span>
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        className="text-xs"
+                                        disabled={payingHoldId === b.id}
+                                        onClick={() => {
+                                            payingBookingRef.current = b;
+                                            payHold(b.id);
+                                        }}
+                                    >
+                                        {payingHoldId === b.id ? (
+                                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                        ) : (
+                                            'Pay Now'
+                                        )}
+                                    </Button>
+                                </div>
+                            )}
                         </div>
-                    )}
+
+                        {!isPendingHold && (
+                            <ChevronRight className="mt-1 h-5 w-5 shrink-0 self-center text-muted-foreground" />
+                        )}
+                    </div>
                 </CardContent>
             </Card>
         );

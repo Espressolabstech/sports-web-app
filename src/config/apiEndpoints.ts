@@ -19,6 +19,7 @@ export const endpoints = {
     verifyBookingPayment: (bookingId: string) =>
         `/bookings/${bookingId}/verify-payment`,
     cancelBooking: (bookingId: string) => `/bookings/${bookingId}/cancel`,
+    activateOtc: (bookingId: string) => `/bookings/${bookingId}/otc`,
     myBookings: '/bookings/my',
     bookingDetail: (bookingId: string) => `/bookings/${bookingId}`,
 
