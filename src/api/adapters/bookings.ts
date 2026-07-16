@@ -9,7 +9,7 @@ export const holdSlot = async (
 
 export const initiatePayment = async (
     bookingId: string,
-    data: { paymentMethod: string },
+    data: { paymentMethod: string; walletOtpToken?: string },
 ): Promise<ApiResponse<ApiCreateBookingResponse>> => {
     return apiClient({ url: endpoints.initiatePayment(bookingId), method: 'POST', data });
 };
@@ -48,6 +48,20 @@ export const activateOtc = async (
     return apiClient({
         url: endpoints.activateOtc(bookingId),
         method: 'PATCH',
+    });
+};
+
+export const sendWalletPaymentOtp = async (): Promise<ApiResponse<null>> => {
+    return apiClient({ url: endpoints.sendWalletOtp, method: 'POST' });
+};
+
+export const verifyWalletPaymentOtp = async (data: {
+    otp: string;
+}): Promise<ApiResponse<{ walletOtpToken: string }>> => {
+    return apiClient({
+        url: endpoints.verifyWalletOtp,
+        method: 'POST',
+        data,
     });
 };
 

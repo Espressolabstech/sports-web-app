@@ -12,6 +12,7 @@ import { getWallet } from '../../api/adapters/wallet';
 import { AnimatedLoader } from '../../components/AnimatedLoader';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
+import { WalletOtpDialog } from '../../components/WalletOtpDialog';
 import { formatTime } from '../../utils/twMerge';
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -52,6 +53,7 @@ const MultiConfirmBooking = () => {
     const [payingIndex, setPayingIndex] = useState<number | null>(null);
     const [confirmedCount, setConfirmedCount] = useState(0);
     const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+    const [walletOtpDialogOpen, setWalletOtpDialogOpen] = useState(false);
 
     // Use the earliest expiry across all holds
     const earliestCreatedAt = state?.holds
@@ -106,7 +108,7 @@ const MultiConfirmBooking = () => {
     const hasEnoughBalance = walletBalance >= grandTotal;
 
     // ── Payment — sequential per hold ────────────────────────────────────────
-    const processPayments = async () => {
+    const processPayments = async (walletOtpToken?: string) => {
         if (!state) return;
         const bookingRefs: string[] = [];
 
@@ -116,6 +118,7 @@ const MultiConfirmBooking = () => {
             try {
                 const res = await initiatePayment(hold.holdId, {
                     paymentMethod: selectedMethod,
+                    walletOtpToken,
                 });
                 const { booking, razorpay } = res.data as any;
 
@@ -517,7 +520,11 @@ const MultiConfirmBooking = () => {
                     <Button
                         className="w-full"
                         size="lg"
-                        onClick={() => startPayment()}
+                        onClick={() =>
+                            selectedMethod === 'WALLET'
+                                ? setWalletOtpDialogOpen(true)
+                                : startPayment(undefined)
+                        }
                         disabled={payLoading || secondsLeft === 0}
                     >
                         {payLoading ? (
@@ -535,6 +542,12 @@ const MultiConfirmBooking = () => {
                     </Button>
                 </div>
             </div>
+
+            <WalletOtpDialog
+                open={walletOtpDialogOpen}
+                onOpenChange={setWalletOtpDialogOpen}
+                onVerified={(walletOtpToken) => startPayment(walletOtpToken)}
+            />
         </div>
     );
 };

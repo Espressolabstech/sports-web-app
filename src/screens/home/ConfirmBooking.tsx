@@ -13,6 +13,7 @@ import { getWallet } from '../../api/adapters/wallet';
 import { AnimatedLoader } from '../../components/AnimatedLoader';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
+import { WalletOtpDialog } from '../../components/WalletOtpDialog';
 import { formatTime } from '../../utils/twMerge';
 
 interface ConfirmBookingState {
@@ -44,6 +45,7 @@ const ConfirmBooking = () => {
     const [secondsLeft, setSecondsLeft] = useState(0);
     const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>('UPI');
     const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+    const [walletOtpDialogOpen, setWalletOtpDialogOpen] = useState(false);
 
     useEffect(() => {
         if (!state?.createdAt) return;
@@ -75,8 +77,11 @@ const ConfirmBooking = () => {
     const hasEnoughBalance = walletBalance >= payableAmount;
 
     const { mutate: pay, isPending: payLoading } = useMutation({
-        mutationFn: () =>
-            initiatePayment(state!.holdId, { paymentMethod: selectedMethod }),
+        mutationFn: (walletOtpToken?: string) =>
+            initiatePayment(state!.holdId, {
+                paymentMethod: selectedMethod,
+                walletOtpToken,
+            }),
         onSuccess: (res) => {
             const {
                 booking,
@@ -432,7 +437,11 @@ const ConfirmBooking = () => {
                     <Button
                         className="w-full"
                         size="lg"
-                        onClick={() => pay()}
+                        onClick={() =>
+                            selectedMethod === 'WALLET'
+                                ? setWalletOtpDialogOpen(true)
+                                : pay(undefined)
+                        }
                         disabled={payLoading || secondsLeft === 0}
                     >
                         {payLoading ? (
@@ -448,6 +457,12 @@ const ConfirmBooking = () => {
                     </Button>
                 </div>
             </div>
+
+            <WalletOtpDialog
+                open={walletOtpDialogOpen}
+                onOpenChange={setWalletOtpDialogOpen}
+                onVerified={(walletOtpToken) => pay(walletOtpToken)}
+            />
         </div>
     );
 };
