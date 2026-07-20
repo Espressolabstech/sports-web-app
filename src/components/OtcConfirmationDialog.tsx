@@ -31,20 +31,23 @@ export function OtcConfirmationDialog({
                 <AlertDialogHeader>
                     <AlertDialogTitle className="flex items-center gap-2">
                         <Shield className="h-5 w-5 text-primary" />
-                        Open to Cancel
+                        Mark your slot as available
                     </AlertDialogTitle>
                     <AlertDialogDescription asChild>
                         <div className="space-y-3 text-sm">
                             <p>
-                                If someone books this slot, you'll receive a
-                                full refund automatically.
+                                Opening your slot lets another player book
+                                your court. If they do, your full booking
+                                amount is automatically returned to your
+                                wallet — no action needed from you.
                             </p>
                             <p>
-                                If no one books it, you'll remain confirmed and
-                                charged as normal.
+                                Your booking stays confirmed the entire time.
+                                If no one takes the slot before the cutoff,
+                                you simply attend as planned.
                             </p>
                             <p className="font-medium text-foreground">
-                                This uses 1 of your 2 monthly Open to Cancel
+                                This uses one of your 2 monthly Open to Cancel
                                 allowances at {venueName}.
                             </p>
                         </div>
@@ -55,7 +58,7 @@ export function OtcConfirmationDialog({
                         Cancel
                     </AlertDialogCancel>
                     <AlertDialogAction onClick={onConfirm} disabled={loading}>
-                        {loading ? 'Activating...' : 'Activate OTC'}
+                        {loading ? 'Confirming...' : 'Confirm'}
                     </AlertDialogAction>
                 </AlertDialogFooter>
             </AlertDialogContent>

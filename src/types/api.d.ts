@@ -267,6 +267,8 @@ declare global {
         cancelledAt: string | null;
         confirmedAt: string | null;
         completedAt: string | null;
+        isOtcActive: boolean;
+        otcActivatedAt: string | null;
         isDeleted: boolean;
         createdAt: string;
         updatedAt: string;

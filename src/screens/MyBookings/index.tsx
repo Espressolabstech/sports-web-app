@@ -8,12 +8,13 @@ import {
 import {
     activateOtc,
     cancelBooking,
+    deactivateOtc,
     initiatePayment,
     verifyBookingPayment,
 } from '../../api/adapters/bookings';
 import { statusColors } from '../../utils/mockData';
 import { formatTime } from '../../utils/twMerge';
-import { differenceInHours, format } from 'date-fns';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 import {
     AlertTriangle,
@@ -45,6 +46,15 @@ import { OtcConfirmationDialog } from '../../components/OtcConfirmationDialog';
 import { BookingReceiptModal } from '../../components/BookingReceiptModal';
 
 const HOLD_DURATION_MS = 7 * 60 * 1000;
+const OTC_CUTOFF_MS = 2 * 60 * 60 * 1000;
+
+// Open to Cancel closes 2 hours before the session starts.
+const getOtcCutoff = (b: ApiBooking) => {
+    const sessionStart = new Date(
+        `${b.bookingDate.split('T')[0]}T${b.startTime}`,
+    );
+    return new Date(sessionStart.getTime() - OTC_CUTOFF_MS);
+};
 
 const bookingStatusColors: Record<string, string> = {
     PENDING: 'bg-amber-100 text-amber-800',
@@ -80,9 +90,6 @@ const MyBookings = () => {
     const [selectedBooking, setSelectedBooking] = useState<ApiBooking | null>(
         null,
     );
-    const [otcActiveBookings, setOtcActiveBookings] = useState<Set<string>>(
-        new Set(),
-    );
     const [tick, setTick] = useState(0);
     const [payingHoldId, setPayingHoldId] = useState<string | null>(null);
     const payingBookingRef = useRef<ApiBooking | null>(null);
@@ -105,22 +112,36 @@ const MyBookings = () => {
         queryFn: () => getPastBookings(),
     });
 
-    const { mutate: cancel, isPending: cancelLoading } = useMutation({
+    const {
+        mutate: activateOtcMutation,
+        isPending: activateOtcLoading,
+    } = useMutation({
         mutationFn: (bookingId: string) => activateOtc(bookingId),
-        onSuccess: (_, bookingId) => {
+        onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['bookings'] });
-            setOtcActiveBookings((prev) => new Set(prev).add(bookingId));
             setOtcDialogOpen(false);
             setSelectedBookingId(null);
-            toast.success('Open to Cancel activated', {
+            toast.success('Your slot is open for another player to book', {
                 description:
                     "We'll refund you automatically if someone else books this slot.",
             });
         },
         onError: (err: any) => {
-            const msg =
-                err?.response?.data?.message ??
-                'Failed to activate Open to Cancel';
+            const msg = err?.message ?? 'Failed to activate Open to Cancel';
+            toast.error(msg);
+        },
+    });
+
+    const { mutate: closeOtc, isPending: closeOtcLoading } = useMutation({
+        mutationFn: (bookingId: string) => deactivateOtc(bookingId),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['bookings'] });
+            toast.info('Open to Cancel offer closed', {
+                description: 'Your booking remains confirmed.',
+            });
+        },
+        onError: (err: any) => {
+            const msg = err?.message ?? 'Failed to close the offer';
             toast.error(msg);
         },
     });
@@ -231,28 +252,18 @@ const MyBookings = () => {
 
     const isOtcEligible = (booking: ApiBooking) => {
         if (booking.status !== 'CONFIRMED') return false;
-        if (otcActiveBookings.has(booking.id)) return false;
-        const sessionStart = new Date(
-            `${booking.bookingDate.split('T')[0]}T${booking.startTime}`,
-        );
-        if (differenceInHours(sessionStart, new Date()) <= 1) return false;
-        return true;
+        if (booking.isOtcActive) return false;
+        return Date.now() < getOtcCutoff(booking).getTime();
     };
+
+    // Whether an active OTC offer is still open (before cutoff) vs. closed
+    // without a taker (past cutoff, booking simply remains confirmed).
+    const isOtcOfferOpen = (booking: ApiBooking) =>
+        booking.isOtcActive && Date.now() < getOtcCutoff(booking).getTime();
 
     const handleActivateOtc = () => {
         if (!selectedBookingId) return;
-        cancel(selectedBookingId);
-    };
-
-    const handleCancelOtc = (bookingId: string) => {
-        setOtcActiveBookings((prev) => {
-            const next = new Set(prev);
-            next.delete(bookingId);
-            return next;
-        });
-        toast.info('Open to Cancel deactivated', {
-            description: 'Your booking remains confirmed.',
-        });
+        activateOtcMutation(selectedBookingId);
     };
 
     const handleShare = async (b: ApiBooking) => {
@@ -289,6 +300,83 @@ const MyBookings = () => {
         } else {
             await navigator.clipboard.writeText(text);
         }
+    };
+
+    const renderOtcStatusCard = (booking: ApiBooking) => {
+        if (isOtcOfferOpen(booking)) {
+            const msLeft = getOtcCutoff(booking).getTime() - Date.now();
+            const totalSecs = Math.max(0, Math.floor(msLeft / 1000));
+            const hh = Math.floor(totalSecs / 3600);
+            const mm = Math.floor((totalSecs % 3600) / 60);
+            const ss = totalSecs % 60;
+            const countdown =
+                hh > 0
+                    ? `${hh}h ${mm}m`
+                    : `${mm}:${ss.toString().padStart(2, '0')}`;
+
+            return (
+                <div className="space-y-2 rounded-lg border border-warning/40 bg-warning/5 p-3">
+                    <p className="text-sm font-medium text-foreground">
+                        Your slot is open for another player to book
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                        If someone books your court before the cutoff, your
+                        full payment will be returned to your wallet
+                        automatically.
+                    </p>
+                    <p className="flex items-center gap-1.5 text-xs font-medium text-warning">
+                        <Clock className="h-3.5 w-3.5" />
+                        Closes in {countdown} · {booking.court.name} ·{' '}
+                        {format(new Date(booking.bookingDate), 'MMM d')}{' '}
+                        {formatTime(booking.startTime)}
+                    </p>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full text-xs border-warning/40 text-warning hover:bg-warning/10"
+                        onClick={() => closeOtc(booking.id)}
+                        disabled={closeOtcLoading}
+                    >
+                        {closeOtcLoading && (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />
+                        )}
+                        Close this offer
+                    </Button>
+                </div>
+            );
+        }
+
+        if (booking.isOtcActive) {
+            // Cutoff has passed and nobody claimed the slot
+            return (
+                <div className="space-y-1 rounded-lg border bg-muted/40 p-3">
+                    <p className="text-sm font-medium text-foreground">
+                        No one booked your slot
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                        Your booking is confirmed. See you on court.
+                    </p>
+                </div>
+            );
+        }
+
+        if (isOtcEligible(booking)) {
+            return (
+                <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                        setSelectedBookingId(booking.id);
+                        setOtcDialogOpen(true);
+                    }}
+                >
+                    <Shield className="h-4 w-4 mr-2" />
+                    Open to Cancel
+                </Button>
+            );
+        }
+
+        return null;
     };
 
     // Detail overlay
@@ -407,40 +495,7 @@ const MyBookings = () => {
 
                     {selectedBooking.status === 'CONFIRMED' && (
                         <>
-                            {otcActiveBookings.has(selectedBooking.id) ? (
-                                <div className="flex items-center justify-between gap-3 rounded-lg border border-warning/40 bg-warning/5 p-3">
-                                    <div className="flex items-center gap-2 text-sm text-warning">
-                                        <Shield className="h-4 w-4" />
-                                        Open to Cancel is active
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="text-xs border-warning/40 text-warning hover:bg-warning/10"
-                                        onClick={() =>
-                                            handleCancelOtc(selectedBooking.id)
-                                        }
-                                    >
-                                        Cancel OTC
-                                    </Button>
-                                </div>
-                            ) : (
-                                isOtcEligible(selectedBooking) && (
-                                    <Button
-                                        variant="outline"
-                                        className="w-full"
-                                        onClick={() => {
-                                            setSelectedBookingId(
-                                                selectedBooking.id,
-                                            );
-                                            setOtcDialogOpen(true);
-                                        }}
-                                    >
-                                        <Shield className="h-4 w-4 mr-2" />
-                                        Open to Cancel
-                                    </Button>
-                                )
-                            )}
+                            {renderOtcStatusCard(selectedBooking)}
 
                             <Button
                                 variant="outline"
@@ -533,7 +588,7 @@ const MyBookings = () => {
     }
 
     const renderBookingCard = (b: ApiBooking, isUpcomingCard: boolean) => {
-        const isOtcActive = otcActiveBookings.has(b.id);
+        const otcOfferOpen = isOtcOfferOpen(b);
         const holdSecs = getHoldSecondsLeft(b);
         const isPendingHold = holdSecs !== null && holdSecs > 0;
         const holdMins = holdSecs !== null ? Math.floor(holdSecs / 60) : 0;
@@ -577,9 +632,9 @@ const MyBookings = () => {
                                             ? 'Held'
                                             : b.status.replace(/_/g, ' ')}
                                     </Badge>
-                                    {isOtcActive && (
+                                    {otcOfferOpen && (
                                         <Badge className="bg-warning/10 text-warning text-[10px]">
-                                            OTC Active
+                                            Open to Cancel
                                         </Badge>
                                     )}
                                 </div>
@@ -714,7 +769,7 @@ const MyBookings = () => {
                         : 'this venue'
                 }
                 onConfirm={handleActivateOtc}
-                loading={cancelLoading}
+                loading={activateOtcLoading}
             />
 
             <BottomNav />

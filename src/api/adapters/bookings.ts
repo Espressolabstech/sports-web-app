@@ -51,6 +51,15 @@ export const activateOtc = async (
     });
 };
 
+export const deactivateOtc = async (
+    bookingId: string,
+): Promise<ApiResponse<ApiBooking>> => {
+    return apiClient({
+        url: endpoints.deactivateOtc(bookingId),
+        method: 'PATCH',
+    });
+};
+
 export const sendWalletPaymentOtp = async (): Promise<ApiResponse<null>> => {
     return apiClient({ url: endpoints.sendWalletOtp, method: 'POST' });
 };
