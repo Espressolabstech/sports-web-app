@@ -583,6 +583,14 @@ const MyBookings = () => {
                         bookedAt: selectedBooking.createdAt,
                     }}
                 />
+
+                <OtcConfirmationDialog
+                    open={otcDialogOpen}
+                    onOpenChange={setOtcDialogOpen}
+                    venueName={selectedBooking.venue.name}
+                    onConfirm={handleActivateOtc}
+                    loading={activateOtcLoading}
+                />
             </div>
         );
     }
