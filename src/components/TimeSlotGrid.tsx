@@ -3,7 +3,14 @@ import { cn, formatTime } from '../utils/twMerge';
 interface TimeSlot {
     startTime: string;
     endTime: string;
-    status: 'available' | 'booked' | 'blocked' | 'held' | 'pending' | 'downtime';
+    status:
+        | 'available'
+        | 'booked'
+        | 'blocked'
+        | 'held'
+        | 'pending'
+        | 'downtime'
+        | 'otc';
 }
 
 interface TimeSlotGridProps {
@@ -20,7 +27,8 @@ export function TimeSlotGrid({
     return (
         <div className="grid grid-cols-3 gap-2">
             {slots.map((slot) => {
-                const isAvailable = slot.status === 'available';
+                const isOtc = slot.status === 'otc';
+                const isAvailable = slot.status === 'available' || isOtc;
                 const isDowntime = slot.status === 'downtime';
                 const isSelected = selectedSlots.includes(slot.startTime);
 
@@ -33,7 +41,11 @@ export function TimeSlotGrid({
                             'rounded-lg border px-3 py-3 text-center text-sm font-medium transition-all',
                             isAvailable &&
                                 !isSelected &&
+                                !isOtc &&
                                 'border-success/30 bg-success/10 text-success hover:bg-success/20',
+                            isOtc &&
+                                !isSelected &&
+                                'border-warning/40 bg-warning/10 text-warning hover:bg-warning/20',
                             isSelected &&
                                 'border-primary bg-primary text-primary-foreground shadow-sm',
                             slot.status === 'booked' &&
@@ -48,15 +60,17 @@ export function TimeSlotGrid({
                     >
                         <div>{formatTime(slot.startTime)}</div>
                         <div className="text-xs opacity-75">
-                            {isAvailable
-                                ? 'Available'
-                                : slot.status === 'booked'
-                                  ? 'Booked'
-                                  : slot.status === 'pending'
-                                    ? 'Pending'
-                                    : isDowntime
-                                      ? 'Closed'
-                                      : 'Blocked'}
+                            {isOtc
+                                ? 'Open to Cancel'
+                                : slot.status === 'available'
+                                  ? 'Available'
+                                  : slot.status === 'booked'
+                                    ? 'Booked'
+                                    : slot.status === 'pending'
+                                      ? 'Pending'
+                                      : isDowntime
+                                        ? 'Closed'
+                                        : 'Blocked'}
                         </div>
                     </button>
                 );

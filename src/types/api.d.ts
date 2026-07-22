@@ -164,7 +164,14 @@ declare global {
     interface ApiSlot {
         startTime: string;
         endTime: string;
-        status: 'available' | 'booked' | 'blocked' | 'held' | 'pending' | 'downtime';
+        status:
+            | 'available'
+            | 'booked'
+            | 'blocked'
+            | 'held'
+            | 'pending'
+            | 'downtime'
+            | 'otc';
     }
 
     interface ApiAvailability {

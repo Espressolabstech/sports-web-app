@@ -304,7 +304,8 @@ const Booking = () => {
     const handleSlotTap = (courtId: string, startTime: string) => {
         const allSlots = courtSlotsData[courtId] ?? [];
         const slot = allSlots.find((s) => s.startTime === startTime);
-        if (!slot || slot.status !== 'available') return;
+        if (!slot || (slot.status !== 'available' && slot.status !== 'otc'))
+            return;
 
         const prevSlots = selectionByKey[cacheKey]?.[courtId] ?? [];
 
@@ -352,7 +353,9 @@ const Booking = () => {
                     const slot = (courtSlotsData[c.id] ?? []).find(
                         (s) => s.startTime === time,
                     );
-                    return slot?.status === 'available' ? '🟩' : '🟥';
+                    return slot?.status === 'available' || slot?.status === 'otc'
+                        ? '🟩'
+                        : '🟥';
                 })
                 .join('  ');
             return `${dots}  ${formatTime(time)}`;
@@ -606,8 +609,10 @@ const Booking = () => {
                                                 />
                                             );
 
+                                        const isOtc = slot.status === 'otc';
                                         const isAvailable =
-                                            slot.status === 'available';
+                                            slot.status === 'available' ||
+                                            isOtc;
                                         const isHeld = slot.status === 'held';
                                         const isDowntime =
                                             slot.status === 'downtime';
@@ -643,7 +648,11 @@ const Booking = () => {
                                                         'bg-primary text-primary-foreground border-primary shadow-sm',
                                                     isAvailable &&
                                                         !isSelected &&
+                                                        !isOtc &&
                                                         'bg-green-500/10 text-green-700 border-green-500/30 hover:bg-green-500/20 dark:text-green-400',
+                                                    isOtc &&
+                                                        !isSelected &&
+                                                        'bg-warning/10 text-warning border-warning/30 hover:bg-warning/20',
                                                     isHeld &&
                                                         'bg-amber-50 text-amber-600 border-amber-200 cursor-not-allowed dark:bg-amber-950/20 dark:text-amber-400',
                                                     isDowntime &&
@@ -665,11 +674,13 @@ const Booking = () => {
                                                             <span>
                                                                 {isSelected
                                                                     ? 'Selected'
-                                                                    : isAvailable
-                                                                      ? 'Open'
-                                                                      : isDowntime
-                                                                        ? 'Closed'
-                                                                        : 'Booked'}
+                                                                    : isOtc
+                                                                      ? 'OTC'
+                                                                      : isAvailable
+                                                                        ? 'Open'
+                                                                        : isDowntime
+                                                                          ? 'Closed'
+                                                                          : 'Booked'}
                                                             </span>
                                                             {isPeak && (
                                                                 <span
