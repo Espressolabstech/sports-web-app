@@ -83,11 +83,7 @@ const ConfirmBooking = () => {
                 walletOtpToken,
             }),
         onSuccess: (res) => {
-            const {
-                booking,
-                razorpay,
-                walletBalance: newBalance,
-            } = res.data as any;
+            const { booking, razorpay } = res.data as any;
 
             // Wallet payment confirmed immediately
             if (selectedMethod === 'WALLET') {
