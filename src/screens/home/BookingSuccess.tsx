@@ -13,7 +13,7 @@ import {
     Receipt,
 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
-import { formatTime } from '../../utils/twMerge';
+import { formatTime, timeDayOffset } from '../../utils/twMerge';
 import { BookingReceiptModal } from '../../components/BookingReceiptModal';
 
 interface BookingSuccessState {
@@ -57,7 +57,9 @@ const BookingSuccess = () => {
     } = state;
 
     const formattedDate = format(new Date(bookingDate), 'EEEE, d MMMM yyyy');
-    const timeRange = `${formatTime(startTime)} – ${formatTime(endTime)}`;
+    const startDayOffset = timeDayOffset(startTime);
+    const endDayOffset = timeDayOffset(endTime);
+    const timeRange = `${formatTime(startTime)}${startDayOffset > 0 ? ' (+1 day)' : ''} – ${formatTime(endTime)}${endDayOffset > 0 ? ' (+1 day)' : ''}`;
 
     // ── Build Google Maps link ──────────────────────────────────────────────
     const mapsLink =

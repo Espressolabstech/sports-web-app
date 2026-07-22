@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { format } from 'date-fns';
 import { X, Printer, CheckCircle2 } from 'lucide-react';
 import { Button } from './ui/button';
-import { formatTime } from '../utils/twMerge';
+import { formatTime, timeDayOffset } from '../utils/twMerge';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export interface ReceiptData {
@@ -204,7 +204,9 @@ export const BookingReceiptModal = ({ open, onClose, data }: Props) => {
                             <div className="row mb-3 flex justify-between text-sm">
                                 <span className="key text-[11px] uppercase tracking-wide text-muted-foreground">Time</span>
                                 <span className="val text-right font-semibold">
-                                    {formatTime(data.startTime)} – {formatTime(data.endTime)}
+                                    {formatTime(data.startTime)}
+                                    {timeDayOffset(data.startTime) > 0 ? ' (+1 day)' : ''} – {formatTime(data.endTime)}
+                                    {timeDayOffset(data.endTime) > 0 ? ' (+1 day)' : ''}
                                     {data.durationMinutes
                                         ? ` (${data.durationMinutes} min)`
                                         : ''}

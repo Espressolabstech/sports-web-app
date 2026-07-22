@@ -14,7 +14,7 @@ import { AnimatedLoader } from '../../components/AnimatedLoader';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { WalletOtpDialog } from '../../components/WalletOtpDialog';
-import { formatTime } from '../../utils/twMerge';
+import { formatTime, timeDayOffset } from '../../utils/twMerge';
 
 interface ConfirmBookingState {
     holdId: string;
@@ -198,6 +198,12 @@ const ConfirmBooking = () => {
     const endTime = state.slots[state.slots.length - 1]?.endTime
         ? formatTime(state.slots[state.slots.length - 1].endTime)
         : '';
+    const startDayOffset = state.slots[0]?.startTime
+        ? timeDayOffset(state.slots[0].startTime)
+        : 0;
+    const endDayOffset = state.slots[state.slots.length - 1]?.endTime
+        ? timeDayOffset(state.slots[state.slots.length - 1].endTime)
+        : 0;
 
     return (
         <div className="min-h-screen bg-background pb-28">
@@ -295,7 +301,19 @@ const ConfirmBooking = () => {
                             <span className="font-medium">
                                 {state.courtName}{' '}
                                 <span className="text-muted-foreground font-normal">
-                                    {startTime} – {endTime}
+                                    {startTime}
+                                    {startDayOffset > 0 && (
+                                        <sup className="ml-0.5 font-semibold text-primary">
+                                            +1
+                                        </sup>
+                                    )}
+                                    {' – '}
+                                    {endTime}
+                                    {endDayOffset > 0 && (
+                                        <sup className="ml-0.5 font-semibold text-primary">
+                                            +1
+                                        </sup>
+                                    )}
                                 </span>
                             </span>
                             {state.discountAmount &&

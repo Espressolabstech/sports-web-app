@@ -13,7 +13,11 @@ import {
     verifyBookingPayment,
 } from '../../api/adapters/bookings';
 import { statusColors } from '../../utils/mockData';
-import { formatTime } from '../../utils/twMerge';
+import {
+    combineDateAndTime,
+    formatTime,
+    timeDayOffset,
+} from '../../utils/twMerge';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import {
@@ -50,8 +54,9 @@ const OTC_CUTOFF_MS = 2 * 60 * 60 * 1000;
 
 // Open to Cancel closes 2 hours before the session starts.
 const getOtcCutoff = (b: ApiBooking) => {
-    const sessionStart = new Date(
-        `${b.bookingDate.split('T')[0]}T${b.startTime}`,
+    const sessionStart = combineDateAndTime(
+        b.bookingDate.split('T')[0],
+        b.startTime,
     );
     return new Date(sessionStart.getTime() - OTC_CUTOFF_MS);
 };
@@ -271,7 +276,7 @@ const MyBookings = () => {
             new Date(b.bookingDate),
             'EEEE, d MMMM yyyy',
         );
-        const timeRange = `${formatTime(b.startTime)} – ${formatTime(b.endTime)}`;
+        const timeRange = `${formatTime(b.startTime)}${timeDayOffset(b.startTime) > 0 ? ' (+1 day)' : ''} – ${formatTime(b.endTime)}${timeDayOffset(b.endTime) > 0 ? ' (+1 day)' : ''}`;
         const mapsLink = `https://maps.google.com/?q=${encodeURIComponent(`${b.venue.name} ${b.venue.city ?? ''}`)}`;
 
         const lines = [
@@ -424,8 +429,21 @@ const MyBookings = () => {
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-foreground">
                                     <Clock className="h-4 w-4 text-muted-foreground" />
-                                    {formatTime(selectedBooking.startTime)} –{' '}
+                                    {formatTime(selectedBooking.startTime)}
+                                    {timeDayOffset(selectedBooking.startTime) >
+                                        0 && (
+                                        <sup className="font-semibold text-primary">
+                                            +1
+                                        </sup>
+                                    )}
+                                    {' – '}
                                     {formatTime(selectedBooking.endTime)}
+                                    {timeDayOffset(selectedBooking.endTime) >
+                                        0 && (
+                                        <sup className="font-semibold text-primary">
+                                            +1
+                                        </sup>
+                                    )}
                                 </div>
                                 <div className="flex items-center gap-2 text-sm text-foreground">
                                     <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -626,8 +644,19 @@ const MyBookings = () => {
                                                 ? 'EEEE, MMM d'
                                                 : 'MMM d, yyyy',
                                         )}{' '}
-                                        · {formatTime(b.startTime)} –{' '}
+                                        · {formatTime(b.startTime)}
+                                        {timeDayOffset(b.startTime) > 0 && (
+                                            <sup className="font-semibold text-primary">
+                                                +1
+                                            </sup>
+                                        )}
+                                        {' – '}
                                         {formatTime(b.endTime)}
+                                        {timeDayOffset(b.endTime) > 0 && (
+                                            <sup className="font-semibold text-primary">
+                                                +1
+                                            </sup>
+                                        )}
                                     </p>
                                 </div>
                                 <div className="flex flex-col items-end gap-1">

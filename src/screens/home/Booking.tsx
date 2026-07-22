@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import { getSportLabel } from '../../utils/sports';
 import { useState, useEffect, useMemo } from 'react';
-import { format } from 'date-fns';
+import { format, addDays } from 'date-fns';
 import { toast } from 'sonner';
 import { ArrowLeft, CalendarDays, Clock, Loader2, Share2, X } from 'lucide-react';
 import { AnimatedLoader } from '../../components/AnimatedLoader';
@@ -11,7 +11,7 @@ import { getCourtDetail } from '../../api/adapters/courts';
 import { holdSlot } from '../../api/adapters/bookings';
 import { DateStrip } from '../../components/DateStrip';
 import { Button } from '../../components/ui/button';
-import { cn, formatTime } from '../../utils/twMerge';
+import { cn, formatTime, timeDayOffset } from '../../utils/twMerge';
 import { useQuery } from '@tanstack/react-query';
 import { getToken } from '../../utils/cookies.helpers';
 import { PhoneLoginModal } from '../../components/PhoneLoginModal';
@@ -179,6 +179,32 @@ const Booking = () => {
                 .map((s) => s.startTime),
         [courtSlotsData, filteredCourts, isToday, nowMinutes],
     );
+
+    // Time rows with a "NEXT DAY" divider inserted wherever an overnight
+    // session's slots roll past midnight (extended "HH:MM", hour >= 24).
+    const timeRows = useMemo(() => {
+        const rows: (
+            | { type: 'time'; time: string }
+            | { type: 'divider'; label: string }
+        )[] = [];
+        let lastDayOffset = 0;
+        timeLabels.forEach((time, idx) => {
+            const dayOffset = timeDayOffset(time);
+            if (idx === 0) lastDayOffset = dayOffset;
+            if (dayOffset > lastDayOffset) {
+                rows.push({
+                    type: 'divider',
+                    label: `Next day · ${format(
+                        addDays(selectedDate, dayOffset),
+                        'EEE, MMM d',
+                    )}`,
+                });
+                lastDayOffset = dayOffset;
+            }
+            rows.push({ type: 'time', time });
+        });
+        return rows;
+    }, [timeLabels, selectedDate]);
 
     // All selected slot objects on the current date (across all courts)
     const currentDateEntries = Object.entries(selectionByKey[cacheKey] ?? {}).map(
@@ -589,15 +615,33 @@ const Booking = () => {
 
                         {/* Time rows */}
                         <div className="space-y-1">
-                            {timeLabels.map((time) => (
+                            {timeRows.map((row) =>
+                                row.type === 'divider' ? (
+                                    <div
+                                        key={row.label}
+                                        className="flex items-center gap-2 py-2"
+                                    >
+                                        <div className="h-px flex-1 bg-border" />
+                                        <span className="whitespace-nowrap rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                            {row.label}
+                                        </span>
+                                        <div className="h-px flex-1 bg-border" />
+                                    </div>
+                                ) : (
                                 <div
-                                    key={time}
+                                    key={row.time}
                                     className="flex gap-1 items-center"
                                 >
                                     <div className="w-14 shrink-0 text-xs text-muted-foreground font-medium">
-                                        {formatTime(time)}
+                                        {formatTime(row.time)}
+                                        {timeDayOffset(row.time) > 0 && (
+                                            <sup className="ml-0.5 text-[9px] font-semibold text-primary">
+                                                +1
+                                            </sup>
+                                        )}
                                     </div>
                                     {filteredCourts.map((c) => {
+                                        const time = row.time;
                                         const slot = (
                                             courtSlotsData[c.id] ?? []
                                         ).find((s) => s.startTime === time);
@@ -721,7 +765,8 @@ const Booking = () => {
                                         );
                                     })}
                                 </div>
-                            ))}
+                                ),
+                            )}
                         </div>
                     </div>
                 )}

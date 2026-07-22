@@ -13,7 +13,7 @@ import { AnimatedLoader } from '../../components/AnimatedLoader';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent } from '../../components/ui/card';
 import { WalletOtpDialog } from '../../components/WalletOtpDialog';
-import { formatTime } from '../../utils/twMerge';
+import { formatTime, timeDayOffset } from '../../utils/twMerge';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface HoldEntry {
@@ -313,6 +313,15 @@ const MultiConfirmBooking = () => {
                                       hold.slots[hold.slots.length - 1].endTime,
                                   )
                                 : '';
+                        const startDayOffset = hold.slots[0]?.startTime
+                            ? timeDayOffset(hold.slots[0].startTime)
+                            : 0;
+                        const endDayOffset = hold.slots[hold.slots.length - 1]
+                            ?.endTime
+                            ? timeDayOffset(
+                                  hold.slots[hold.slots.length - 1].endTime,
+                              )
+                            : 0;
                         const isConfirmed = idx < confirmedCount;
                         const isProcessing = idx === payingIndex;
 
@@ -344,7 +353,20 @@ const MultiConfirmBooking = () => {
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
                                                     {hold.courtName} ·{' '}
-                                                    {startTime} – {endTime} ·{' '}
+                                                    {startTime}
+                                                    {startDayOffset > 0 && (
+                                                        <sup className="ml-0.5 font-semibold text-primary">
+                                                            +1
+                                                        </sup>
+                                                    )}
+                                                    {' – '}
+                                                    {endTime}
+                                                    {endDayOffset > 0 && (
+                                                        <sup className="ml-0.5 font-semibold text-primary">
+                                                            +1
+                                                        </sup>
+                                                    )}
+                                                    {' · '}
                                                     {hold.slots.length} slot
                                                     {hold.slots.length > 1
                                                         ? 's'
