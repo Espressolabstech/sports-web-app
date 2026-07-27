@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { format } from 'date-fns';
 import { X, Printer, CheckCircle2 } from 'lucide-react';
 import { Button } from './ui/button';
-import { formatTime, timeDayOffset } from '../utils/twMerge';
+import { formatPaymentMethod, formatTime, timeDayOffset } from '../utils/twMerge';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 export interface ReceiptData {
@@ -218,7 +218,7 @@ export const BookingReceiptModal = ({ open, onClose, data }: Props) => {
                                 <div className="row mb-3 flex justify-between text-sm">
                                     <span className="key text-[11px] uppercase tracking-wide text-muted-foreground">Payment</span>
                                     <span className="val text-right font-semibold capitalize">
-                                        {data.paymentMethod.replace(/_/g, ' ')}
+                                        {formatPaymentMethod(data.paymentMethod)}
                                         {data.paymentStatus
                                             ? ` · ${data.paymentStatus}`
                                             : ''}

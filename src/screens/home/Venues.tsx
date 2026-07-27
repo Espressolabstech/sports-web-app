@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { cn } from '../../utils/twMerge';
 import { AnimatedLoader } from '../../components/AnimatedLoader';
 import { getSportLabel } from '../../utils/sports';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -23,14 +24,10 @@ import {
 } from '../../components/ui/alert-dialog';
 import {
     ArrowLeft,
-    Crown,
     MapPin,
     Percent,
     Share2,
     Shield,
-    Star,
-    Unlock,
-    Lock,
     Zap,
     ChevronRight,
     Clock,
@@ -65,130 +62,57 @@ import {
     SheetTitle,
 } from '../../components/ui/sheet';
 import { getToken } from '../../utils/cookies.helpers';
+import { TIER_META, TIER_PERKS, TIER_PERK_KEYS } from '../../utils/tierMeta';
 import padelIcon from '../../assets/padel-Icon.png';
 import pickleballIcon from '../../assets/pickleball-Icon.png';
 import tennisIcon from '../../assets/tennis-Icon.png';
 
-// ── Tier Metadata ──────────────────────────────────────────────────────────────
-const TIER_META: Record<
-    string,
-    {
-        label: string;
-        icon: React.ReactNode;
-        gradient: string;
-        bgGradient: string;
-        color: string;
-        bgClass: string;
-        chipBg: string;
-        chipText: string;
-    }
-> = {
-    club: {
-        label: 'Club',
-        icon: <Shield className="h-5 w-5" />,
-        gradient: 'bg-gradient-to-r from-blue-500 to-sky-400',
-        bgGradient:
-            'bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100 dark:from-blue-950/40 dark:via-sky-950/30 dark:to-blue-900/40',
-        color: 'text-blue-600 dark:text-blue-400',
-        bgClass: 'bg-blue-500/10',
-        chipBg: 'bg-blue-500/15',
-        chipText: 'text-blue-700 dark:text-blue-300',
-    },
-    pro: {
-        label: 'Pro',
-        icon: <Star className="h-5 w-5" />,
-        gradient: 'bg-gradient-to-r from-emerald-500 to-teal-400',
-        bgGradient:
-            'bg-gradient-to-br from-emerald-50 via-teal-50 to-emerald-100 dark:from-emerald-950/40 dark:via-teal-950/30 dark:to-emerald-900/40',
-        color: 'text-emerald-600 dark:text-emerald-400',
-        bgClass: 'bg-emerald-500/10',
-        chipBg: 'bg-emerald-500/15',
-        chipText: 'text-emerald-700 dark:text-emerald-300',
-    },
-    elite: {
-        label: 'Elite',
-        icon: <Crown className="h-5 w-5" />,
-        gradient: 'bg-gradient-to-r from-violet-600 to-fuchsia-400',
-        bgGradient:
-            'bg-gradient-to-br from-violet-50 via-fuchsia-50 to-violet-100 dark:from-violet-950/40 dark:via-fuchsia-950/30 dark:to-violet-900/40',
-        color: 'text-violet-600 dark:text-violet-400',
-        bgClass: 'bg-violet-500/10',
-        chipBg: 'bg-violet-500/15',
-        chipText: 'text-violet-700 dark:text-violet-300',
-    },
-};
+// Tier metadata (labels, colors, perks) is shared with VenuePoints.tsx — see utils/tierMeta.tsx
 
-const ALL_PERKS: TierPerkInfo[] = [
-    {
-        key: 'otc',
-        name: 'Open to Cancel',
-        icon: <Unlock className="h-3.5 w-3.5" />,
-        shortLabel: 'OTC',
-        description:
-            'Release a confirmed booking. If someone else books that slot, you get a full refund automatically.',
-        howItWorks: [
-            "Tap 'Open to Cancel' on any upcoming booking.",
-            'Your slot becomes available to other players.',
-            "If someone books it → you're fully refunded.",
-            'If no one books it → you stay confirmed and are charged as normal.',
-            'You get 2 OTC uses per month at each venue.',
-        ],
-    },
-    {
-        key: 'rental_discount',
-        name: '15% off Rentals',
-        icon: <Percent className="h-3.5 w-3.5" />,
-        shortLabel: 'Rentals',
-        description:
-            'Get 15% off all ball and paddle/racket rentals at this venue.',
-        howItWorks: [
-            'Discount applies automatically at checkout.',
-            'Covers balls, paddles, and rackets.',
-            'Valid for every booking you make at this venue.',
-        ],
-    },
-    {
-        key: 'hold',
-        name: 'Court on Hold',
-        icon: <Lock className="h-3.5 w-3.5" />,
-        shortLabel: 'Hold',
-        description:
-            'Reserve a court for 30 minutes while you decide — no charge unless you confirm.',
-        howItWorks: [
-            "Pick a slot and tap 'Hold Court'.",
-            'The slot is reserved for you for 30 minutes.',
-            'Confirm and pay within 30 min to keep it.',
-            "If you don't confirm, the hold expires and the slot reopens.",
-            'Requires at least 24 hours before the session.',
-        ],
-    },
-    {
-        key: 'early',
-        name: 'Early Access',
-        icon: <Zap className="h-3.5 w-3.5" />,
-        shortLabel: 'Early',
-        description:
-            'Get a 30-minute head start to book slots before they open to everyone else.',
-        howItWorks: [
-            'New slots appear to you 30 minutes before other players.',
-            'Book prime-time slots before they sell out.',
-            'Available automatically — no action needed.',
-        ],
-    },
-];
-
-const TIER_PERK_KEYS: Record<string, string[]> = {
-    club: ['otc', 'rental_discount'],
-    pro: ['otc', 'rental_discount', 'hold'],
-    elite: ['otc', 'rental_discount', 'hold', 'early'],
-};
-
-const TIER_PERKS: Record<string, TierPerkInfo[]> = Object.fromEntries(
-    Object.entries(TIER_PERK_KEYS).map(([tier, keys]) => [
-        tier,
-        keys.map((k) => ALL_PERKS.find((p) => p.key === k)!),
-    ]),
-);
+// Static rewards icon: gold coin with star and ribbon tails
+function RewardsCoinIcon({ className }: { className?: string }) {
+    return (
+        <svg
+            className={className}
+            viewBox="0 0 24 24"
+            fill="none"
+            xmlns="http://www.w3.org/2000/svg"
+        >
+            <defs>
+                <linearGradient
+                    id="rewards-coin-gold"
+                    x1="2"
+                    y1="2"
+                    x2="22"
+                    y2="22"
+                    gradientUnits="userSpaceOnUse"
+                >
+                    <stop stopColor="#FCD34D" />
+                    <stop offset="1" stopColor="#F59E0B" />
+                </linearGradient>
+            </defs>
+            {/* Ribbon tails */}
+            <path d="M8.5 15.5 L6 21 L10.5 18.5 L12 15.5" fill="#FB7185" />
+            <path d="M15.5 15.5 L18 21 L13.5 18.5 L12 15.5" fill="#F43F5E" />
+            {/* Coin */}
+            <circle cx="12" cy="10" r="7" fill="url(#rewards-coin-gold)" />
+            <circle
+                cx="12"
+                cy="10"
+                r="5.5"
+                fill="none"
+                stroke="#FEF3C7"
+                strokeWidth="1"
+                strokeOpacity="0.7"
+            />
+            {/* Star */}
+            <path
+                d="M12 7 L13 9.35 L15.5 9.65 L13.6 11.3 L14.15 13.75 L12 12.45 L9.85 13.75 L10.4 11.3 L8.5 9.65 L11 9.35 Z"
+                fill="#FFF7ED"
+            />
+        </svg>
+    );
+}
 
 const SPORT_IMAGES: Record<string, string> = {
     PADEL: padelIcon,
@@ -240,8 +164,8 @@ const Venues = () => {
                             razorpaySignature: response.razorpay_signature,
                             packageId: confirmPkg.id,
                         });
-                        toast.success('Credits added to your wallet!', {
-                            description: `₹${Number(confirmPkg.amount).toLocaleString('en-IN')} credits are ready to use at ${facility.name}.`,
+                        toast.success('Points added to your account!', {
+                            description: `${Number(confirmPkg.amount).toLocaleString('en-IN')} points are ready to use at ${facility.name}.`,
                         });
                         queryClient.invalidateQueries({
                             queryKey: ['venue', venueId],
@@ -465,49 +389,93 @@ const Venues = () => {
             <div className="mx-auto max-w-lg px-4">
                 {/* ── Section 1: Venue Identity ── */}
                 <div className="pt-3 pb-5">
-                    <div className="flex items-start gap-2">
-                        <h1 className="text-2xl font-bold text-foreground flex-1">
-                            {facility.name}
-                        </h1>
-                        {user && currentTierName && meta && (
-                            <button
-                                onClick={() => setPerksSheetOpen(true)}
-                                className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${meta.chipBg} ${meta.chipText} shrink-0 mt-1 hover:opacity-80 transition-opacity`}
-                            >
-                                <span className="[&>svg]:h-3 [&>svg]:w-3">
-                                    {meta.icon}
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                            <h1 className="text-2xl font-bold text-foreground truncate">
+                                {facility.name}
+                            </h1>
+                            <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                                <button
+                                    onClick={() => {
+                                        const loc = [
+                                            facility.address,
+                                            facility.city,
+                                        ]
+                                            .filter(Boolean)
+                                            .join(', ');
+                                        const url =
+                                            facility.latitude &&
+                                            facility.longitude
+                                                ? `https://maps.google.com/?q=${facility.latitude},${facility.longitude}`
+                                                : `https://maps.google.com/?q=${encodeURIComponent(loc)}`;
+                                        window.open(url, '_blank');
+                                    }}
+                                    className="inline-flex items-center gap-1.5 hover:underline text-left"
+                                >
+                                    <MapPin className="h-3.5 w-3.5 shrink-0" />
+                                    <span className="truncate">
+                                        {[facility.area, facility.city]
+                                            .filter(Boolean)
+                                            .join(' · ')}
+                                    </span>
+                                </button>
+                                <span className="text-muted-foreground/40">
+                                    ·
                                 </span>
-                                {meta.label}
-                            </button>
+                                <button
+                                    onClick={() =>
+                                        navigate(`/venue/${venueId}/about`)
+                                    }
+                                    className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline shrink-0"
+                                >
+                                    About
+                                    <ChevronRight className="h-3 w-3" />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Points */}
+                        {!user ? (
+                            <div className="self-center shrink-0">
+                                <button
+                                    onClick={() => setLoginOpen(true)}
+                                    aria-label="Sign in to start earning points at this venue"
+                                    className="inline-flex items-center gap-1.5 rounded-2xl border border-border bg-background pl-2.5 pr-1.5 py-1.5 hover:bg-accent/50 transition-colors active:scale-95"
+                                >
+                                    <RewardsCoinIcon className="h-[18px] w-[18px] opacity-50" />
+                                    <span className="text-xs font-medium text-muted-foreground">
+                                        Earn points
+                                    </span>
+                                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/70" />
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="self-center shrink-0 p-[1px] rounded-2xl bg-gradient-to-br from-amber-200 via-amber-300 to-amber-400 hover:from-amber-300 hover:via-amber-400 hover:to-amber-500 transition-all active:scale-95">
+                                <button
+                                    onClick={() =>
+                                        navigate(`/venue/${venueId}/points`)
+                                    }
+                                    aria-label={`${walletBalance.toLocaleString('en-IN')} points at this venue`}
+                                    className="inline-flex items-center gap-1.5 rounded-[15px] bg-background pl-2.5 pr-1.5 py-1.5 transition-colors"
+                                >
+                                    <RewardsCoinIcon className="h-[18px] w-[18px]" />
+                                    <span
+                                        className={cn(
+                                            'text-sm font-semibold tabular-nums',
+                                            walletBalance === 0
+                                                ? 'text-muted-foreground'
+                                                : 'text-foreground',
+                                        )}
+                                    >
+                                        {walletBalance.toLocaleString('en-IN')}
+                                        <span className="ml-0.5 text-[10px] font-medium text-muted-foreground">
+                                            pts
+                                        </span>
+                                    </span>
+                                    <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/70" />
+                                </button>
+                            </div>
                         )}
-                    </div>
-                    <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                        <button
-                            onClick={() => {
-                                const loc = [facility.address, facility.city]
-                                    .filter(Boolean)
-                                    .join(', ');
-                                const url =
-                                    facility.latitude && facility.longitude
-                                        ? `https://maps.google.com/?q=${facility.latitude},${facility.longitude}`
-                                        : `https://maps.google.com/?q=${encodeURIComponent(loc)}`;
-                                window.open(url, '_blank');
-                            }}
-                            className="inline-flex items-center gap-1.5 hover:underline text-left"
-                        >
-                            <MapPin className="h-3.5 w-3.5 shrink-0" />
-                            <span className="truncate">
-                                {[facility.area, facility.city].filter(Boolean).join(' · ')}
-                            </span>
-                        </button>
-                        <span className="text-muted-foreground/40">·</span>
-                        <button
-                            onClick={() => navigate(`/venue/${venueId}/about`)}
-                            className="inline-flex items-center gap-0.5 font-medium text-primary hover:underline shrink-0"
-                        >
-                            About
-                            <ChevronRight className="h-3 w-3" />
-                        </button>
                     </div>
                 </div>
 
@@ -614,7 +582,7 @@ const Venues = () => {
                                     />
                                     <div className="flex-1 min-w-0">
                                         <p className="text-[15px] font-semibold text-foreground tracking-tight leading-tight">
-                                            Club Credits
+                                            Club Points
                                         </p>
                                         <p className="text-[12.5px] text-muted-foreground mt-0.5 leading-snug">
                                             Pay less, play more
@@ -625,8 +593,8 @@ const Venues = () => {
                                 <div className="flex flex-wrap gap-1.5 mt-3 pl-[26px]">
                                     <span className="inline-flex items-center gap-1 rounded-full bg-foreground/[0.05] px-2 py-0.5 text-[11px] font-medium text-foreground/75">
                                         {user
-                                            ? `₹${walletBalance.toLocaleString('en-IN')} balance`
-                                            : 'Bonus credits on purchase'}
+                                            ? `${walletBalance.toLocaleString('en-IN')} pts balance`
+                                            : 'Bonus points on purchase'}
                                     </span>
                                     <span className="inline-flex items-center gap-1 rounded-full bg-foreground/[0.05] px-2 py-0.5 text-[11px] font-medium text-foreground/75">
                                         Fast-track your tier
@@ -965,19 +933,19 @@ const Venues = () => {
                     <SheetHeader className="mb-3">
                         <SheetTitle className="flex items-center gap-2">
                             <Wallet className="h-5 w-5 text-primary" />
-                            Credit Packages
+                            Points Packages
                         </SheetTitle>
                     </SheetHeader>
 
-                    {/* Wallet balance + current tier summary */}
+                    {/* Points balance + current tier summary */}
                     {user && (
                         <div className="flex items-center gap-3 rounded-xl bg-muted/60 px-4 py-3 mb-4">
                             <div className="flex-1">
                                 <p className="text-xs text-muted-foreground">
-                                    Wallet Balance
+                                    Points Balance
                                 </p>
                                 <p className="text-base font-bold text-foreground">
-                                    ₹{walletBalance.toLocaleString('en-IN')}
+                                    {walletBalance.toLocaleString('en-IN')} pts
                                 </p>
                             </div>
                             {currentTierName && meta && (
@@ -999,7 +967,7 @@ const Venues = () => {
                     )}
 
                     <p className="text-sm text-muted-foreground mb-4">
-                        Buy credits to save on bookings. Some packages instantly
+                        Buy points to save on bookings. Some packages instantly
                         unlock a higher tier.
                     </p>
 
@@ -1045,7 +1013,7 @@ const Venues = () => {
                                                     )}
                                                 </div>
                                                 <p className="text-xs text-muted-foreground">
-                                                    ₹{Number(pkg.amount).toLocaleString('en-IN')} added to wallet
+                                                    {Number(pkg.amount).toLocaleString('en-IN')} pts added
                                                 </p>
                                             </div>
                                             <Button
@@ -1099,19 +1067,19 @@ const Venues = () => {
                                     </strong>{' '}
                                     to add{' '}
                                     <strong className="text-foreground">
-                                        ₹
                                         {Number(
                                             confirmPkg?.amount,
-                                        ).toLocaleString('en-IN')}
+                                        ).toLocaleString('en-IN')}{' '}
+                                        points
                                     </strong>{' '}
-                                    in credits at{' '}
+                                    at{' '}
                                     <strong className="text-foreground">
                                         {facility?.name}
                                     </strong>
                                     .
                                 </p>
                                 <p className="text-xs">
-                                    Credits never expire and can be used for any
+                                    Points never expire and can be used for any
                                     booking at this venue.
                                 </p>
                             </div>

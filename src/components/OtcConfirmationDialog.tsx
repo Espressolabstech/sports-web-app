@@ -38,8 +38,8 @@ export function OtcConfirmationDialog({
                             <p>
                                 Opening your slot lets another player book
                                 your court. If they do, your full booking
-                                amount is automatically returned to your
-                                wallet — no action needed from you.
+                                amount is automatically credited to your
+                                points balance — no action needed from you.
                             </p>
                             <p>
                                 Your booking stays confirmed the entire time.

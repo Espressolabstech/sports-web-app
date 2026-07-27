@@ -83,14 +83,14 @@ export function WalletOtpDialog({
                 <DialogHeader>
                     <DialogTitle className="flex items-center justify-center gap-2 text-center text-lg font-semibold">
                         <Shield className="h-5 w-5 text-primary" />
-                        Verify to pay with Wallet
+                        Verify to pay with Points
                     </DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4 pt-2">
                     <p className="text-center text-sm text-muted-foreground">
                         {isSendingOtp
                             ? 'Sending a code to your registered mobile number…'
-                            : 'Enter the code sent to your registered mobile number to authorize this wallet payment.'}
+                            : 'Enter the code sent to your registered mobile number to authorize this points payment.'}
                     </p>
                     <Input
                         placeholder="Enter OTP"

@@ -518,16 +518,16 @@ const MultiConfirmBooking = () => {
                                     <div className="flex items-center gap-1.5">
                                         <Wallet className="h-3.5 w-3.5 text-primary" />
                                         <span className="text-sm font-medium">
-                                            Venue Wallet
+                                            Venue Points
                                         </span>
                                     </div>
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                        Balance: ₹
-                                        {walletBalance.toLocaleString('en-IN')}
+                                        Balance: {walletBalance.toLocaleString('en-IN')}{' '}
+                                        pts
                                         {!hasEnoughBalance &&
                                             walletBalance > 0 &&
                                             ' — insufficient'}
-                                        {walletBalance === 0 && ' — no credits'}
+                                        {walletBalance === 0 && ' — no points'}
                                     </p>
                                 </div>
                             </div>
@@ -557,7 +557,7 @@ const MultiConfirmBooking = () => {
                                     : 'Processing…'}
                             </>
                         ) : selectedMethod === 'WALLET' ? (
-                            `Pay ₹${grandTotal} from Wallet`
+                            `Pay ${grandTotal} pts`
                         ) : (
                             `Pay ₹${grandTotal}`
                         )}

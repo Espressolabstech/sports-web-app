@@ -87,7 +87,7 @@ const ConfirmBooking = () => {
 
             // Wallet payment confirmed immediately
             if (selectedMethod === 'WALLET') {
-                toast.success('Booking confirmed via wallet!');
+                toast.success('Booking confirmed using points!');
                 navigate('/booking-success', {
                     replace: true,
                     state: {
@@ -427,16 +427,16 @@ const ConfirmBooking = () => {
                                     <div className="flex items-center gap-1.5">
                                         <Wallet className="h-3.5 w-3.5 text-primary" />
                                         <span className="text-sm font-medium">
-                                            Venue Wallet
+                                            Venue Points
                                         </span>
                                     </div>
                                     <p className="text-xs text-muted-foreground mt-0.5">
-                                        Balance: ₹
-                                        {walletBalance.toLocaleString('en-IN')}
+                                        Balance: {walletBalance.toLocaleString('en-IN')}{' '}
+                                        pts
                                         {!hasEnoughBalance &&
                                             walletBalance > 0 &&
                                             ' — insufficient'}
-                                        {walletBalance === 0 && ' — no credits'}
+                                        {walletBalance === 0 && ' — no points'}
                                     </p>
                                 </div>
                             </div>
@@ -464,7 +464,7 @@ const ConfirmBooking = () => {
                                 Processing…
                             </>
                         ) : selectedMethod === 'WALLET' ? (
-                            `Pay ₹${payableAmount} from Wallet`
+                            `Pay ${payableAmount} pts`
                         ) : (
                             `Pay ₹${payableAmount}`
                         )}

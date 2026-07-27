@@ -40,3 +40,9 @@ export function combineDateAndTime(dateStr: string, hhmm: string): Date {
     date.setHours(realHour, m, 0, 0);
     return date;
 }
+
+/** Display label for a stored payment method — "WALLET" reads as "Points" everywhere in the UI. */
+export function formatPaymentMethod(method: string): string {
+    if (method === 'WALLET') return 'Points';
+    return method.replace(/_/g, ' ');
+}

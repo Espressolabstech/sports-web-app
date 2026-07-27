@@ -15,6 +15,7 @@ import {
 import { statusColors } from '../../utils/mockData';
 import {
     combineDateAndTime,
+    formatPaymentMethod,
     formatTime,
     timeDayOffset,
 } from '../../utils/twMerge';
@@ -326,7 +327,7 @@ const MyBookings = () => {
                     </p>
                     <p className="text-xs text-muted-foreground">
                         If someone books your court before the cutoff, your
-                        full payment will be returned to your wallet
+                        full payment will be credited to your points balance
                         automatically.
                     </p>
                     <p className="flex items-center gap-1.5 text-xs font-medium text-warning">
@@ -473,7 +474,10 @@ const MyBookings = () => {
                                 <div className="flex justify-between text-xs text-muted-foreground">
                                     <span>Payment</span>
                                     <span>
-                                        {selectedBooking.payment.paymentMethod}{' '}
+                                        {formatPaymentMethod(
+                                            selectedBooking.payment
+                                                .paymentMethod,
+                                        )}{' '}
                                         ·{' '}
                                         {selectedBooking.payment.paymentStatus}
                                     </span>

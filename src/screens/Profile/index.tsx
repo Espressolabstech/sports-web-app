@@ -106,16 +106,16 @@ const MyProfile = () => {
                                     <div className="flex items-center gap-2">
                                         <Wallet className="h-4 w-4 text-primary" />
                                         <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                                            Wallet
+                                            Points
                                         </span>
                                     </div>
                                     <ChevronRight className="h-4 w-4 text-muted-foreground" />
                                 </div>
                                 <p className="text-sm font-medium text-foreground">
-                                    View all venue wallets
+                                    View all venue points
                                 </p>
                                 <p className="text-xs text-muted-foreground mt-0.5">
-                                    Tap to see your balances
+                                    Tap to see your points balances
                                 </p>
                             </CardContent>
                         </Card>
@@ -185,7 +185,7 @@ const MyProfile = () => {
                 ) : purchases.length > 0 ? (
                     <div>
                         <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">
-                            Credit Packages
+                            Points Packages
                         </h2>
 
                         <Card className="mb-2">
@@ -196,7 +196,7 @@ const MyProfile = () => {
                                     </div>
                                     <div className="flex-1">
                                         <p className="text-sm font-semibold text-foreground">
-                                            ₹{totalCreditsPurchased.toLocaleString()} total credits
+                                            {totalCreditsPurchased.toLocaleString()} pts total
                                         </p>
                                         <p className="text-xs text-muted-foreground">
                                             ₹{totalSpent.toLocaleString()} spent across{' '}
@@ -232,7 +232,7 @@ const MyProfile = () => {
                                             </div>
                                             <div className="text-right shrink-0">
                                                 <p className="text-sm font-semibold text-foreground">
-                                                    ₹{p.package.amount.toLocaleString()}
+                                                    {p.package.amount.toLocaleString()} pts
                                                 </p>
                                                 <p className="text-[10px] text-muted-foreground">
                                                     paid ₹{p.amountPaid.toLocaleString()}

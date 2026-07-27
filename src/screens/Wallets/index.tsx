@@ -25,7 +25,7 @@ const Wallets = () => {
                     <button onClick={() => navigate(-1)} className="p-1 -ml-1 rounded-full hover:bg-white/10 transition-colors">
                         <ArrowLeft className="h-5 w-5" />
                     </button>
-                    <h1 className="text-xl font-bold">My Wallets</h1>
+                    <h1 className="text-xl font-bold">My Points</h1>
                 </div>
             </header>
 
@@ -43,7 +43,7 @@ const Wallets = () => {
                                 </span>
                             </div>
                             <p className="text-2xl font-bold text-foreground">
-                                ₹{totalBalance.toLocaleString('en-IN')}
+                                {totalBalance.toLocaleString('en-IN')} pts
                             </p>
                             <p className="text-xs text-muted-foreground mt-0.5">
                                 Across {wallets.length} venue{wallets.length !== 1 ? 's' : ''}
@@ -55,7 +55,7 @@ const Wallets = () => {
                 {/* Per-Venue Wallets */}
                 <div>
                     <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-2 px-1">
-                        Venue Wallets
+                        Venue Points
                     </h2>
 
                     {isLoading ? (
@@ -68,7 +68,7 @@ const Wallets = () => {
                             <CardContent className="p-6 text-center">
                                 <Wallet className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
                                 <p className="text-sm text-muted-foreground">
-                                    No venue wallets yet. Purchase a credit package to get started.
+                                    No venue points yet. Purchase a points package to get started.
                                 </p>
                             </CardContent>
                         </Card>
@@ -89,7 +89,7 @@ const Wallets = () => {
                                             </div>
                                             <div className="text-right shrink-0">
                                                 <p className={`text-lg font-bold ${Number(w.balance) > 0 ? 'text-foreground' : 'text-muted-foreground'}`}>
-                                                    ₹{Number(w.balance).toLocaleString('en-IN')}
+                                                    {Number(w.balance).toLocaleString('en-IN')} pts
                                                 </p>
                                                 <p className="text-xs text-muted-foreground">
                                                     available
