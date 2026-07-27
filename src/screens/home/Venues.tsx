@@ -28,6 +28,7 @@ import {
     Percent,
     Share2,
     Shield,
+    User,
     Zap,
     ChevronRight,
     Clock,
@@ -365,8 +366,8 @@ const Venues = () => {
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <button className="rounded-full bg-card/80 p-2 backdrop-blur-sm hover:bg-card transition-colors">
-                                    <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground">
-                                        U
+                                    <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
+                                        <User className="h-3.5 w-3.5" />
                                     </div>
                                 </button>
                             </DropdownMenuTrigger>
