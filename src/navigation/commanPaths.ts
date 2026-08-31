@@ -11,4 +11,12 @@ export const path = {
     confirmBooking: '/confirm-booking',
     multiConfirmBooking: '/multi-confirm-booking',
     bookingSuccess: '/booking-success',
+    events: '/events',
+    eventRegister: '/events/:slug/register',
+    eventPass: '/events/:slug/pass',
+    eventHosts: '/events/:slug/hosts',
+    eventRules: '/events/:slug/rules',
+    eventPlayers: '/events/:slug/players',
+    eventStandings: '/events/:slug/standings',
+    eventDetail: '/events/:slug',
 };

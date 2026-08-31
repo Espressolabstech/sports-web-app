@@ -1,4 +1,4 @@
-import { Home, CalendarDays, User, LogIn } from 'lucide-react';
+import { Home, CalendarDays, Trophy, User, LogIn } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { cn } from '../utils/twMerge';
 import { path } from '../navigation/commanPaths';
@@ -27,6 +27,11 @@ export function BottomNav() {
                     <NavLink to={path.home} end className={navClass}>
                         <Home className="h-5 w-5" />
                         <span>Home</span>
+                    </NavLink>
+
+                    <NavLink to={path.events} className={navClass}>
+                        <Trophy className="h-5 w-5" />
+                        <span>Events</span>
                     </NavLink>
 
                     {user ? (

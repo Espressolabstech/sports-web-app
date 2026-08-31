@@ -13,6 +13,12 @@ import Booking from '../screens/home/Booking';
 import ConfirmBooking from '../screens/home/ConfirmBooking';
 import MultiConfirmBooking from '../screens/home/MultiConfirmBooking';
 import BookingSuccess from '../screens/home/BookingSuccess';
+import EventsList from '../screens/events';
+import EventLanding from '../screens/events/EventLanding';
+import EventRegister from '../screens/events/EventRegister';
+import EventPass from '../screens/events/EventPass';
+import EventHosts from '../screens/events/EventHosts';
+import EventSubPage from '../screens/events/EventSubPage';
 
 export const router = createBrowserRouter([
     {
@@ -62,6 +68,38 @@ export const router = createBrowserRouter([
     {
         path: path.bookingSuccess,
         element: <ProtectedComponentWrapper children={<BookingSuccess />} />,
+    },
+    {
+        path: path.events,
+        element: <EventsList />,
+    },
+    {
+        path: path.eventRegister,
+        element: <EventRegister />,
+    },
+    {
+        path: path.eventPass,
+        element: <EventPass />,
+    },
+    {
+        path: path.eventHosts,
+        element: <EventHosts />,
+    },
+    {
+        path: path.eventRules,
+        element: <EventSubPage section="rules" />,
+    },
+    {
+        path: path.eventPlayers,
+        element: <EventSubPage section="players" />,
+    },
+    {
+        path: path.eventStandings,
+        element: <EventSubPage section="standings" />,
+    },
+    {
+        path: path.eventDetail,
+        element: <EventLanding />,
     },
     {
         path: '*',
