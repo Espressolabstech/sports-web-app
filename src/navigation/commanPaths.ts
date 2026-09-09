@@ -13,6 +13,7 @@ export const path = {
     bookingSuccess: '/booking-success',
     events: '/events',
     eventRegister: '/events/:slug/register',
+    eventLive: '/events/:slug/live',
     eventPass: '/events/:slug/pass',
     eventHosts: '/events/:slug/hosts',
     eventRules: '/events/:slug/rules',

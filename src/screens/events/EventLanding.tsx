@@ -14,11 +14,14 @@ import {
     X,
 } from 'lucide-react';
 import { useCountdown } from '../../components/events/Countdown';
-import { cn } from '../../utils/twMerge';
 import {
+    cohortsOf,
+    cohortStatus,
     fetchEvent,
     fillStatus,
     getRegistration,
+    rosterIn,
+    standings,
     type EventRegistration,
 } from '../../lib/public-events';
 import { AnimatedLoader } from '../../components/AnimatedLoader';
@@ -50,6 +53,9 @@ export default function EventLanding() {
         queryKey: ['public-event', slug],
         queryFn: () => fetchEvent(slug!),
         enabled: !!slug,
+        // No websocket/Realtime layer here, so poll while the tournament is
+        // actually in progress (fill count, live badge) and stop otherwise.
+        refetchInterval: (query) => (query.state.data?.phase === 'live' ? 15000 : false),
     });
 
     useEffect(() => {
@@ -81,6 +87,13 @@ export default function EventLanding() {
 
     const poster = event.posterUrl;
     const fill = fillStatus(event);
+    const cohorts = cohortsOf(event);
+    const previewCohort = reg?.skill ?? cohorts[0];
+    const standingsPreview = previewCohort
+        ? standings(event, previewCohort)
+              .filter((r) => r.played > 0)
+              .slice(0, 3)
+        : [];
     const statusColor =
         fill.status === 'full'
             ? 'hsl(var(--event-full))'
@@ -343,56 +356,162 @@ export default function EventLanding() {
                     </div>
                 </Link>
 
+                {cohorts.length > 1 && (
+                    <section className="mt-6">
+                        <p
+                            className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                            style={{ color: 'hsl(var(--event-on-ink-muted))' }}
+                        >
+                            Cohorts
+                        </p>
+                        <p className="mb-2 px-1 text-[12px]" style={{ color: 'hsl(var(--event-on-ink-muted))' }}>
+                            Beginner and Intermediate play separate tournaments — you only face
+                            players in your own cohort.
+                        </p>
+                        <div className="space-y-2">
+                            {cohorts.map((c) => {
+                                const st = cohortStatus(event, c);
+                                return (
+                                    <Link
+                                        key={c}
+                                        to={`/events/${event.slug}/players?cohort=${c}`}
+                                        className="flex items-center gap-2.5 rounded-2xl px-4 py-3.5 active:scale-[0.99]"
+                                        style={{ backgroundColor: 'hsl(var(--event-ink-soft))' }}
+                                    >
+                                        <div className="min-w-0 flex-1">
+                                            <p
+                                                className="truncate text-[14px] font-semibold leading-tight"
+                                                style={{ color: 'hsl(var(--event-on-ink))' }}
+                                            >
+                                                {c}
+                                            </p>
+                                            <p className="truncate text-[11px] leading-tight" style={{ color: 'hsl(var(--event-on-ink-muted))' }}>
+                                                {rosterIn(event, c).length} registered
+                                            </p>
+                                        </div>
+                                        <span
+                                            className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em]"
+                                            style={
+                                                st === 'live'
+                                                    ? {
+                                                          backgroundColor: 'hsl(var(--event-accent))',
+                                                          color: 'hsl(var(--event-accent-foreground))',
+                                                      }
+                                                    : {
+                                                          backgroundColor: 'hsl(var(--event-on-ink)/0.1)',
+                                                          color: 'hsl(var(--event-on-ink)/0.8)',
+                                                      }
+                                            }
+                                        >
+                                            {st === 'live' ? 'Live' : st === 'completed' ? 'Finished' : 'Not started'}
+                                        </span>
+                                        <ChevronRight
+                                            className="h-4 w-4 shrink-0"
+                                            style={{ color: 'hsl(var(--event-on-ink-muted))' }}
+                                        />
+                                    </Link>
+                                );
+                            })}
+                        </div>
+                    </section>
+                )}
+
                 <section className="mt-6">
-                    <p
-                        className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
-                        style={{ color: 'hsl(var(--event-on-ink-muted))' }}
-                    >
-                        Standings
-                    </p>
+                    <div className="mb-2 flex items-center justify-between px-1">
+                        <p
+                            className="text-[11px] font-semibold uppercase tracking-[0.18em]"
+                            style={{ color: 'hsl(var(--event-on-ink-muted))' }}
+                        >
+                            Standings
+                        </p>
+                        <Link
+                            to={`/events/${event.slug}/standings`}
+                            className="flex items-center gap-0.5 text-[11px] font-semibold"
+                            style={{ color: 'hsl(var(--event-on-ink-muted))' }}
+                        >
+                            See all
+                            <ChevronRight className="h-3.5 w-3.5" />
+                        </Link>
+                    </div>
                     <Link
                         to={`/events/${event.slug}/standings`}
                         className="relative block overflow-hidden rounded-2xl active:scale-[0.99]"
                         style={{ backgroundColor: 'hsl(var(--event-ink-soft))' }}
                     >
-                        <div
-                            className={cn(
-                                'space-y-2 p-4',
-                                event.phase === 'upcoming' && 'pointer-events-none select-none blur-[5px]',
-                            )}
-                            aria-hidden={event.phase === 'upcoming'}
-                        >
-                            {[1, 2, 3].map((n) => (
-                                <div key={n} className="flex items-center gap-3">
-                                    <span
-                                        className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold"
-                                        style={{
-                                            backgroundColor: 'hsl(var(--event-lime)/0.2)',
-                                            color: 'hsl(var(--event-lime))',
-                                        }}
-                                    >
-                                        {n}
-                                    </span>
-                                    <span
-                                        className="h-3 flex-1 rounded-full"
-                                        style={{ backgroundColor: 'hsl(var(--event-on-ink)/0.18)' }}
-                                    />
-                                    <span
-                                        className="h-3 w-10 rounded-full"
-                                        style={{ backgroundColor: 'hsl(var(--event-on-ink)/0.18)' }}
-                                    />
+                        {event.phase === 'upcoming' ? (
+                            <>
+                                <div className="pointer-events-none select-none space-y-2 p-4 blur-[5px]" aria-hidden>
+                                    {[1, 2, 3].map((n) => (
+                                        <div key={n} className="flex items-center gap-3">
+                                            <span
+                                                className="flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold"
+                                                style={{
+                                                    backgroundColor: 'hsl(var(--event-lime)/0.2)',
+                                                    color: 'hsl(var(--event-lime))',
+                                                }}
+                                            >
+                                                {n}
+                                            </span>
+                                            <span
+                                                className="h-3 flex-1 rounded-full"
+                                                style={{ backgroundColor: 'hsl(var(--event-on-ink)/0.18)' }}
+                                            />
+                                            <span
+                                                className="h-3 w-10 rounded-full"
+                                                style={{ backgroundColor: 'hsl(var(--event-on-ink)/0.18)' }}
+                                            />
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-
-                        {event.phase === 'upcoming' && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+                                <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">
+                                    <Trophy className="h-6 w-6" style={{ color: 'hsl(var(--event-lime))' }} />
+                                    <p
+                                        className="mt-2 text-sm font-semibold"
+                                        style={{ color: 'hsl(var(--event-on-ink))' }}
+                                    >
+                                        Come back at the start of the event to see the standings.
+                                    </p>
+                                </div>
+                            </>
+                        ) : standingsPreview.length > 0 ? (
+                            <div className="space-y-2 p-4">
+                                {standingsPreview.map((row) => (
+                                    <div key={row.playerId} className="flex items-center gap-3">
+                                        <span
+                                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                                            style={{
+                                                backgroundColor: 'hsl(var(--event-lime)/0.2)',
+                                                color: 'hsl(var(--event-lime))',
+                                            }}
+                                        >
+                                            {row.rank}
+                                        </span>
+                                        <span
+                                            className="min-w-0 flex-1 truncate text-[14px] font-medium"
+                                            style={{ color: 'hsl(var(--event-on-ink))' }}
+                                        >
+                                            {row.name}
+                                        </span>
+                                        <span
+                                            className="text-[14px] font-bold tabular-nums"
+                                            style={{ color: 'hsl(var(--event-on-ink))' }}
+                                        >
+                                            {row.points}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center gap-1.5 px-6 py-8 text-center">
                                 <Trophy className="h-6 w-6" style={{ color: 'hsl(var(--event-lime))' }} />
                                 <p
-                                    className="mt-2 text-sm font-semibold"
+                                    className="text-sm font-semibold"
                                     style={{ color: 'hsl(var(--event-on-ink))' }}
                                 >
-                                    Come back at the start of the event to see the standings.
+                                    No standings yet
+                                </p>
+                                <p className="text-xs" style={{ color: 'hsl(var(--event-on-ink-muted))' }}>
+                                    Check back once the first round is scored.
                                 </p>
                             </div>
                         )}
@@ -445,15 +564,17 @@ export default function EventLanding() {
                             {fill.status === 'full' ? 'Join waitlist' : 'Register'}
                         </Link>
                     ) : (
-                        <span
-                            className="inline-flex h-14 flex-1 items-center justify-center rounded-2xl text-[15px] font-semibold"
+                        <Link
+                            to={`/events/${event.slug}/live`}
+                            className="inline-flex h-14 flex-1 items-center justify-center gap-2 rounded-2xl text-[16px] font-black uppercase tracking-wide active:scale-[0.99]"
                             style={{
-                                backgroundColor: 'hsl(var(--event-ink-soft))',
-                                color: 'hsl(var(--event-on-ink-muted))',
+                                backgroundColor: 'hsl(var(--event-accent))',
+                                color: 'hsl(var(--event-accent-foreground))',
                             }}
                         >
-                            {event.phase === 'live' ? 'Registration closed' : 'Event finished'}
-                        </span>
+                            <Trophy className="h-4 w-4" />
+                            {event.phase === 'live' ? 'Live scoring' : 'View results'}
+                        </Link>
                     )}
                 </div>
             </div>

@@ -36,6 +36,10 @@ declare global {
         id: string;
         eventId: string;
         roundNumber: number;
+        cohort: ApiEventEntrant['skill'] | null;
+        status: 'PENDING' | 'ACTIVE' | 'COMPLETED';
+        startedAt: string | null;
+        timeLimitSec: number | null;
         resting: string[];
         matches: ApiEventMatch[];
     }
@@ -63,6 +67,9 @@ declare global {
         priceInr: number;
         upiId: string | null;
         phase: 'DRAFT' | 'PUBLISHED' | 'LIVE' | 'COMPLETED';
+        currentRound: number;
+        totalRounds: number | null;
+        completedCohorts: ApiEventEntrant['skill'][];
         createdAt: string;
         updatedAt: string;
         entrants: ApiEventEntrant[];
@@ -92,16 +99,28 @@ declare global {
     }
 
     interface ApiEventRegistrationData {
-        entrant: ApiEventEntrant;
-        ticketCode: string;
+        // null while a paid registration is still waiting on payment —
+        // the entrant is only created once confirmPayment verifies it.
+        entrant: ApiEventEntrant | null;
+        ticketCode: string | null;
         waitlisted: boolean;
+        pending: boolean;
         razorpay: ApiEventRazorpayOrder | null;
     }
 
-    interface VerifyEventPaymentBody {
+    interface ConfirmEventPaymentBody {
+        name: string;
+        phone: string;
+        skill?: ApiEventEntrant['skill'];
         razorpayOrderId: string;
         razorpayPaymentId: string;
         razorpaySignature: string;
+    }
+
+    interface ApiEventPaymentConfirmationData {
+        entrant: ApiEventEntrant;
+        ticketCode: string;
+        waitlisted: boolean;
     }
 }
 

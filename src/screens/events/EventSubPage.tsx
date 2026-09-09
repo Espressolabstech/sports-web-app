@@ -1,17 +1,21 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Lock, MapPin, Timer, Trophy, Users, Zap } from 'lucide-react';
 import {
+    cohortStatus,
+    cohortsOf,
     fetchEvent,
     fillStatus,
     getRegistration,
     shortName,
     standings,
     type EventRegistration,
+    type EventSkill,
     type RosterPlayer,
     type TournamentEvent,
 } from '../../lib/public-events';
+import { Podium } from '../../components/events/Podium';
 
 type Section = 'rules' | 'players' | 'standings';
 
@@ -29,12 +33,17 @@ const onInkMuted = { color: 'hsl(var(--event-on-ink-muted))' };
 export default function EventSubPage({ section }: { section: Section }) {
     const { slug } = useParams();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [reg, setReg] = useState<EventRegistration | null>(null);
+    const [cohortOverride, setCohortOverride] = useState<EventSkill | null>(null);
 
     const { data: event } = useQuery({
         queryKey: ['public-event', slug],
         queryFn: () => fetchEvent(slug!),
         enabled: !!slug,
+        // Standings/players update as the organizer enters scores — poll
+        // while the tournament is live rather than requiring a manual pull.
+        refetchInterval: (query) => (query.state.data?.phase === 'live' ? 10000 : false),
     });
 
     useEffect(() => {
@@ -49,7 +58,15 @@ export default function EventSubPage({ section }: { section: Section }) {
         if (!event) return [];
         const mine =
             reg && !event.roster.some((p) => p.id === reg.entrantId)
-                ? [{ id: 'me', name: shortName(reg.name), skill: reg.skill, isMe: true }]
+                ? [
+                      {
+                          id: 'me',
+                          name: shortName(reg.name),
+                          skill: reg.skill,
+                          createdAt: reg.createdAt,
+                          isMe: true,
+                      },
+                  ]
                 : [];
         return [
             ...mine,
@@ -74,6 +91,16 @@ export default function EventSubPage({ section }: { section: Section }) {
     }
 
     const gated = section === 'players' && !reg;
+
+    const cohorts = cohortsOf(event);
+    const paramCohort = searchParams.get('cohort') as EventSkill | null;
+    const activeCohort =
+        (cohortOverride && cohorts.includes(cohortOverride) ? cohortOverride : null) ??
+        (paramCohort && cohorts.includes(paramCohort) ? paramCohort : null) ??
+        (reg && cohorts.includes(reg.skill) ? reg.skill : null) ??
+        cohorts[0];
+
+    const cohortRoster = activeCohort ? roster.filter((p) => p.skill === activeCohort) : roster;
 
     return (
         <div className="min-h-screen pb-32" style={ink}>
@@ -101,6 +128,30 @@ export default function EventSubPage({ section }: { section: Section }) {
                         </p>
                     </div>
                 </div>
+                {section !== 'rules' && cohorts.length > 1 && (
+                    <div className="mx-auto flex max-w-lg gap-1.5 overflow-x-auto px-3 pb-2.5">
+                        {cohorts.map((c) => (
+                            <button
+                                key={c}
+                                onClick={() => setCohortOverride(c)}
+                                className="shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-semibold"
+                                style={
+                                    c === activeCohort
+                                        ? {
+                                              backgroundColor: 'hsl(var(--event-accent))',
+                                              color: 'hsl(var(--event-accent-foreground))',
+                                          }
+                                        : {
+                                              backgroundColor: 'hsl(var(--event-on-ink)/0.08)',
+                                              color: 'hsl(var(--event-on-ink))',
+                                          }
+                                }
+                            >
+                                {c}
+                            </button>
+                        ))}
+                    </div>
+                )}
             </header>
 
             <main className="mx-auto max-w-lg px-4 py-4">
@@ -109,9 +160,11 @@ export default function EventSubPage({ section }: { section: Section }) {
                     (gated ? (
                         <LockedPlayers event={event} />
                     ) : (
-                        <Players roster={roster} capacity={event.capacity} />
+                        <Players roster={cohortRoster} capacity={event.capacity} />
                     ))}
-                {section === 'standings' && <Standings event={event} />}
+                {section === 'standings' && activeCohort && (
+                    <Standings event={event} cohort={activeCohort} />
+                )}
             </main>
 
             {gated && (
@@ -294,11 +347,12 @@ function Players({
     );
 }
 
-function Standings({ event }: { event: TournamentEvent }) {
-    const table = standings(event);
+function Standings({ event, cohort }: { event: TournamentEvent; cohort: EventSkill }) {
+    const table = standings(event, cohort);
+    const status = cohortStatus(event, cohort);
     const hasScores = table.some((r) => r.played > 0);
 
-    if (event.phase === 'upcoming' || !hasScores) {
+    if (status === 'not_started' || !hasScores) {
         return (
             <div className="rounded-2xl px-6 py-16 text-center" style={card}>
                 <Trophy className="mx-auto h-9 w-9" style={{ color: 'hsl(var(--event-lime))' }} />
@@ -312,35 +366,96 @@ function Standings({ event }: { event: TournamentEvent }) {
         );
     }
 
+    const podiumRows = table.filter((r) => r.rank <= 3).slice(0, 3);
+    const rest = table.filter((r) => !podiumRows.includes(r));
+
     return (
-        <div className="overflow-hidden rounded-2xl" style={card}>
-            {table.map((row, i) => (
-                <div
-                    key={row.playerId}
-                    className="flex items-center gap-3 px-4 py-3"
-                    style={i > 0 ? { borderTop: '1px solid hsl(var(--event-on-ink)/0.08)' } : undefined}
+        <div className="space-y-3.5">
+            {status === 'completed' && (
+                <p
+                    className="px-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                    style={onInkMuted}
                 >
-                    <span
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
-                        style={
-                            i < 3
-                                ? { backgroundColor: 'hsl(var(--event-lime)/0.2)', color: 'hsl(var(--event-lime))' }
-                                : { backgroundColor: 'hsl(var(--event-on-ink)/0.08)', color: 'hsl(var(--event-on-ink-muted))' }
-                        }
-                    >
-                        {i + 1}
-                    </span>
-                    <p className="min-w-0 flex-1 truncate text-[15px] font-medium" style={onInk}>
-                        {row.name}
-                    </p>
-                    <p className="text-xs" style={onInkMuted}>
-                        {row.won}/{row.played} won
-                    </p>
-                    <p className="w-12 text-right text-[15px] font-bold" style={onInk}>
-                        {row.points}
-                    </p>
+                    Final podium
+                </p>
+            )}
+            {podiumRows.length === 3 && <Podium rows={podiumRows} />}
+
+            {rest.length > 0 && (
+                <>
+                    {status === 'completed' && (
+                        <p
+                            className="px-1 pt-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
+                            style={onInkMuted}
+                        >
+                            Full results
+                        </p>
+                    )}
+                    <div className="overflow-hidden rounded-2xl" style={card}>
+                        {rest.map((row, i) => (
+                            <div
+                                key={row.playerId}
+                                className="flex items-center gap-3 px-4 py-3"
+                                style={i > 0 ? { borderTop: '1px solid hsl(var(--event-on-ink)/0.08)' } : undefined}
+                            >
+                                <span
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                                    style={{
+                                        backgroundColor: 'hsl(var(--event-on-ink)/0.08)',
+                                        color: 'hsl(var(--event-on-ink-muted))',
+                                    }}
+                                >
+                                    {row.rank}
+                                </span>
+                                <p className="min-w-0 flex-1 truncate text-[15px] font-medium" style={onInk}>
+                                    {row.name}
+                                </p>
+                                <p className="text-xs" style={onInkMuted}>
+                                    {row.won}/{row.played} won
+                                </p>
+                                <p className="w-12 text-right text-[15px] font-bold" style={onInk}>
+                                    {row.points}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </>
+            )}
+
+            {podiumRows.length < 3 && rest.length === 0 && (
+                <div className="overflow-hidden rounded-2xl" style={card}>
+                    {podiumRows.map((row, i) => (
+                        <div
+                            key={row.playerId}
+                            className="flex items-center gap-3 px-4 py-3"
+                            style={i > 0 ? { borderTop: '1px solid hsl(var(--event-on-ink)/0.08)' } : undefined}
+                        >
+                            <span
+                                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                                style={{
+                                    backgroundColor: 'hsl(var(--event-lime)/0.2)',
+                                    color: 'hsl(var(--event-lime))',
+                                }}
+                            >
+                                {row.rank}
+                            </span>
+                            <p className="min-w-0 flex-1 truncate text-[15px] font-medium" style={onInk}>
+                                {row.name}
+                            </p>
+                            <p className="text-xs" style={onInkMuted}>
+                                {row.won}/{row.played} won
+                            </p>
+                            <p className="w-12 text-right text-[15px] font-bold" style={onInk}>
+                                {row.points}
+                            </p>
+                        </div>
+                    ))}
                 </div>
-            ))}
+            )}
+
+            <p className="px-1 text-xs" style={onInkMuted}>
+                {status === 'live' ? 'Updating after every round.' : 'Final result.'}
+            </p>
         </div>
     );
 }

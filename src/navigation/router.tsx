@@ -16,6 +16,7 @@ import BookingSuccess from '../screens/home/BookingSuccess';
 import EventsList from '../screens/events';
 import EventLanding from '../screens/events/EventLanding';
 import EventRegister from '../screens/events/EventRegister';
+import EventLive from '../screens/events/EventLive';
 import EventPass from '../screens/events/EventPass';
 import EventHosts from '../screens/events/EventHosts';
 import EventSubPage from '../screens/events/EventSubPage';
@@ -76,6 +77,10 @@ export const router = createBrowserRouter([
     {
         path: path.eventRegister,
         element: <EventRegister />,
+    },
+    {
+        path: path.eventLive,
+        element: <EventLive />,
     },
     {
         path: path.eventPass,

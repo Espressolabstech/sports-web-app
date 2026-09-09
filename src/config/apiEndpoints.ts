@@ -48,6 +48,5 @@ export const endpoints = {
     events: '/public/events',
     eventDetail: (slug: string) => `/public/events/${slug}`,
     registerForEvent: (slug: string) => `/public/events/${slug}/register`,
-    verifyEventPayment: (slug: string, entrantId: string) =>
-        `/public/events/${slug}/entrants/${entrantId}/verify-payment`,
+    confirmEventPayment: (slug: string) => `/public/events/${slug}/confirm-payment`,
 };

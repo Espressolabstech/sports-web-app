@@ -6,7 +6,8 @@ import { ArrowLeft, ArrowRight, Check, IndianRupee, ShieldCheck } from 'lucide-r
 import { toast } from 'sonner';
 import { cn } from '../../utils/twMerge';
 import {
-    confirmEventPayment,
+    cohortStatus,
+    confirmPayment,
     fetchEvent,
     finalizeRegistration,
     getRegistration,
@@ -54,14 +55,31 @@ export default function EventRegister() {
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
 
-    useEffect(() => {
-        if (slug && getRegistration(slug)) navigate(`/events/${slug}/pass`, { replace: true });
-    }, [slug, navigate]);
-
+    // Cohorts (Beginner/Intermediate/Advance) run as separate tournaments —
+    // only offer the ones that haven't started yet. One cohort going live
+    // doesn't close registration for another that hasn't.
     const offeredLevels = useMemo(
-        () => SKILLS.filter((s) => event?.skillLevels.includes(s.key)),
+        () =>
+            SKILLS.filter(
+                (s) =>
+                    event?.skillLevels.includes(s.key) &&
+                    cohortStatus(event, s.key) === 'not_started',
+            ),
         [event],
     );
+
+    useEffect(() => {
+        if (!slug || !event) return;
+        // Once every cohort this event offers has started, there's nothing
+        // left to register for — bounce straight to the live standings page
+        // instead of an empty form. A different cohort going live doesn't
+        // close registration here, since each runs its own tournament.
+        if (offeredLevels.length === 0) {
+            navigate(`/events/${slug}/live`, { replace: true });
+            return;
+        }
+        if (getRegistration(slug)) navigate(`/events/${slug}/pass`, { replace: true });
+    }, [slug, event, offeredLevels, navigate]);
 
     useEffect(() => {
         if (offeredLevels.length === 1) setSkill(offeredLevels[0].key);
@@ -116,33 +134,38 @@ export default function EventRegister() {
     const submit = async () => {
         setSubmitting(true);
         try {
-            const { registration, razorpay } = await submitRegistration(event.slug, {
+            const details = {
                 name: form.name.trim(),
                 phone: form.phone.trim(),
                 skill: skill!,
-            });
+            };
 
-            if (!razorpay) {
+            const { registration, razorpay } = await submitRegistration(event.slug, details);
+
+            // Free entry or waitlist spot — already registered, nothing to pay.
+            if (registration) {
                 finalizeRegistration(registration);
                 navigate(`/events/${event.slug}/pass`, { replace: true });
                 return;
             }
 
+            // Paid entry: no registration exists yet — it's only created once
+            // this payment is verified, so a cancelled checkout leaves nothing behind.
             const options: RazorpayOptions = {
-                key: razorpay.keyId,
-                amount: razorpay.amount,
-                currency: razorpay.currency,
-                order_id: razorpay.orderId,
+                key: razorpay!.keyId,
+                amount: razorpay!.amount,
+                currency: razorpay!.currency,
+                order_id: razorpay!.orderId,
                 name: event.title,
                 description: `Entry fee · ${skill}`,
                 handler: async (response) => {
                     try {
-                        await confirmEventPayment(event.slug, registration.entrantId, {
+                        const confirmed = await confirmPayment(event.slug, details, {
                             razorpayOrderId: response.razorpay_order_id,
                             razorpayPaymentId: response.razorpay_payment_id,
                             razorpaySignature: response.razorpay_signature,
                         });
-                        finalizeRegistration(registration);
+                        finalizeRegistration(confirmed);
                         navigate(`/events/${event.slug}/pass`, { replace: true });
                     } catch {
                         toast.error('Payment verification failed', {

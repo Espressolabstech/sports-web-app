@@ -22,13 +22,12 @@ export const registerForEvent = async (
     });
 };
 
-export const verifyEventPayment = async (
+export const confirmEventPayment = async (
     slug: string,
-    entrantId: string,
-    data: VerifyEventPaymentBody,
-): Promise<ApiResponse<ApiEventRegistrationData>> => {
+    data: ConfirmEventPaymentBody,
+): Promise<ApiResponse<ApiEventPaymentConfirmationData>> => {
     return apiClient({
-        url: endpoints.verifyEventPayment(slug, entrantId),
+        url: endpoints.confirmEventPayment(slug),
         method: 'POST',
         data,
     });

@@ -2,7 +2,7 @@ import {
     getEvents,
     getEventDetail,
     registerForEvent as apiRegisterForEvent,
-    verifyEventPayment as apiVerifyEventPayment,
+    confirmEventPayment as apiConfirmEventPayment,
 } from '../api/adapters/events';
 
 export type EventSkill = 'Beginner' | 'Intermediate' | 'Advance';
@@ -13,6 +13,7 @@ export interface RosterPlayer {
     id: string;
     name: string;
     skill: EventSkill;
+    createdAt: string;
     isMe?: boolean;
 }
 
@@ -36,6 +37,9 @@ export interface TournamentEvent {
     posterUrl: string;
     priceInr: number;
     phase: EventPhase;
+    currentRound: number;
+    totalRounds: number | null;
+    completedCohorts: EventSkill[];
     roster: RosterPlayer[];
     rounds: ApiEventRound[];
     hosts: ApiEventHost[];
@@ -97,10 +101,16 @@ const mapEvent = (e: ApiEvent): TournamentEvent => {
         posterUrl: e.posterUrl ?? '',
         priceInr: e.priceInr,
         phase: PHASE_TO_CLIENT[e.phase] ?? 'upcoming',
+        currentRound: e.currentRound ?? 0,
+        totalRounds: e.totalRounds ?? null,
+        completedCohorts: (e.completedCohorts ?? []).map(
+            (s) => SKILL_TO_CLIENT[s] ?? 'Intermediate',
+        ),
         roster: e.entrants.map((p) => ({
             id: p.id,
             name: p.name,
             skill: SKILL_TO_CLIENT[p.skill] ?? 'Intermediate',
+            createdAt: p.createdAt,
         })),
         rounds: e.rounds ?? [],
         hosts: e.hosts,
@@ -137,45 +147,143 @@ export function shortName(name: string) {
     return name.trim().split(/\s+/)[0] ?? name;
 }
 
+export function nameOf(event: TournamentEvent, entrantId: string) {
+    return event.roster.find((p) => p.id === entrantId)?.name ?? 'Player';
+}
+
+/* ── Cohorts — Beginner/Intermediate/Advance each run their own separate
+   tournament (own draw, own rounds, own standings), started and finished
+   independently by the organizer. ─────────────────────────────────── */
+
+const COHORT_ORDER: EventSkill[] = ['Beginner', 'Intermediate', 'Advance'];
+
+/** Cohorts that actually matter for this event — configured levels, plus any level a player registered with. */
+export function cohortsOf(event: TournamentEvent): EventSkill[] {
+    const set = new Set<EventSkill>(event.skillLevels);
+    event.roster.forEach((p) => set.add(p.skill));
+    return COHORT_ORDER.filter((c) => set.has(c));
+}
+
+export function rosterIn(event: TournamentEvent, cohort: EventSkill) {
+    return event.roster.filter((p) => p.skill === cohort);
+}
+
+export function roundsIn(event: TournamentEvent, cohort: EventSkill) {
+    return event.rounds.filter((r) => SKILL_TO_CLIENT[r.cohort ?? ''] === cohort);
+}
+
+export type CohortStatus = 'not_started' | 'live' | 'completed';
+
+export function cohortStatus(event: TournamentEvent, cohort: EventSkill): CohortStatus {
+    if (event.completedCohorts.includes(cohort)) return 'completed';
+    return roundsIn(event, cohort).length > 0 ? 'live' : 'not_started';
+}
+
+/** The round currently being played for a cohort, if any — null once that cohort is finished or hasn't started. */
+export function currentRound(event: TournamentEvent, cohort: EventSkill): ApiEventRound | null {
+    return roundsIn(event, cohort).find((r) => r.status === 'ACTIVE') ?? null;
+}
+
 export interface StandingsRow {
     playerId: string;
     name: string;
     played: number;
     won: number;
     points: number;
+    bestRound: number;
+    rank: number;
 }
 
-export function standings(event: TournamentEvent): StandingsRow[] {
-    const rows = new Map<string, StandingsRow>();
+/**
+ * Same tiebreaker order as the organizer scoring engine (sports-api's
+ * computeStandings): total points, then head-to-head (only meaningful
+ * between two players who've actually faced each other), then best
+ * single-round score, then enrollment order. Ranks are shared for
+ * identical point totals — kept in sync so the player and organizer
+ * views never disagree on placement.
+ */
+export function standings(event: TournamentEvent, cohort: EventSkill): StandingsRow[] {
+    const base = new Map<
+        string,
+        StandingsRow & { createdAt: string }
+    >();
 
-    for (const player of event.roster) {
-        rows.set(player.id, { playerId: player.id, name: player.name, played: 0, won: 0, points: 0 });
+    for (const player of rosterIn(event, cohort)) {
+        base.set(player.id, {
+            playerId: player.id,
+            name: player.name,
+            createdAt: player.createdAt,
+            played: 0,
+            won: 0,
+            points: 0,
+            bestRound: 0,
+            rank: 0,
+        });
     }
 
-    for (const round of event.rounds) {
+    const headToHead = new Map<string, number>();
+    const h2hKey = (a: string, b: string) => `${a}>${b}`;
+
+    for (const round of roundsIn(event, cohort)) {
         for (const match of round.matches) {
             if (match.scoreA === null || match.scoreB === null) continue;
 
-            const sides: [string[], number, number][] = [
-                [[match.teamAEntrant1Id, match.teamAEntrant2Id], match.scoreA, match.scoreB],
-                [[match.teamBEntrant1Id, match.teamBEntrant2Id], match.scoreB, match.scoreA],
-            ];
+            const teamA = [match.teamAEntrant1Id, match.teamAEntrant2Id];
+            const teamB = [match.teamBEntrant1Id, match.teamBEntrant2Id];
 
-            for (const [team, own, opponent] of sides) {
-                for (const playerId of team) {
-                    const row = rows.get(playerId);
-                    if (!row) continue;
-                    row.played += 1;
-                    row.points += own;
-                    if (own > opponent) row.won += 1;
+            for (const id of teamA) {
+                const row = base.get(id);
+                if (!row) continue;
+                row.points += match.scoreA;
+                row.played += 1;
+                row.bestRound = Math.max(row.bestRound, match.scoreA);
+                if (match.scoreA > match.scoreB) row.won += 1;
+            }
+            for (const id of teamB) {
+                const row = base.get(id);
+                if (!row) continue;
+                row.points += match.scoreB;
+                row.played += 1;
+                row.bestRound = Math.max(row.bestRound, match.scoreB);
+                if (match.scoreB > match.scoreA) row.won += 1;
+            }
+
+            for (const a of teamA) {
+                for (const b of teamB) {
+                    headToHead.set(h2hKey(a, b), (headToHead.get(h2hKey(a, b)) ?? 0) + match.scoreA);
+                    headToHead.set(h2hKey(b, a), (headToHead.get(h2hKey(b, a)) ?? 0) + match.scoreB);
                 }
             }
         }
     }
 
-    return [...rows.values()].sort(
-        (a, b) => b.points - a.points || b.won - a.won || a.name.localeCompare(b.name),
-    );
+    const rows = [...base.values()];
+
+    rows.sort((x, y) => {
+        if (x.points !== y.points) return y.points - x.points;
+
+        const xVsY = headToHead.get(h2hKey(x.playerId, y.playerId));
+        const yVsX = headToHead.get(h2hKey(y.playerId, x.playerId));
+        if (xVsY !== undefined && yVsX !== undefined && xVsY !== yVsX) {
+            return yVsX - xVsY;
+        }
+
+        if (x.bestRound !== y.bestRound) return y.bestRound - x.bestRound;
+
+        return new Date(x.createdAt).getTime() - new Date(y.createdAt).getTime();
+    });
+
+    let rank = 0;
+    let prevPoints: number | null = null;
+    rows.forEach((row, i) => {
+        if (row.points !== prevPoints) {
+            rank = i + 1;
+            prevPoints = row.points;
+        }
+        row.rank = rank;
+    });
+
+    return rows;
 }
 
 const localKey = (slug: string) => `bookease-event-reg-${slug}`;
@@ -206,21 +314,63 @@ export function finalizeRegistration(reg: EventRegistration) {
 }
 
 /**
- * Submits the registration form. If the entry has a fee and a spot is available,
- * the response includes a Razorpay order — the caller must complete checkout and
- * call `confirmEventPayment` before treating the registration as final.
+ * Submits the registration form. Free entries and waitlist spots register
+ * immediately (`registration` comes back set, `razorpay` is null). A paid
+ * entry with a spot open does NOT create a registration yet — only a
+ * Razorpay order (`registration` is null, `razorpay` is set) — the caller
+ * must complete checkout and call `confirmPayment` to actually create it.
+ * This means a cancelled or abandoned checkout never leaves behind an
+ * "unpaid" registration occupying a spot.
  */
 export async function submitRegistration(
     slug: string,
     data: { name: string; phone: string; skill: EventSkill },
-): Promise<{ registration: EventRegistration; razorpay: ApiEventRazorpayOrder | null }> {
+): Promise<{
+    registration: EventRegistration | null;
+    razorpay: ApiEventRazorpayOrder | null;
+}> {
     const res = await apiRegisterForEvent(slug, {
         name: data.name,
         phone: data.phone,
         skill: SKILL_TO_API[data.skill],
     });
 
+    if (!res.data.entrant) {
+        return { registration: null, razorpay: res.data.razorpay };
+    }
+
     const registration: EventRegistration = {
+        eventSlug: slug,
+        entrantId: res.data.entrant.id,
+        name: res.data.entrant.name,
+        phone: res.data.entrant.phone ?? data.phone,
+        skill: data.skill,
+        ticketCode: res.data.ticketCode!,
+        waitlisted: res.data.waitlisted,
+        createdAt: res.data.entrant.createdAt,
+    };
+
+    return { registration, razorpay: null };
+}
+
+/** Verifies a completed Razorpay payment and only then creates the registration. */
+export async function confirmPayment(
+    slug: string,
+    data: { name: string; phone: string; skill: EventSkill },
+    payment: {
+        razorpayOrderId: string;
+        razorpayPaymentId: string;
+        razorpaySignature: string;
+    },
+): Promise<EventRegistration> {
+    const res = await apiConfirmEventPayment(slug, {
+        name: data.name,
+        phone: data.phone,
+        skill: SKILL_TO_API[data.skill],
+        ...payment,
+    });
+
+    return {
         eventSlug: slug,
         entrantId: res.data.entrant.id,
         name: res.data.entrant.name,
@@ -230,14 +380,4 @@ export async function submitRegistration(
         waitlisted: res.data.waitlisted,
         createdAt: res.data.entrant.createdAt,
     };
-
-    return { registration, razorpay: res.data.razorpay };
-}
-
-export async function confirmEventPayment(
-    slug: string,
-    entrantId: string,
-    payload: VerifyEventPaymentBody,
-): Promise<void> {
-    await apiVerifyEventPayment(slug, entrantId, payload);
 }
