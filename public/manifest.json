@@ -1,6 +1,6 @@
 {
-  "name": "BookEase",
-  "short_name": "BookEase",
+  "name": "PlayPass",
+  "short_name": "PlayPass",
   "description": "Book sports courts near you",
   "start_url": "/",
   "display": "standalone",

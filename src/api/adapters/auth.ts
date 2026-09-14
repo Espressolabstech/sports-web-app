@@ -22,3 +22,7 @@ export const updateUserName = async (
 ): Promise<{ message: string; data: { name: string } }> => {
     return apiClient({ url: endpoints.updateName, method: 'PATCH', data });
 };
+
+export const submitVenueApplication = async (data: VenueApplicationBody) => {
+    return apiClient({ url: endpoints.venueApplication, method: 'POST', data });
+};

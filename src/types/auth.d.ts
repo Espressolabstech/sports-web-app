@@ -31,6 +31,10 @@ declare global {
         message: string;
         data: AuthUser;
     }
+
+    interface VenueApplicationBody {
+        email: string;
+    }
 }
 
 export {};

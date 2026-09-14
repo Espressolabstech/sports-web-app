@@ -290,7 +290,7 @@ const Venues = () => {
                 : `https://maps.google.com/?q=${encodeURIComponent(`${facility.name} ${facility.city}`)}`;
 
         const lines = [
-            `🏟️ Check out ${facility.name} on BookEase!`,
+            `🏟️ Check out ${facility.name} on PlayPass!`,
             ``,
             `🎾 Sports: ${sports}`,
             `📍 Location: ${facility.city}`,
@@ -305,7 +305,7 @@ const Venues = () => {
         if (navigator.share) {
             try {
                 await navigator.share({
-                    title: `🏟️ ${facility.name} on BookEase`,
+                    title: `🏟️ ${facility.name} on PlayPass`,
                     text,
                 });
             } catch {
@@ -611,7 +611,7 @@ const Venues = () => {
                             onClick={() => navigate('/')}
                             className="text-xs text-muted-foreground hover:text-foreground hover:underline"
                         >
-                            Powered by BookEase · Explore more venues
+                            Powered by PlayPass · Explore more venues
                         </button>
                     </div>
                 </div>

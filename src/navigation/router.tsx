@@ -2,6 +2,8 @@ import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { path } from './commanPaths';
 import { AuthWrapper, ProtectedComponentWrapper } from '../utils/wrapper';
 import Login from '../screens/Login';
+import Landing from '../screens/Landing';
+import ForVenues from '../screens/Landing/ForVenues';
 import Home from '../screens/home';
 import MyBookings from '../screens/MyBookings';
 import MyProfile from '../screens/Profile';
@@ -28,7 +30,15 @@ export const router = createBrowserRouter([
     },
     {
         path: path.home,
+        element: <Landing />,
+    },
+    {
+        path: path.venues,
         element: <Home />,
+    },
+    {
+        path: path.forVenues,
+        element: <ForVenues />,
     },
     {
         path: path.MyBookings,

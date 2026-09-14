@@ -1,5 +1,7 @@
 export const path = {
     home: '/',
+    venues: '/venues',
+    forVenues: '/for-venues',
     login: '/login',
     MyBookings: '/my-bookings',
     profile: '/profile',

@@ -95,7 +95,7 @@ export function PhoneLoginModal({
     const { mutate: submitName, isPending: isSubmittingName } = useMutation({
         mutationFn: (data: UpdateUserName) => updateUserName(data),
         onSuccess: () => {
-            toast.success('Welcome to BookEase!');
+            toast.success('Welcome to PlayPass!');
             onOpenChange(false);
             onSuccess?.();
         },
@@ -127,7 +127,7 @@ export function PhoneLoginModal({
             <DialogContent className="w-full max-w-sm rounded-xl">
                 <DialogHeader>
                     <DialogTitle className="text-center text-lg font-semibold">
-                        {step === 'phone' && 'Sign in to BookEase'}
+                        {step === 'phone' && 'Sign in to PlayPass'}
                         {step === 'otp' && 'Verify your number'}
                         {step === 'name' && "What's your name?"}
                     </DialogTitle>

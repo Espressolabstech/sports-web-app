@@ -184,7 +184,7 @@ const MyBookings = () => {
                 amount: razorpay.amount,
                 currency: razorpay.currency,
                 order_id: razorpay.orderId,
-                name: 'BookEase',
+                name: 'PlayPass',
                 handler: async (payment: any) => {
                     try {
                         await verifyBookingPayment(booking.id, {

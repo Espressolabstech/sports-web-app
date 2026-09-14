@@ -5,6 +5,7 @@ export const endpoints = {
     verifyOtp: '/verify-otp',
     resendOtp: '/resend-otp',
     updateName: '/user/update-name',
+    venueApplication: '/venue-applications',
 
     // Home / Venue Discovery
     venues: '/home/venues',

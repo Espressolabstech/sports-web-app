@@ -89,7 +89,7 @@ const Login = () => {
     const { mutate: submitName, isPending: isNamePending } = useMutation({
         mutationFn: (data: UpdateUserName) => updateUserName(data),
         onSuccess: () => {
-            toast.success('Welcome to BookEase!');
+            toast.success('Welcome to PlayPass!');
             navigate(path.home);
         },
         onError: (error) => {
@@ -123,7 +123,7 @@ const Login = () => {
             <div className="bg-primary px-6 pt-16 pb-12 text-primary-foreground">
                 <div className="mx-auto max-w-sm">
                     <h1 className="text-3xl font-bold tracking-tight">
-                        BookEase
+                        PlayPass
                     </h1>
                     <p className="mt-2 text-primary-foreground/80 text-sm">
                         Book courts, manage games, play more.

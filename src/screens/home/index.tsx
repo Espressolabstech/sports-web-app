@@ -10,6 +10,7 @@ import { FacilityCard } from '../../components/FacilityCard';
 import { getToken } from '../../utils/cookies.helpers';
 import { Sheet, SheetContent } from '../../components/ui/sheet';
 import { AnimatedLoader } from '../../components/AnimatedLoader';
+import logoWhite from '../../assets/logo-white-v2.png';
 
 const POPULAR_CITIES = [
     'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Chennai',
@@ -78,9 +79,11 @@ const Home = () => {
                 <div className="relative px-5 pb-9 pt-[2.1rem] rounded-b-3xl overflow-hidden bg-[linear-gradient(90deg,rgba(38,117,148,1)_0%,rgba(16,45,69,1)_70%)]">
                     <div className="flex items-center justify-between gap-3">
                         <div>
-                            <h1 className="text-[22px] font-bold tracking-tight text-white leading-none">
-                                BookEase
-                            </h1>
+                            <img
+                                src={logoWhite}
+                                alt="PlayPass"
+                                className="h-8 w-[89px] object-contain"
+                            />
                             <button
                                 onClick={() => setCityOpen(true)}
                                 className="mt-2.5 inline-flex items-center gap-1 text-xs font-medium text-white/80 hover:text-white transition-colors"
