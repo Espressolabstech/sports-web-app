@@ -15,33 +15,44 @@ declare global {
         skill: 'BEGINNER' | 'INTERMEDIATE' | 'ADVANCED';
         paid: boolean;
         checkedIn: boolean;
+        /** Registered after capacity was full. Never scheduled, never on standings — until the organizer promotes them. */
+        waitlisted: boolean;
         source: 'REGISTRATION' | 'WALK_IN';
         createdAt: string;
         updatedAt: string;
     }
 
+    /**
+     * A match. Americano: a slot in the rolling court queue — progression is
+     * driven by `queueIndex` + `state`, not a round lifecycle. Mexicano:
+     * every match in a round is `ACTIVE` at once and only advances when the
+     * host closes the round (see `ApiEventMexicanoRound`).
+     */
     interface ApiEventMatch {
         id: string;
-        roundId: string;
-        court: number;
+        eventId: string;
+        queueIndex: number;
+        /** Display grouping (e.g. "Round 3"). For Mexicano this IS the round the match belongs to. */
+        roundNumber: number;
+        state: 'QUEUED' | 'ACTIVE' | 'COMPLETED';
+        court: number | null;
         teamAEntrant1Id: string;
         teamAEntrant2Id: string;
         teamBEntrant1Id: string;
         teamBEntrant2Id: string;
         scoreA: number | null;
         scoreB: number | null;
+        /** Mexicano only: the pairing rule that produced this match, e.g. "Random draw" or "1st + 4th v 2nd + 3rd". */
+        drawTag: string | null;
     }
 
-    interface ApiEventRound {
+    /** Mexicano only: one row per round — who's sitting out, and whether it's closed (scores locked, next round drawn). */
+    interface ApiEventMexicanoRound {
         id: string;
         eventId: string;
         roundNumber: number;
-        cohort: ApiEventEntrant['skill'] | null;
-        status: 'PENDING' | 'ACTIVE' | 'COMPLETED';
-        startedAt: string | null;
-        timeLimitSec: number | null;
         resting: string[];
-        matches: ApiEventMatch[];
+        closed: boolean;
     }
 
     interface ApiEvent {
@@ -62,18 +73,21 @@ declare global {
         roundMinutes: number;
         pointsPerRound: number;
         registrationClosesHours: number;
-        skillLevels: ApiEventEntrant['skill'][];
+        /** One tournament is hosted for exactly one skill level. */
+        skillLevel: ApiEventEntrant['skill'];
+        /** When on, a match can't be tied — the winning pair earns +2 bonus points. */
+        goldenPoint: boolean;
         posterUrl: string | null;
         priceInr: number;
         upiId: string | null;
         phase: 'DRAFT' | 'PUBLISHED' | 'LIVE' | 'COMPLETED';
-        currentRound: number;
-        totalRounds: number | null;
-        completedCohorts: ApiEventEntrant['skill'][];
+        startedAt: string | null;
+        plannedRounds: number | null;
         createdAt: string;
         updatedAt: string;
         entrants: ApiEventEntrant[];
-        rounds?: ApiEventRound[];
+        matches: ApiEventMatch[];
+        mexicanoRounds: ApiEventMexicanoRound[];
         hosts: ApiEventHost[];
     }
 

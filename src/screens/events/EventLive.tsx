@@ -1,17 +1,14 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ArrowLeft, MapPin, RefreshCw, Trophy, Users, Zap } from 'lucide-react';
 import {
-    cohortStatus,
-    cohortsOf,
-    currentRound,
     fetchEvent,
-    getRegistration,
+    isMexicano,
     nameOf,
     standings,
-    type EventSkill,
+    tournamentStatus,
 } from '../../lib/public-events';
 import { Podium } from '../../components/events/Podium';
 import { AnimatedLoader } from '../../components/AnimatedLoader';
@@ -24,9 +21,7 @@ const onInkMuted = { color: 'hsl(var(--event-on-ink-muted))' };
 export default function EventLive() {
     const { slug } = useParams();
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
     const [lastRefreshed, setLastRefreshed] = useState(() => new Date());
-    const [cohortOverride, setCohortOverride] = useState<EventSkill | null>(null);
 
     const {
         data: event,
@@ -64,21 +59,15 @@ export default function EventLive() {
         );
     }
 
-    const cohorts = cohortsOf(event);
-    const paramCohort = searchParams.get('cohort') as EventSkill | null;
-    const reg = slug ? getRegistration(slug) : null;
-    const activeCohort =
-        (cohortOverride && cohorts.includes(cohortOverride) ? cohortOverride : null) ??
-        (paramCohort && cohorts.includes(paramCohort) ? paramCohort : null) ??
-        (reg && cohorts.includes(reg.skill) ? reg.skill : null) ??
-        cohorts[0] ??
-        null;
-
-    const table = activeCohort ? standings(event, activeCohort) : [];
+    const table = standings(event);
     const podiumRows = table.filter((r) => r.rank <= 3).slice(0, 3);
     const rest = table.filter((r) => !podiumRows.includes(r));
-    const round = activeCohort ? currentRound(event, activeCohort) : null;
-    const status = activeCohort ? cohortStatus(event, activeCohort) : 'not_started';
+    const mexicano = isMexicano(event);
+    const activeMatches = event.matches
+        .filter((m) => m.state === 'active')
+        .sort((a, b) => (a.court ?? 0) - (b.court ?? 0));
+    const roundNumber = mexicano && activeMatches.length > 0 ? activeMatches[0].roundNumber : null;
+    const status = tournamentStatus(event);
     const isLive = status === 'live';
 
     const mapsHref = `https://maps.google.com/?q=${encodeURIComponent(
@@ -88,11 +77,7 @@ export default function EventLive() {
     const subMenu = [
         { to: mapsHref, external: true, icon: MapPin, label: event.venueName },
         { to: `/events/${event.slug}/rules`, icon: Zap, label: 'Format' },
-        {
-            to: `/events/${event.slug}/players${activeCohort ? `?cohort=${activeCohort}` : ''}`,
-            icon: Users,
-            label: 'Players',
-        },
+        { to: `/events/${event.slug}/players`, icon: Users, label: 'Players' },
     ];
 
     const doRefresh = () => {
@@ -150,31 +135,6 @@ export default function EventLive() {
                         </span>
                     </div>
 
-                    {cohorts.length > 1 && (
-                        <div className="mt-3 flex gap-1.5">
-                            {cohorts.map((c) => (
-                                <button
-                                    key={c}
-                                    onClick={() => setCohortOverride(c)}
-                                    className="flex-1 rounded-full px-3 py-1.5 text-[12px] font-semibold"
-                                    style={
-                                        c === activeCohort
-                                            ? {
-                                                  backgroundColor: 'hsl(var(--event-accent))',
-                                                  color: 'hsl(var(--event-accent-foreground))',
-                                              }
-                                            : {
-                                                  backgroundColor: 'hsl(var(--event-on-ink)/0.08)',
-                                                  color: 'hsl(var(--event-on-ink))',
-                                              }
-                                    }
-                                >
-                                    {c}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-
                     <div className="mt-3 -mx-4 flex gap-1.5 overflow-x-auto px-4 pb-0.5">
                         {subMenu.map((t) => {
                             const inner = (
@@ -207,12 +167,12 @@ export default function EventLive() {
                 <div className="flex items-center justify-between px-1">
                     <p className="text-[12px]" style={onInkMuted}>
                         {status === 'live'
-                            ? round
-                                ? `Round ${round.roundNumber} in progress`
-                                : `${activeCohort} is live`
+                            ? roundNumber
+                                ? `Round ${roundNumber} in progress`
+                                : 'Live now'
                             : status === 'completed'
-                              ? `${activeCohort} has ended`
-                              : `${activeCohort} hasn't started yet`}
+                              ? 'Tournament has ended'
+                              : "Hasn't started yet"}
                         {' · '}
                         Updated {format(lastRefreshed, 'h:mm a')}
                     </p>
@@ -280,20 +240,20 @@ export default function EventLive() {
                     </>
                 )}
 
-                {round && round.matches.length > 0 && (
+                {activeMatches.length > 0 && (
                     <>
                         <p
                             className="px-1 pt-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
                             style={onInkMuted}
                         >
-                            Round {round.roundNumber} · on court
+                            {mexicano && roundNumber ? `Round ${roundNumber} · on court` : 'On court'}
                         </p>
                         <div className="space-y-2.5">
-                            {round.matches.map((m) => {
+                            {activeMatches.map((m) => {
                                 const scored = m.scoreA !== null && m.scoreB !== null;
                                 return (
                                     <div
-                                        key={m.court}
+                                        key={m.queueIndex}
                                         className="rounded-2xl p-3.5"
                                         style={card}
                                     >
@@ -301,12 +261,12 @@ export default function EventLive() {
                                             className="mb-2 text-[11px] font-semibold uppercase tracking-[0.1em]"
                                             style={onInkMuted}
                                         >
-                                            Court {m.court}
+                                            Court {m.court ?? '—'}
                                         </p>
                                         <div className="flex items-center gap-3">
                                             <div className="min-w-0 flex-1 text-[13px] font-medium" style={onInk}>
-                                                <p className="truncate">{nameOf(event, m.teamAEntrant1Id)}</p>
-                                                <p className="truncate">{nameOf(event, m.teamAEntrant2Id)}</p>
+                                                <p className="truncate">{nameOf(event, m.teamA[0])}</p>
+                                                <p className="truncate">{nameOf(event, m.teamA[1])}</p>
                                             </div>
                                             <div className="shrink-0 text-center text-[20px] font-extrabold tabular-nums">
                                                 {scored ? (
@@ -320,8 +280,8 @@ export default function EventLive() {
                                                 )}
                                             </div>
                                             <div className="min-w-0 flex-1 text-right text-[13px] font-medium" style={onInk}>
-                                                <p className="truncate">{nameOf(event, m.teamBEntrant1Id)}</p>
-                                                <p className="truncate">{nameOf(event, m.teamBEntrant2Id)}</p>
+                                                <p className="truncate">{nameOf(event, m.teamB[0])}</p>
+                                                <p className="truncate">{nameOf(event, m.teamB[1])}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -337,7 +297,7 @@ export default function EventLive() {
                         ? 'Pull down or tap refresh to see the latest scores.'
                         : status === 'completed'
                           ? 'These are the final results.'
-                          : 'Check back once this cohort starts.'}
+                          : 'Check back once the tournament starts.'}
                 </p>
             </main>
         </div>

@@ -8,13 +8,40 @@ import {
 export type EventSkill = 'Beginner' | 'Intermediate' | 'Advance';
 export type EventPhase = 'upcoming' | 'live' | 'completed';
 export type FillStatusValue = 'open' | 'filling' | 'full';
+export type MatchState = 'queued' | 'active' | 'completed';
 
 export interface RosterPlayer {
     id: string;
     name: string;
     skill: EventSkill;
+    checkedIn: boolean;
+    waitlisted: boolean;
     createdAt: string;
     isMe?: boolean;
+}
+
+/**
+ * One match. Americano: a slot in the rolling court queue — progression is
+ * driven by `queueIndex` + `state`, not a round lifecycle. Mexicano: every
+ * match in a round is `active` at once and only advances when the host
+ * closes the round.
+ */
+export interface EventMatch {
+    queueIndex: number;
+    roundNumber: number;
+    state: MatchState;
+    court: number | null;
+    teamA: [string, string];
+    teamB: [string, string];
+    scoreA: number | null;
+    scoreB: number | null;
+    drawTag: string | null;
+}
+
+export interface MexicanoRound {
+    roundNumber: number;
+    resting: string[];
+    closed: boolean;
 }
 
 export interface TournamentEvent {
@@ -33,15 +60,16 @@ export interface TournamentEvent {
     roundMinutes: number;
     pointsPerRound: number;
     registrationClosesHours: number;
-    skillLevels: EventSkill[];
+    skillLevel: EventSkill;
+    goldenPoint: boolean;
     posterUrl: string;
     priceInr: number;
     phase: EventPhase;
-    currentRound: number;
-    totalRounds: number | null;
-    completedCohorts: EventSkill[];
+    startedAt: Date | null;
+    plannedRounds: number | null;
     roster: RosterPlayer[];
-    rounds: ApiEventRound[];
+    matches: EventMatch[];
+    mexicanoRounds: MexicanoRound[];
     hosts: ApiEventHost[];
 }
 
@@ -74,7 +102,31 @@ const SKILL_TO_API: Record<EventSkill, ApiEventEntrant['skill']> = {
     Advance: 'ADVANCED',
 };
 
+const STATE_TO_CLIENT: Record<string, MatchState> = {
+    QUEUED: 'queued',
+    ACTIVE: 'active',
+    COMPLETED: 'completed',
+};
+
 const combine = (dateISO: string, time: string) => new Date(`${dateISO}T${time}:00`);
+
+const mapMatch = (m: ApiEventMatch): EventMatch => ({
+    queueIndex: m.queueIndex,
+    roundNumber: m.roundNumber,
+    state: STATE_TO_CLIENT[m.state] ?? 'queued',
+    court: m.court ?? null,
+    teamA: [m.teamAEntrant1Id, m.teamAEntrant2Id],
+    teamB: [m.teamBEntrant1Id, m.teamBEntrant2Id],
+    scoreA: m.scoreA ?? null,
+    scoreB: m.scoreB ?? null,
+    drawTag: m.drawTag ?? null,
+});
+
+const mapMexicanoRound = (r: ApiEventMexicanoRound): MexicanoRound => ({
+    roundNumber: r.roundNumber,
+    resting: r.resting ?? [],
+    closed: Boolean(r.closed),
+});
 
 const mapEvent = (e: ApiEvent): TournamentEvent => {
     const dateISO = String(e.eventDate).slice(0, 10);
@@ -97,22 +149,23 @@ const mapEvent = (e: ApiEvent): TournamentEvent => {
         roundMinutes: e.roundMinutes,
         pointsPerRound: e.pointsPerRound,
         registrationClosesHours: e.registrationClosesHours,
-        skillLevels: e.skillLevels.map((s) => SKILL_TO_CLIENT[s] ?? 'Intermediate'),
+        skillLevel: SKILL_TO_CLIENT[e.skillLevel] ?? 'Intermediate',
+        goldenPoint: Boolean(e.goldenPoint),
         posterUrl: e.posterUrl ?? '',
         priceInr: e.priceInr,
         phase: PHASE_TO_CLIENT[e.phase] ?? 'upcoming',
-        currentRound: e.currentRound ?? 0,
-        totalRounds: e.totalRounds ?? null,
-        completedCohorts: (e.completedCohorts ?? []).map(
-            (s) => SKILL_TO_CLIENT[s] ?? 'Intermediate',
-        ),
+        startedAt: e.startedAt ? new Date(e.startedAt) : null,
+        plannedRounds: e.plannedRounds ?? null,
         roster: e.entrants.map((p) => ({
             id: p.id,
             name: p.name,
             skill: SKILL_TO_CLIENT[p.skill] ?? 'Intermediate',
+            checkedIn: p.checkedIn,
+            waitlisted: Boolean(p.waitlisted),
             createdAt: p.createdAt,
         })),
-        rounds: e.rounds ?? [],
+        matches: (e.matches ?? []).map(mapMatch),
+        mexicanoRounds: (e.mexicanoRounds ?? []).map(mapMexicanoRound),
         hosts: e.hosts,
     };
 };
@@ -126,13 +179,27 @@ export async function fetchEvent(slug: string): Promise<TournamentEvent | null> 
     try {
         const res = await getEventDetail(slug);
         return mapEvent(res.data.event);
-    } catch {
+    } catch (error) {
+        // Distinguish a real 404 from a client-side mapping bug in the
+        // console — both still resolve to the "not found" screen, but a
+        // silent mapping failure shouldn't look identical to a missing
+        // event when debugging.
+        console.error('fetchEvent failed', slug, error);
         return null;
     }
 }
 
+/** Entrants actually in the tournament — the waitlist is excluded from fill, matches and standings. */
+export function playingRoster(event: TournamentEvent) {
+    return event.roster.filter((p) => !p.waitlisted);
+}
+
+export function waitlistOf(event: TournamentEvent) {
+    return event.roster.filter((p) => p.waitlisted);
+}
+
 export function fillStatus(event: TournamentEvent) {
-    const filled = event.roster.length;
+    const filled = playingRoster(event).length;
     const pct = event.capacity > 0 ? Math.min(100, Math.round((filled / event.capacity) * 100)) : 0;
     const status: FillStatusValue = pct >= 100 ? 'full' : pct >= 60 ? 'filling' : 'open';
     const label = status === 'full' ? 'Full' : status === 'filling' ? 'Filling up' : 'Open';
@@ -140,7 +207,7 @@ export function fillStatus(event: TournamentEvent) {
 }
 
 export function spotsLeft(event: TournamentEvent) {
-    return Math.max(0, event.capacity - event.roster.length);
+    return Math.max(0, event.capacity - playingRoster(event).length);
 }
 
 export function shortName(name: string) {
@@ -151,37 +218,26 @@ export function nameOf(event: TournamentEvent, entrantId: string) {
     return event.roster.find((p) => p.id === entrantId)?.name ?? 'Player';
 }
 
-/* ── Cohorts — Beginner/Intermediate/Advance each run their own separate
-   tournament (own draw, own rounds, own standings), started and finished
-   independently by the organizer. ─────────────────────────────────── */
-
-const COHORT_ORDER: EventSkill[] = ['Beginner', 'Intermediate', 'Advance'];
-
-/** Cohorts that actually matter for this event — configured levels, plus any level a player registered with. */
-export function cohortsOf(event: TournamentEvent): EventSkill[] {
-    const set = new Set<EventSkill>(event.skillLevels);
-    event.roster.forEach((p) => set.add(p.skill));
-    return COHORT_ORDER.filter((c) => set.has(c));
+export function isMexicano(event: TournamentEvent) {
+    return event.format.toLowerCase().includes('mexicano');
 }
 
-export function rosterIn(event: TournamentEvent, cohort: EventSkill) {
-    return event.roster.filter((p) => p.skill === cohort);
+export type TournamentStatus = 'not_started' | 'live' | 'completed';
+
+export function tournamentStatus(event: TournamentEvent): TournamentStatus {
+    if (event.phase === 'completed') return 'completed';
+    return event.matches.length > 0 ? 'live' : 'not_started';
 }
 
-export function roundsIn(event: TournamentEvent, cohort: EventSkill) {
-    return event.rounds.filter((r) => SKILL_TO_CLIENT[r.cohort ?? ''] === cohort);
-}
-
-export type CohortStatus = 'not_started' | 'live' | 'completed';
-
-export function cohortStatus(event: TournamentEvent, cohort: EventSkill): CohortStatus {
-    if (event.completedCohorts.includes(cohort)) return 'completed';
-    return roundsIn(event, cohort).length > 0 ? 'live' : 'not_started';
-}
-
-/** The round currently being played for a cohort, if any — null once that cohort is finished or hasn't started. */
-export function currentRound(event: TournamentEvent, cohort: EventSkill): ApiEventRound | null {
-    return roundsIn(event, cohort).find((r) => r.status === 'ACTIVE') ?? null;
+/** Mexicano only: the round currently in play (the highest round number that has matches). */
+export function currentMexicanoRound(event: TournamentEvent) {
+    if (event.matches.length === 0) return null;
+    const roundNumber = Math.max(...event.matches.map((m) => m.roundNumber));
+    const matches = event.matches
+        .filter((m) => m.roundNumber === roundNumber)
+        .sort((a, b) => (a.court ?? 0) - (b.court ?? 0));
+    const meta = event.mexicanoRounds.find((r) => r.roundNumber === roundNumber) ?? null;
+    return { roundNumber, matches, resting: meta?.resting ?? [], closed: meta?.closed ?? false };
 }
 
 export interface StandingsRow {
@@ -194,21 +250,20 @@ export interface StandingsRow {
     rank: number;
 }
 
+/** Extra points each player of the winning pair earns when Golden Point is on — kept in sync with sports-api's WINNER_BONUS. */
+const WINNER_BONUS = 2;
+
 /**
  * Same tiebreaker order as the organizer scoring engine (sports-api's
  * computeStandings): total points, then head-to-head (only meaningful
  * between two players who've actually faced each other), then best
- * single-round score, then enrollment order. Ranks are shared for
- * identical point totals — kept in sync so the player and organizer
- * views never disagree on placement.
+ * single-match score, then enrollment order. Waitlisted players never
+ * played, so they never appear here.
  */
-export function standings(event: TournamentEvent, cohort: EventSkill): StandingsRow[] {
-    const base = new Map<
-        string,
-        StandingsRow & { createdAt: string }
-    >();
+export function standings(event: TournamentEvent): StandingsRow[] {
+    const base = new Map<string, StandingsRow & { createdAt: string }>();
 
-    for (const player of rosterIn(event, cohort)) {
+    for (const player of playingRoster(event)) {
         base.set(player.id, {
             playerId: player.id,
             name: player.name,
@@ -224,35 +279,36 @@ export function standings(event: TournamentEvent, cohort: EventSkill): Standings
     const headToHead = new Map<string, number>();
     const h2hKey = (a: string, b: string) => `${a}>${b}`;
 
-    for (const round of roundsIn(event, cohort)) {
-        for (const match of round.matches) {
-            if (match.scoreA === null || match.scoreB === null) continue;
+    for (const m of event.matches) {
+        if (m.scoreA === null || m.scoreB === null) continue;
+        const teamA = m.teamA;
+        const teamB = m.teamB;
+        const aWins = m.scoreA > m.scoreB;
+        const bWins = m.scoreB > m.scoreA;
+        const bonusA = event.goldenPoint && aWins ? WINNER_BONUS : 0;
+        const bonusB = event.goldenPoint && bWins ? WINNER_BONUS : 0;
 
-            const teamA = [match.teamAEntrant1Id, match.teamAEntrant2Id];
-            const teamB = [match.teamBEntrant1Id, match.teamBEntrant2Id];
+        for (const id of teamA) {
+            const row = base.get(id);
+            if (!row) continue;
+            row.points += m.scoreA + bonusA;
+            row.played += 1;
+            row.bestRound = Math.max(row.bestRound, m.scoreA + bonusA);
+            if (aWins) row.won += 1;
+        }
+        for (const id of teamB) {
+            const row = base.get(id);
+            if (!row) continue;
+            row.points += m.scoreB + bonusB;
+            row.played += 1;
+            row.bestRound = Math.max(row.bestRound, m.scoreB + bonusB);
+            if (bWins) row.won += 1;
+        }
 
-            for (const id of teamA) {
-                const row = base.get(id);
-                if (!row) continue;
-                row.points += match.scoreA;
-                row.played += 1;
-                row.bestRound = Math.max(row.bestRound, match.scoreA);
-                if (match.scoreA > match.scoreB) row.won += 1;
-            }
-            for (const id of teamB) {
-                const row = base.get(id);
-                if (!row) continue;
-                row.points += match.scoreB;
-                row.played += 1;
-                row.bestRound = Math.max(row.bestRound, match.scoreB);
-                if (match.scoreB > match.scoreA) row.won += 1;
-            }
-
-            for (const a of teamA) {
-                for (const b of teamB) {
-                    headToHead.set(h2hKey(a, b), (headToHead.get(h2hKey(a, b)) ?? 0) + match.scoreA);
-                    headToHead.set(h2hKey(b, a), (headToHead.get(h2hKey(b, a)) ?? 0) + match.scoreB);
-                }
+        for (const a of teamA) {
+            for (const b of teamB) {
+                headToHead.set(h2hKey(a, b), (headToHead.get(h2hKey(a, b)) ?? 0) + m.scoreA + bonusA);
+                headToHead.set(h2hKey(b, a), (headToHead.get(h2hKey(b, a)) ?? 0) + m.scoreB + bonusB);
             }
         }
     }

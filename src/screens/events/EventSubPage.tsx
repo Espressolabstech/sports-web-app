@@ -1,17 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Lock, MapPin, Timer, Trophy, Users, Zap } from 'lucide-react';
 import {
-    cohortStatus,
-    cohortsOf,
     fetchEvent,
     fillStatus,
     getRegistration,
     shortName,
     standings,
+    tournamentStatus,
     type EventRegistration,
-    type EventSkill,
     type RosterPlayer,
     type TournamentEvent,
 } from '../../lib/public-events';
@@ -33,9 +31,7 @@ const onInkMuted = { color: 'hsl(var(--event-on-ink-muted))' };
 export default function EventSubPage({ section }: { section: Section }) {
     const { slug } = useParams();
     const navigate = useNavigate();
-    const [searchParams] = useSearchParams();
     const [reg, setReg] = useState<EventRegistration | null>(null);
-    const [cohortOverride, setCohortOverride] = useState<EventSkill | null>(null);
 
     const { data: event } = useQuery({
         queryKey: ['public-event', slug],
@@ -63,6 +59,8 @@ export default function EventSubPage({ section }: { section: Section }) {
                           id: 'me',
                           name: shortName(reg.name),
                           skill: reg.skill,
+                          checkedIn: false,
+                          waitlisted: reg.waitlisted,
                           createdAt: reg.createdAt,
                           isMe: true,
                       },
@@ -92,16 +90,6 @@ export default function EventSubPage({ section }: { section: Section }) {
 
     const gated = section === 'players' && !reg;
 
-    const cohorts = cohortsOf(event);
-    const paramCohort = searchParams.get('cohort') as EventSkill | null;
-    const activeCohort =
-        (cohortOverride && cohorts.includes(cohortOverride) ? cohortOverride : null) ??
-        (paramCohort && cohorts.includes(paramCohort) ? paramCohort : null) ??
-        (reg && cohorts.includes(reg.skill) ? reg.skill : null) ??
-        cohorts[0];
-
-    const cohortRoster = activeCohort ? roster.filter((p) => p.skill === activeCohort) : roster;
-
     return (
         <div className="min-h-screen pb-32" style={ink}>
             <header
@@ -128,30 +116,6 @@ export default function EventSubPage({ section }: { section: Section }) {
                         </p>
                     </div>
                 </div>
-                {section !== 'rules' && cohorts.length > 1 && (
-                    <div className="mx-auto flex max-w-lg gap-1.5 overflow-x-auto px-3 pb-2.5">
-                        {cohorts.map((c) => (
-                            <button
-                                key={c}
-                                onClick={() => setCohortOverride(c)}
-                                className="shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] font-semibold"
-                                style={
-                                    c === activeCohort
-                                        ? {
-                                              backgroundColor: 'hsl(var(--event-accent))',
-                                              color: 'hsl(var(--event-accent-foreground))',
-                                          }
-                                        : {
-                                              backgroundColor: 'hsl(var(--event-on-ink)/0.08)',
-                                              color: 'hsl(var(--event-on-ink))',
-                                          }
-                                }
-                            >
-                                {c}
-                            </button>
-                        ))}
-                    </div>
-                )}
             </header>
 
             <main className="mx-auto max-w-lg px-4 py-4">
@@ -160,11 +124,9 @@ export default function EventSubPage({ section }: { section: Section }) {
                     (gated ? (
                         <LockedPlayers event={event} />
                     ) : (
-                        <Players roster={cohortRoster} capacity={event.capacity} />
+                        <Players roster={roster} capacity={event.capacity} />
                     ))}
-                {section === 'standings' && activeCohort && (
-                    <Standings event={event} cohort={activeCohort} />
-                )}
+                {section === 'standings' && <Standings event={event} />}
             </main>
 
             {gated && (
@@ -226,7 +188,7 @@ function Rules({ event }: { event: TournamentEvent }) {
             label: 'Play',
             value: `${event.courts} courts · ${event.roundMinutes} min rounds · ${event.pointsPerRound} pts`,
         },
-        { icon: Users, label: 'Cohorts', value: event.skillLevels.join(', ') || '—' },
+        { icon: Users, label: 'Skill level', value: event.skillLevel },
     ];
 
     return (
@@ -338,6 +300,7 @@ function Players({
                             </p>
                             <p className="truncate text-[12px]" style={onInkMuted}>
                                 {p.skill}
+                                {p.waitlisted ? ' · Waitlisted' : ''}
                             </p>
                         </div>
                     </div>
@@ -347,9 +310,9 @@ function Players({
     );
 }
 
-function Standings({ event, cohort }: { event: TournamentEvent; cohort: EventSkill }) {
-    const table = standings(event, cohort);
-    const status = cohortStatus(event, cohort);
+function Standings({ event }: { event: TournamentEvent }) {
+    const table = standings(event);
+    const status = tournamentStatus(event);
     const hasScores = table.some((r) => r.played > 0);
 
     if (status === 'not_started' || !hasScores) {

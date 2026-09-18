@@ -2,11 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { ArrowLeft, ArrowRight, Check, IndianRupee, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, IndianRupee, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../utils/twMerge';
 import {
-    cohortStatus,
     confirmPayment,
     fetchEvent,
     finalizeRegistration,
@@ -16,23 +15,14 @@ import {
     type EventSkill,
 } from '../../lib/public-events';
 
-const SKILLS: { key: EventSkill; blurb: string }[] = [
-    {
-        key: 'Beginner',
-        blurb:
-            'New to the game or a handful of sessions in. Still getting used to the underarm serve, the glass rebounds and staying with your partner.',
-    },
-    {
-        key: 'Intermediate',
-        blurb:
-            'Playing weekly for a while. You rally consistently off both walls, serve and return with control, move as a pair and can use the lob and the volley to take the net.',
-    },
-    {
-        key: 'Advance',
-        blurb:
-            'Competitive, match-hardened play. Reliable bandeja and vibora, comfortable off the back glass, and you build points tactically at pace.',
-    },
-];
+const SKILL_BLURB: Record<EventSkill, string> = {
+    Beginner:
+        'New to the game or a handful of sessions in. Still getting used to the underarm serve, the glass rebounds and staying with your partner.',
+    Intermediate:
+        'Playing weekly for a while. You rally consistently off both walls, serve and return with control, move as a pair and can use the lob and the volley to take the net.',
+    Advance:
+        'Competitive, match-hardened play. Reliable bandeja and vibora, comfortable off the back glass, and you build points tactically at pace.',
+};
 
 const ink = { backgroundColor: 'hsl(var(--event-ink))' };
 const card = { backgroundColor: 'hsl(var(--event-ink-soft))' };
@@ -51,41 +41,21 @@ export default function EventRegister() {
 
     const [step, setStep] = useState(0);
     const [form, setForm] = useState({ name: '', phone: '' });
-    const [skill, setSkill] = useState<EventSkill | null>(null);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
 
-    // Cohorts (Beginner/Intermediate/Advance) run as separate tournaments —
-    // only offer the ones that haven't started yet. One cohort going live
-    // doesn't close registration for another that hasn't.
-    const offeredLevels = useMemo(
-        () =>
-            SKILLS.filter(
-                (s) =>
-                    event?.skillLevels.includes(s.key) &&
-                    cohortStatus(event, s.key) === 'not_started',
-            ),
-        [event],
-    );
-
     useEffect(() => {
         if (!slug || !event) return;
-        // Once every cohort this event offers has started, there's nothing
-        // left to register for — bounce straight to the live standings page
-        // instead of an empty form. A different cohort going live doesn't
-        // close registration here, since each runs its own tournament.
-        if (offeredLevels.length === 0) {
+        // Registration is only open while the tournament hasn't started —
+        // once it has, there's nothing left to register for.
+        if (event.phase !== 'upcoming') {
             navigate(`/events/${slug}/live`, { replace: true });
             return;
         }
         if (getRegistration(slug)) navigate(`/events/${slug}/pass`, { replace: true });
-    }, [slug, event, offeredLevels, navigate]);
+    }, [slug, event, navigate]);
 
-    useEffect(() => {
-        if (offeredLevels.length === 1) setSkill(offeredLevels[0].key);
-    }, [offeredLevels]);
-
-    const steps = useMemo(() => ['Your details', 'Skill level', 'Payment'], []);
+    const steps = useMemo(() => ['Your details', 'Payment'], []);
 
     if (!event) {
         return (
@@ -123,11 +93,6 @@ export default function EventRegister() {
             }
             setErrors({});
         }
-        if (step === 1 && !skill) {
-            setErrors({ skill: 'Pick the level that fits you best' });
-            return;
-        }
-        setErrors({});
         setStep((s) => s + 1);
     };
 
@@ -137,7 +102,7 @@ export default function EventRegister() {
             const details = {
                 name: form.name.trim(),
                 phone: form.phone.trim(),
-                skill: skill!,
+                skill: event.skillLevel,
             };
 
             const { registration, razorpay } = await submitRegistration(event.slug, details);
@@ -157,7 +122,7 @@ export default function EventRegister() {
                 currency: razorpay!.currency,
                 order_id: razorpay!.orderId,
                 name: event.title,
-                description: `Entry fee · ${skill}`,
+                description: `Entry fee · ${event.skillLevel}`,
                 handler: async (response) => {
                     try {
                         const confirmed = await confirmPayment(event.slug, details, {
@@ -250,6 +215,14 @@ export default function EventRegister() {
 
                 {step === 0 && (
                     <div className="space-y-4">
+                        <div className="rounded-2xl p-4" style={card}>
+                            <p className="text-sm font-semibold" style={onInk}>
+                                {event.skillLevel} level
+                            </p>
+                            <p className="mt-1 text-xs leading-relaxed" style={onInkMuted}>
+                                {SKILL_BLURB[event.skillLevel]}
+                            </p>
+                        </div>
                         <Field
                             label="Full name"
                             value={form.name}
@@ -274,59 +247,6 @@ export default function EventRegister() {
                 )}
 
                 {step === 1 && (
-                    <div className="space-y-3">
-                        <p className="px-1 text-sm" style={onInkMuted}>
-                            {offeredLevels.length === 1
-                                ? `This tournament is being hosted for the ${offeredLevels[0].key.toLowerCase()} cohort only.`
-                                : 'This tournament runs ' +
-                                  offeredLevels.map((l) => l.key.toLowerCase()).join(' and ') +
-                                  ' cohorts. Pick the one that fits you — the draw is made within your cohort.'}
-                        </p>
-                        {offeredLevels.map((s) => (
-                            <button
-                                key={s.key}
-                                onClick={() => {
-                                    setSkill(s.key);
-                                    setErrors({});
-                                }}
-                                className="flex w-full items-start gap-3 rounded-2xl p-4 text-left transition-colors active:scale-[0.99]"
-                                style={{
-                                    backgroundColor: 'hsl(var(--event-ink-soft))',
-                                    boxShadow:
-                                        skill === s.key ? 'inset 0 0 0 1.5px hsl(var(--event-lime))' : undefined,
-                                }}
-                            >
-                                <span
-                                    className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
-                                    style={
-                                        skill === s.key
-                                            ? { backgroundColor: 'hsl(var(--event-lime))' }
-                                            : { boxShadow: 'inset 0 0 0 2px hsl(var(--event-on-ink)/0.3)' }
-                                    }
-                                >
-                                    {skill === s.key && (
-                                        <Check className="h-3 w-3" style={{ color: 'hsl(var(--event-ink))' }} />
-                                    )}
-                                </span>
-                                <span>
-                                    <span className="block text-sm font-semibold" style={onInk}>
-                                        {s.key}
-                                    </span>
-                                    <span className="mt-0.5 block text-xs leading-relaxed" style={onInkMuted}>
-                                        {s.blurb}
-                                    </span>
-                                </span>
-                            </button>
-                        ))}
-                        {errors.skill && (
-                            <p className="px-1 text-xs" style={{ color: 'hsl(var(--event-full))' }}>
-                                {errors.skill}
-                            </p>
-                        )}
-                    </div>
-                )}
-
-                {step === 2 && (
                     <div className="space-y-4">
                         <div className="rounded-2xl p-4" style={card}>
                             <div className="flex items-center justify-between">
@@ -381,7 +301,7 @@ export default function EventRegister() {
             >
                 <div className="mx-auto max-w-lg px-4 py-3">
                     <button
-                        onClick={step === 2 ? submit : next}
+                        onClick={step === 1 ? submit : next}
                         disabled={submitting}
                         className={cn(
                             'inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-[16px] font-black uppercase tracking-wide active:scale-[0.99] disabled:opacity-60',
@@ -393,12 +313,12 @@ export default function EventRegister() {
                     >
                         {submitting
                             ? 'Confirming…'
-                            : step === 2
+                            : step === 1
                               ? waitlist
                                   ? 'Join waitlist'
                                   : 'Confirm registration'
                               : 'Continue'}
-                        {!submitting && step < 2 && <ArrowRight className="h-4 w-4" />}
+                        {!submitting && step < 1 && <ArrowRight className="h-4 w-4" />}
                     </button>
                 </div>
             </div>

@@ -15,12 +15,9 @@ import {
 } from 'lucide-react';
 import { useCountdown } from '../../components/events/Countdown';
 import {
-    cohortsOf,
-    cohortStatus,
     fetchEvent,
     fillStatus,
     getRegistration,
-    rosterIn,
     standings,
     type EventRegistration,
 } from '../../lib/public-events';
@@ -87,13 +84,9 @@ export default function EventLanding() {
 
     const poster = event.posterUrl;
     const fill = fillStatus(event);
-    const cohorts = cohortsOf(event);
-    const previewCohort = reg?.skill ?? cohorts[0];
-    const standingsPreview = previewCohort
-        ? standings(event, previewCohort)
-              .filter((r) => r.played > 0)
-              .slice(0, 3)
-        : [];
+    const standingsPreview = standings(event)
+        .filter((r) => r.played > 0)
+        .slice(0, 3);
     const statusColor =
         fill.status === 'full'
             ? 'hsl(var(--event-full))'
@@ -355,66 +348,6 @@ export default function EventLanding() {
                         />
                     </div>
                 </Link>
-
-                {cohorts.length > 1 && (
-                    <section className="mt-6">
-                        <p
-                            className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-[0.18em]"
-                            style={{ color: 'hsl(var(--event-on-ink-muted))' }}
-                        >
-                            Cohorts
-                        </p>
-                        <p className="mb-2 px-1 text-[12px]" style={{ color: 'hsl(var(--event-on-ink-muted))' }}>
-                            Beginner and Intermediate play separate tournaments — you only face
-                            players in your own cohort.
-                        </p>
-                        <div className="space-y-2">
-                            {cohorts.map((c) => {
-                                const st = cohortStatus(event, c);
-                                return (
-                                    <Link
-                                        key={c}
-                                        to={`/events/${event.slug}/players?cohort=${c}`}
-                                        className="flex items-center gap-2.5 rounded-2xl px-4 py-3.5 active:scale-[0.99]"
-                                        style={{ backgroundColor: 'hsl(var(--event-ink-soft))' }}
-                                    >
-                                        <div className="min-w-0 flex-1">
-                                            <p
-                                                className="truncate text-[14px] font-semibold leading-tight"
-                                                style={{ color: 'hsl(var(--event-on-ink))' }}
-                                            >
-                                                {c}
-                                            </p>
-                                            <p className="truncate text-[11px] leading-tight" style={{ color: 'hsl(var(--event-on-ink-muted))' }}>
-                                                {rosterIn(event, c).length} registered
-                                            </p>
-                                        </div>
-                                        <span
-                                            className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em]"
-                                            style={
-                                                st === 'live'
-                                                    ? {
-                                                          backgroundColor: 'hsl(var(--event-accent))',
-                                                          color: 'hsl(var(--event-accent-foreground))',
-                                                      }
-                                                    : {
-                                                          backgroundColor: 'hsl(var(--event-on-ink)/0.1)',
-                                                          color: 'hsl(var(--event-on-ink)/0.8)',
-                                                      }
-                                            }
-                                        >
-                                            {st === 'live' ? 'Live' : st === 'completed' ? 'Finished' : 'Not started'}
-                                        </span>
-                                        <ChevronRight
-                                            className="h-4 w-4 shrink-0"
-                                            style={{ color: 'hsl(var(--event-on-ink-muted))' }}
-                                        />
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                    </section>
-                )}
 
                 <section className="mt-6">
                     <div className="mb-2 flex items-center justify-between px-1">
