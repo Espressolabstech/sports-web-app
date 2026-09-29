@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { ArrowLeft, ArrowRight, IndianRupee, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, ArrowRight, IndianRupee, ShieldCheck, UserPlus, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '../../utils/twMerge';
 import {
@@ -10,6 +10,7 @@ import {
     fetchEvent,
     finalizeRegistration,
     getRegistration,
+    isPhoneAlreadyRegistered,
     submitRegistration,
     spotsLeft,
     type EventSkill,
@@ -41,8 +42,11 @@ export default function EventRegister() {
 
     const [step, setStep] = useState(0);
     const [form, setForm] = useState({ name: '', phone: '' });
+    const [friendOpen, setFriendOpen] = useState(false);
+    const [friend, setFriend] = useState({ name: '', phone: '' });
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
+    const [checkingDuplicate, setCheckingDuplicate] = useState(false);
 
     useEffect(() => {
         if (!slug || !event) return;
@@ -73,7 +77,9 @@ export default function EventRegister() {
         );
     }
 
-    const waitlist = spotsLeft(event) === 0;
+    const entrants = friendOpen ? 2 : 1;
+    const waitlist = spotsLeft(event) < entrants;
+    const totalInr = event.priceInr * entrants;
 
     const validateDetails = () => {
         const e: Record<string, string> = {};
@@ -81,16 +87,48 @@ export default function EventRegister() {
         const phone = form.phone.trim();
         if (name.length < 2) e.name = 'Enter your full name';
         if (!/^[0-9]{10}$/.test(phone)) e.phone = 'Enter a valid 10-digit mobile number';
+        if (friendOpen) {
+            const friendName = friend.name.trim();
+            const friendPhone = friend.phone.trim();
+            if (friendName.length < 2) e.friend_name = "Enter your friend's full name";
+            if (!/^[0-9]{10}$/.test(friendPhone)) e.friend_phone = "Enter a valid 10-digit mobile number";
+            if (phone && friendPhone && phone === friendPhone) {
+                e.friend_phone = "Friend's number must be different from yours";
+            }
+        }
         return e;
     };
 
-    const next = () => {
+    const next = async () => {
         if (step === 0) {
             const e = validateDetails();
             if (Object.keys(e).length > 0) {
                 setErrors(e);
                 return;
             }
+
+            // A number already registered for this event gets stopped here
+            // — never let the form quietly succeed and hand back a pass
+            // (possibly someone else's) without payment.
+            setCheckingDuplicate(true);
+            try {
+                const phone = form.phone.trim();
+                const friendPhone = friendOpen ? friend.phone.trim() : null;
+                const [mainTaken, friendTaken] = await Promise.all([
+                    isPhoneAlreadyRegistered(event.slug, phone),
+                    friendPhone ? isPhoneAlreadyRegistered(event.slug, friendPhone) : Promise.resolve(false),
+                ]);
+                if (mainTaken || friendTaken) {
+                    setErrors({
+                        ...(mainTaken && { phone: 'This number is already registered for this event' }),
+                        ...(friendTaken && { friend_phone: "This number is already registered for this event" }),
+                    });
+                    return;
+                }
+            } finally {
+                setCheckingDuplicate(false);
+            }
+
             setErrors({});
         }
         setStep((s) => s + 1);
@@ -104,8 +142,11 @@ export default function EventRegister() {
                 phone: form.phone.trim(),
                 skill: event.skillLevel,
             };
+            const friendDetails = friendOpen
+                ? { name: friend.name.trim(), phone: friend.phone.trim() }
+                : undefined;
 
-            const { registration, razorpay } = await submitRegistration(event.slug, details);
+            const { registration, razorpay } = await submitRegistration(event.slug, details, friendDetails);
 
             // Free entry or waitlist spot — already registered, nothing to pay.
             if (registration) {
@@ -122,14 +163,21 @@ export default function EventRegister() {
                 currency: razorpay!.currency,
                 order_id: razorpay!.orderId,
                 name: event.title,
-                description: `Entry fee · ${event.skillLevel}`,
+                description: friendDetails
+                    ? `Entry fee (2) · ${event.skillLevel}`
+                    : `Entry fee · ${event.skillLevel}`,
                 handler: async (response) => {
                     try {
-                        const confirmed = await confirmPayment(event.slug, details, {
-                            razorpayOrderId: response.razorpay_order_id,
-                            razorpayPaymentId: response.razorpay_payment_id,
-                            razorpaySignature: response.razorpay_signature,
-                        });
+                        const confirmed = await confirmPayment(
+                            event.slug,
+                            details,
+                            {
+                                razorpayOrderId: response.razorpay_order_id,
+                                razorpayPaymentId: response.razorpay_payment_id,
+                                razorpaySignature: response.razorpay_signature,
+                            },
+                            friendDetails,
+                        );
                         finalizeRegistration(confirmed);
                         navigate(`/events/${event.slug}/pass`, { replace: true });
                     } catch {
@@ -240,6 +288,63 @@ export default function EventRegister() {
                             prefix="+91"
                             error={errors.phone}
                         />
+
+                        {!friendOpen ? (
+                            <button
+                                onClick={() => setFriendOpen(true)}
+                                className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold active:scale-[0.99]"
+                                style={{
+                                    backgroundColor: 'hsl(var(--event-ink-soft))',
+                                    color: 'hsl(var(--event-on-ink))',
+                                    boxShadow: 'inset 0 0 0 1px hsl(var(--event-on-ink)/0.14)',
+                                }}
+                            >
+                                <UserPlus className="h-4 w-4" />
+                                Also register a friend
+                            </button>
+                        ) : (
+                            <div className="space-y-4 rounded-2xl p-4" style={card}>
+                                <div className="flex items-center justify-between">
+                                    <p className="text-sm font-semibold" style={onInk}>Your friend</p>
+                                    <button
+                                        onClick={() => {
+                                            setFriendOpen(false);
+                                            setFriend({ name: '', phone: '' });
+                                            setErrors((prev) => {
+                                                const rest = { ...prev };
+                                                delete rest.friend_name;
+                                                delete rest.friend_phone;
+                                                return rest;
+                                            });
+                                        }}
+                                        className="inline-flex items-center gap-1 text-xs font-medium"
+                                        style={onInkMuted}
+                                    >
+                                        <X className="h-3.5 w-3.5" /> Remove
+                                    </button>
+                                </div>
+                                <Field
+                                    label="Friend's full name"
+                                    value={friend.name}
+                                    onChange={(v) => setFriend({ ...friend, name: v })}
+                                    placeholder="Riya Mehta"
+                                    error={errors.friend_name}
+                                />
+                                <Field
+                                    label="Friend's mobile number"
+                                    value={friend.phone}
+                                    onChange={(v) => setFriend({ ...friend, phone: v.replace(/\D/g, '').slice(0, 10) })}
+                                    placeholder="9876543210"
+                                    inputMode="numeric"
+                                    prefix="+91"
+                                    error={errors.friend_phone}
+                                />
+                                <p className="text-xs" style={onInkMuted}>
+                                    Two entries — the total updates at the payment step.
+                                </p>
+                            </div>
+                        )}
+
                         <p className="px-1 text-xs" style={onInkMuted}>
                             We use this only to send your pass and round updates for this event.
                         </p>
@@ -249,13 +354,25 @@ export default function EventRegister() {
                 {step === 1 && (
                     <div className="space-y-4">
                         <div className="rounded-2xl p-4" style={card}>
+                            {friendOpen && (
+                                <div className="mb-2 space-y-1.5 text-xs" style={onInkMuted}>
+                                    <div className="flex items-center justify-between">
+                                        <span>{form.name.trim() || 'You'}</span>
+                                        <span>₹{event.priceInr.toLocaleString('en-IN')}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                        <span>{friend.name.trim() || 'Your friend'}</span>
+                                        <span>₹{event.priceInr.toLocaleString('en-IN')}</span>
+                                    </div>
+                                </div>
+                            )}
                             <div className="flex items-center justify-between">
                                 <span className="text-sm" style={onInkMuted}>
-                                    Entry fee
+                                    {friendOpen ? 'Total · 2 entries' : 'Entry fee'}
                                 </span>
                                 <span className="inline-flex items-center text-lg font-bold" style={onInk}>
                                     <IndianRupee className="h-4 w-4" />
-                                    {event.priceInr.toLocaleString('en-IN')}
+                                    {totalInr.toLocaleString('en-IN')}
                                 </span>
                             </div>
                             <div
@@ -302,7 +419,7 @@ export default function EventRegister() {
                 <div className="mx-auto max-w-lg px-4 py-3">
                     <button
                         onClick={step === 1 ? submit : next}
-                        disabled={submitting}
+                        disabled={submitting || checkingDuplicate}
                         className={cn(
                             'inline-flex h-14 w-full items-center justify-center gap-2 rounded-2xl text-[16px] font-black uppercase tracking-wide active:scale-[0.99] disabled:opacity-60',
                         )}
@@ -313,12 +430,14 @@ export default function EventRegister() {
                     >
                         {submitting
                             ? 'Confirming…'
-                            : step === 1
-                              ? waitlist
-                                  ? 'Join waitlist'
-                                  : 'Confirm registration'
-                              : 'Continue'}
-                        {!submitting && step < 1 && <ArrowRight className="h-4 w-4" />}
+                            : checkingDuplicate
+                              ? 'Checking…'
+                              : step === 1
+                                ? waitlist
+                                    ? 'Join waitlist'
+                                    : 'Confirm registration'
+                                : 'Continue'}
+                        {!submitting && !checkingDuplicate && step < 1 && <ArrowRight className="h-4 w-4" />}
                     </button>
                 </div>
             </div>

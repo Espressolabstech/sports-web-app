@@ -42,6 +42,8 @@ declare global {
         teamBEntrant2Id: string;
         scoreA: number | null;
         scoreB: number | null;
+        /** Americano only: set when the score was a literal tie (12-12) and Golden Point is on — carries who took the golden point. */
+        goldenPointWinner: 'A' | 'B' | null;
         /** Mexicano only: the pairing rule that produced this match, e.g. "Random draw" or "1st + 4th v 2nd + 3rd". */
         drawTag: string | null;
     }
@@ -83,6 +85,10 @@ declare global {
         phase: 'DRAFT' | 'PUBLISHED' | 'LIVE' | 'COMPLETED';
         startedAt: string | null;
         plannedRounds: number | null;
+        /** Americano only: the booked court slot in minutes (90/120/150/180). */
+        slotMinutes: number | null;
+        /** Americano only: the host's chosen last round ("Finish after this round"). */
+        finalRound: number | null;
         createdAt: string;
         updatedAt: string;
         entrants: ApiEventEntrant[];
@@ -99,10 +105,34 @@ declare global {
         event: ApiEvent;
     }
 
+    interface ApiStandingsRow {
+        playerId: string;
+        name: string;
+        points: number;
+        matchPoints: number;
+        bonusPoints: number;
+        byePoints: number;
+        played: number;
+        won: number;
+        byes: number;
+        rank: number;
+    }
+
+    interface ApiEventStandingsData {
+        standings: ApiStandingsRow[];
+    }
+
+    interface ApiFriendRegistrant {
+        name: string;
+        phone: string;
+    }
+
     interface RegisterForEventBody {
         name: string;
         phone: string;
         skill?: ApiEventEntrant['skill'];
+        /** "Also register a friend" — a second entrant on the same submission. */
+        friend?: ApiFriendRegistrant;
     }
 
     interface ApiEventRazorpayOrder {
@@ -120,12 +150,15 @@ declare global {
         waitlisted: boolean;
         pending: boolean;
         razorpay: ApiEventRazorpayOrder | null;
+        friendEntrant: ApiEventEntrant | null;
+        friendTicketCode: string | null;
     }
 
     interface ConfirmEventPaymentBody {
         name: string;
         phone: string;
         skill?: ApiEventEntrant['skill'];
+        friend?: ApiFriendRegistrant;
         razorpayOrderId: string;
         razorpayPaymentId: string;
         razorpaySignature: string;
@@ -135,6 +168,13 @@ declare global {
         entrant: ApiEventEntrant;
         ticketCode: string;
         waitlisted: boolean;
+        friendEntrant: ApiEventEntrant | null;
+        friendTicketCode: string | null;
+    }
+
+    interface ApiEventRegistrationLookupData {
+        entrant: ApiEventEntrant;
+        ticketCode: string;
     }
 }
 

@@ -11,6 +11,12 @@ export const getEventDetail = async (
     return apiClient({ url: endpoints.eventDetail(slug), method: 'GET' });
 };
 
+export const getEventStandings = async (
+    slug: string,
+): Promise<ApiResponse<ApiEventStandingsData>> => {
+    return apiClient({ url: endpoints.eventStandings(slug), method: 'GET' });
+};
+
 export const registerForEvent = async (
     slug: string,
     data: RegisterForEventBody,
@@ -30,5 +36,17 @@ export const confirmEventPayment = async (
         url: endpoints.confirmEventPayment(slug),
         method: 'POST',
         data,
+    });
+};
+
+/** Looks up whether a phone number is already registered for this event — 404s if not. */
+export const getEventRegistrationByPhone = async (
+    slug: string,
+    phone: string,
+): Promise<ApiResponse<ApiEventRegistrationLookupData>> => {
+    return apiClient({
+        url: endpoints.eventRegistrationLookup(slug),
+        method: 'GET',
+        params: { phone },
     });
 };

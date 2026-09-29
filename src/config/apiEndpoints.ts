@@ -48,6 +48,8 @@ export const endpoints = {
     // Events (public, player-facing)
     events: '/public/events',
     eventDetail: (slug: string) => `/public/events/${slug}`,
+    eventStandings: (slug: string) => `/public/events/${slug}/standings`,
+    eventRegistrationLookup: (slug: string) => `/public/events/${slug}/registration`,
     registerForEvent: (slug: string) => `/public/events/${slug}/register`,
     confirmEventPayment: (slug: string) => `/public/events/${slug}/confirm-payment`,
 };

@@ -1,6 +1,8 @@
 import {
     getEvents,
     getEventDetail,
+    getEventStandings,
+    getEventRegistrationByPhone,
     registerForEvent as apiRegisterForEvent,
     confirmEventPayment as apiConfirmEventPayment,
 } from '../api/adapters/events';
@@ -35,6 +37,8 @@ export interface EventMatch {
     teamB: [string, string];
     scoreA: number | null;
     scoreB: number | null;
+    /** Americano only: set when the score was a literal tie (12-12) and Golden Point is on — carries who took the golden point. */
+    goldenPointWinner: 'A' | 'B' | null;
     drawTag: string | null;
 }
 
@@ -67,6 +71,10 @@ export interface TournamentEvent {
     phase: EventPhase;
     startedAt: Date | null;
     plannedRounds: number | null;
+    /** Americano only: the booked court slot in minutes (90/120/150/180). */
+    slotMinutes: number | null;
+    /** Americano only: the host's chosen last round ("Finish after this round"). */
+    finalRound: number | null;
     roster: RosterPlayer[];
     matches: EventMatch[];
     mexicanoRounds: MexicanoRound[];
@@ -82,6 +90,13 @@ export interface EventRegistration {
     ticketCode: string;
     waitlisted: boolean;
     createdAt: string;
+    /** "Also register a friend" — a second entrant on the same registration. */
+    friend?: {
+        entrantId: string;
+        name: string;
+        phone: string;
+        ticketCode: string;
+    };
 }
 
 const PHASE_TO_CLIENT: Record<string, EventPhase> = {
@@ -119,6 +134,7 @@ const mapMatch = (m: ApiEventMatch): EventMatch => ({
     teamB: [m.teamBEntrant1Id, m.teamBEntrant2Id],
     scoreA: m.scoreA ?? null,
     scoreB: m.scoreB ?? null,
+    goldenPointWinner: m.goldenPointWinner ?? null,
     drawTag: m.drawTag ?? null,
 });
 
@@ -156,6 +172,8 @@ const mapEvent = (e: ApiEvent): TournamentEvent => {
         phase: PHASE_TO_CLIENT[e.phase] ?? 'upcoming',
         startedAt: e.startedAt ? new Date(e.startedAt) : null,
         plannedRounds: e.plannedRounds ?? null,
+        slotMinutes: e.slotMinutes ?? null,
+        finalRound: e.finalRound ?? null,
         roster: e.entrants.map((p) => ({
             id: p.id,
             name: p.name,
@@ -243,103 +261,36 @@ export function currentMexicanoRound(event: TournamentEvent) {
 export interface StandingsRow {
     playerId: string;
     name: string;
+    points: number;
+    matchPoints: number;
+    bonusPoints: number;
+    byePoints: number;
     played: number;
     won: number;
-    points: number;
-    bestRound: number;
+    byes: number;
     rank: number;
 }
 
-/** Extra points each player of the winning pair earns when Golden Point is on — kept in sync with sports-api's WINNER_BONUS. */
-const WINNER_BONUS = 2;
-
 /**
- * Same tiebreaker order as the organizer scoring engine (sports-api's
- * computeStandings): total points, then head-to-head (only meaningful
- * between two players who've actually faced each other), then best
- * single-match score, then enrollment order. Waitlisted players never
- * played, so they never appear here.
+ * Standings are computed server-side (sports-api's computeStandings) and
+ * fetched here rather than re-derived client-side — the scoring rules
+ * (byes, golden-point ties) live in exactly one place, so this app never
+ * drifts out of sync with the organizer app or the backend.
  */
-export function standings(event: TournamentEvent): StandingsRow[] {
-    const base = new Map<string, StandingsRow & { createdAt: string }>();
-
-    for (const player of playingRoster(event)) {
-        base.set(player.id, {
-            playerId: player.id,
-            name: player.name,
-            createdAt: player.createdAt,
-            played: 0,
-            won: 0,
-            points: 0,
-            bestRound: 0,
-            rank: 0,
-        });
-    }
-
-    const headToHead = new Map<string, number>();
-    const h2hKey = (a: string, b: string) => `${a}>${b}`;
-
-    for (const m of event.matches) {
-        if (m.scoreA === null || m.scoreB === null) continue;
-        const teamA = m.teamA;
-        const teamB = m.teamB;
-        const aWins = m.scoreA > m.scoreB;
-        const bWins = m.scoreB > m.scoreA;
-        const bonusA = event.goldenPoint && aWins ? WINNER_BONUS : 0;
-        const bonusB = event.goldenPoint && bWins ? WINNER_BONUS : 0;
-
-        for (const id of teamA) {
-            const row = base.get(id);
-            if (!row) continue;
-            row.points += m.scoreA + bonusA;
-            row.played += 1;
-            row.bestRound = Math.max(row.bestRound, m.scoreA + bonusA);
-            if (aWins) row.won += 1;
-        }
-        for (const id of teamB) {
-            const row = base.get(id);
-            if (!row) continue;
-            row.points += m.scoreB + bonusB;
-            row.played += 1;
-            row.bestRound = Math.max(row.bestRound, m.scoreB + bonusB);
-            if (bWins) row.won += 1;
-        }
-
-        for (const a of teamA) {
-            for (const b of teamB) {
-                headToHead.set(h2hKey(a, b), (headToHead.get(h2hKey(a, b)) ?? 0) + m.scoreA + bonusA);
-                headToHead.set(h2hKey(b, a), (headToHead.get(h2hKey(b, a)) ?? 0) + m.scoreB + bonusB);
-            }
-        }
-    }
-
-    const rows = [...base.values()];
-
-    rows.sort((x, y) => {
-        if (x.points !== y.points) return y.points - x.points;
-
-        const xVsY = headToHead.get(h2hKey(x.playerId, y.playerId));
-        const yVsX = headToHead.get(h2hKey(y.playerId, x.playerId));
-        if (xVsY !== undefined && yVsX !== undefined && xVsY !== yVsX) {
-            return yVsX - xVsY;
-        }
-
-        if (x.bestRound !== y.bestRound) return y.bestRound - x.bestRound;
-
-        return new Date(x.createdAt).getTime() - new Date(y.createdAt).getTime();
-    });
-
-    let rank = 0;
-    let prevPoints: number | null = null;
-    rows.forEach((row, i) => {
-        if (row.points !== prevPoints) {
-            rank = i + 1;
-            prevPoints = row.points;
-        }
-        row.rank = rank;
-    });
-
-    return rows;
+export async function fetchStandings(slug: string): Promise<StandingsRow[]> {
+    const res = await getEventStandings(slug);
+    return res.data.standings.map((r) => ({
+        playerId: r.playerId,
+        name: r.name,
+        points: r.points,
+        matchPoints: r.matchPoints,
+        bonusPoints: r.bonusPoints,
+        byePoints: r.byePoints,
+        played: r.played,
+        won: r.won,
+        byes: r.byes,
+        rank: r.rank,
+    }));
 }
 
 const localKey = (slug: string) => `bookease-event-reg-${slug}`;
@@ -381,6 +332,7 @@ export function finalizeRegistration(reg: EventRegistration) {
 export async function submitRegistration(
     slug: string,
     data: { name: string; phone: string; skill: EventSkill },
+    friend?: { name: string; phone: string },
 ): Promise<{
     registration: EventRegistration | null;
     razorpay: ApiEventRazorpayOrder | null;
@@ -389,6 +341,7 @@ export async function submitRegistration(
         name: data.name,
         phone: data.phone,
         skill: SKILL_TO_API[data.skill],
+        friend,
     });
 
     if (!res.data.entrant) {
@@ -404,6 +357,15 @@ export async function submitRegistration(
         ticketCode: res.data.ticketCode!,
         waitlisted: res.data.waitlisted,
         createdAt: res.data.entrant.createdAt,
+        friend:
+            res.data.friendEntrant && res.data.friendTicketCode
+                ? {
+                      entrantId: res.data.friendEntrant.id,
+                      name: res.data.friendEntrant.name,
+                      phone: res.data.friendEntrant.phone ?? friend?.phone ?? '',
+                      ticketCode: res.data.friendTicketCode,
+                  }
+                : undefined,
     };
 
     return { registration, razorpay: null };
@@ -418,11 +380,13 @@ export async function confirmPayment(
         razorpayPaymentId: string;
         razorpaySignature: string;
     },
+    friend?: { name: string; phone: string },
 ): Promise<EventRegistration> {
     const res = await apiConfirmEventPayment(slug, {
         name: data.name,
         phone: data.phone,
         skill: SKILL_TO_API[data.skill],
+        friend,
         ...payment,
     });
 
@@ -435,5 +399,29 @@ export async function confirmPayment(
         ticketCode: res.data.ticketCode,
         waitlisted: res.data.waitlisted,
         createdAt: res.data.entrant.createdAt,
+        friend:
+            res.data.friendEntrant && res.data.friendTicketCode
+                ? {
+                      entrantId: res.data.friendEntrant.id,
+                      name: res.data.friendEntrant.name,
+                      phone: res.data.friendEntrant.phone ?? friend?.phone ?? '',
+                      ticketCode: res.data.friendTicketCode,
+                  }
+                : undefined,
     };
+}
+
+/**
+ * Whether a phone number is already registered for this event — checked
+ * server-side so the registration form can stop a duplicate attempt before
+ * it ever reaches payment, rather than silently handing back someone
+ * else's existing pass.
+ */
+export async function isPhoneAlreadyRegistered(slug: string, phone: string): Promise<boolean> {
+    try {
+        await getEventRegistrationByPhone(slug, phone);
+        return true;
+    } catch {
+        return false;
+    }
 }

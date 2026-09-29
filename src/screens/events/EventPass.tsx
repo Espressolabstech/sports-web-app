@@ -143,6 +143,17 @@ export default function EventPass() {
                             {reg.waitlisted && " · Waitlisted — we'll message you if a spot opens"}
                         </p>
                     </div>
+                    {reg.friend && (
+                        <div
+                            className="flex items-center justify-between px-5 py-3 text-xs"
+                            style={{ borderTop: '1px solid hsl(var(--event-on-ink)/0.08)', ...onInkMuted }}
+                        >
+                            <span>
+                                Also registered: <span style={onInk}>{reg.friend.name}</span>
+                            </span>
+                            <span style={onInk}>{reg.friend.ticketCode}</span>
+                        </div>
+                    )}
                 </section>
 
                 <button

@@ -5,9 +5,9 @@ import { format } from 'date-fns';
 import { ArrowLeft, MapPin, RefreshCw, Trophy, Users, Zap } from 'lucide-react';
 import {
     fetchEvent,
+    fetchStandings,
     isMexicano,
     nameOf,
-    standings,
     tournamentStatus,
 } from '../../lib/public-events';
 import { Podium } from '../../components/events/Podium';
@@ -35,6 +35,13 @@ export default function EventLive() {
         refetchInterval: (query) => (query.state.data?.phase === 'live' ? 15000 : false),
     });
 
+    const { data: table = [] } = useQuery({
+        queryKey: ['public-event-standings', slug],
+        queryFn: () => fetchStandings(slug!),
+        enabled: !!slug && event?.phase !== 'upcoming',
+        refetchInterval: () => (event?.phase === 'live' ? 15000 : false),
+    });
+
     if (isLoading) {
         return (
             <div className="flex min-h-screen items-center justify-center" style={ink}>
@@ -59,7 +66,6 @@ export default function EventLive() {
         );
     }
 
-    const table = standings(event);
     const podiumRows = table.filter((r) => r.rank <= 3).slice(0, 3);
     const rest = table.filter((r) => !podiumRows.includes(r));
     const mexicano = isMexicano(event);
@@ -229,7 +235,7 @@ export default function EventLive() {
                                         {row.name}
                                     </p>
                                     <p className="text-xs" style={onInkMuted}>
-                                        {row.won}/{row.played} won
+                                        {row.won}/{row.played} won{!mexicano && row.byes > 0 ? ` · ${row.byes} bye${row.byes === 1 ? '' : 's'}` : ''}
                                     </p>
                                     <p className="w-12 text-right text-[15px] font-bold" style={onInk}>
                                         {row.points}
@@ -270,9 +276,16 @@ export default function EventLive() {
                                             </div>
                                             <div className="shrink-0 text-center text-[20px] font-extrabold tabular-nums">
                                                 {scored ? (
-                                                    <span style={onInk}>
-                                                        {m.scoreA} – {m.scoreB}
-                                                    </span>
+                                                    <>
+                                                        <span style={onInk}>
+                                                            {m.scoreA} – {m.scoreB}
+                                                        </span>
+                                                        {m.goldenPointWinner && (
+                                                            <p className="mt-0.5 text-[9px] font-semibold uppercase tracking-wide" style={onInkMuted}>
+                                                                Golden point
+                                                            </p>
+                                                        )}
+                                                    </>
                                                 ) : (
                                                     <span className="text-[11px] font-semibold uppercase" style={onInkMuted}>
                                                         Playing

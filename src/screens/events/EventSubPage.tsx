@@ -4,10 +4,11 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Lock, MapPin, Timer, Trophy, Users, Zap } from 'lucide-react';
 import {
     fetchEvent,
+    fetchStandings,
     fillStatus,
     getRegistration,
+    isMexicano,
     shortName,
-    standings,
     tournamentStatus,
     type EventRegistration,
     type RosterPlayer,
@@ -176,6 +177,7 @@ export default function EventSubPage({ section }: { section: Section }) {
 }
 
 function Rules({ event }: { event: TournamentEvent }) {
+    const mexicano = isMexicano(event);
     const rows = [
         {
             icon: MapPin,
@@ -186,7 +188,9 @@ function Rules({ event }: { event: TournamentEvent }) {
         {
             icon: Timer,
             label: 'Play',
-            value: `${event.courts} courts · ${event.roundMinutes} min rounds · ${event.pointsPerRound} pts`,
+            value: mexicano
+                ? `${event.courts} courts · ${event.roundMinutes} min rounds · ${event.pointsPerRound} pts`
+                : `${event.courts} courts · 24 pts per match${event.goldenPoint ? ' · golden point on ties' : ''}`,
         },
         { icon: Users, label: 'Skill level', value: event.skillLevel },
     ];
@@ -311,8 +315,14 @@ function Players({
 }
 
 function Standings({ event }: { event: TournamentEvent }) {
-    const table = standings(event);
     const status = tournamentStatus(event);
+    const mexicano = isMexicano(event);
+    const { data: table = [] } = useQuery({
+        queryKey: ['public-event-standings', event.slug],
+        queryFn: () => fetchStandings(event.slug),
+        enabled: status !== 'not_started',
+        refetchInterval: () => (event.phase === 'live' ? 10000 : false),
+    });
     const hasScores = table.some((r) => r.played > 0);
 
     if (status === 'not_started' || !hasScores) {
@@ -374,7 +384,7 @@ function Standings({ event }: { event: TournamentEvent }) {
                                     {row.name}
                                 </p>
                                 <p className="text-xs" style={onInkMuted}>
-                                    {row.won}/{row.played} won
+                                    {row.won}/{row.played} won{!mexicano && row.byes > 0 ? ` · ${row.byes} bye${row.byes === 1 ? '' : 's'}` : ''}
                                 </p>
                                 <p className="w-12 text-right text-[15px] font-bold" style={onInk}>
                                     {row.points}

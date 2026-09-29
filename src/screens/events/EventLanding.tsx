@@ -16,9 +16,9 @@ import {
 import { useCountdown } from '../../components/events/Countdown';
 import {
     fetchEvent,
+    fetchStandings,
     fillStatus,
     getRegistration,
-    standings,
     type EventRegistration,
 } from '../../lib/public-events';
 import { AnimatedLoader } from '../../components/AnimatedLoader';
@@ -55,6 +55,13 @@ export default function EventLanding() {
         refetchInterval: (query) => (query.state.data?.phase === 'live' ? 15000 : false),
     });
 
+    const { data: table = [] } = useQuery({
+        queryKey: ['public-event-standings', slug],
+        queryFn: () => fetchStandings(slug!),
+        enabled: !!slug && event?.phase !== 'upcoming',
+        refetchInterval: () => (event?.phase === 'live' ? 15000 : false),
+    });
+
     useEffect(() => {
         if (!slug) return;
         const sync = () => setReg(getRegistration(slug));
@@ -84,9 +91,7 @@ export default function EventLanding() {
 
     const poster = event.posterUrl;
     const fill = fillStatus(event);
-    const standingsPreview = standings(event)
-        .filter((r) => r.played > 0)
-        .slice(0, 3);
+    const standingsPreview = table.filter((r) => r.played > 0).slice(0, 3);
     const statusColor =
         fill.status === 'full'
             ? 'hsl(var(--event-full))'
