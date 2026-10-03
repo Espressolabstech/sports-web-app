@@ -17,6 +17,7 @@ declare global {
         checkedIn: boolean;
         /** Registered after capacity was full. Never scheduled, never on standings — until the organizer promotes them. */
         waitlisted: boolean;
+        removedFromPlay?: boolean;
         source: 'REGISTRATION' | 'WALK_IN';
         createdAt: string;
         updatedAt: string;
@@ -89,6 +90,7 @@ declare global {
         slotMinutes: number | null;
         /** Americano only: the host's chosen last round ("Finish after this round"). */
         finalRound: number | null;
+        scheduleMode?: 'STANDARD' | 'NON_STOP' | 'KING_OF_COURT';
         createdAt: string;
         updatedAt: string;
         entrants: ApiEventEntrant[];
@@ -116,6 +118,7 @@ declare global {
         won: number;
         byes: number;
         rank: number;
+        topUpPoints?: number;
     }
 
     interface ApiEventStandingsData {

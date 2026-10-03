@@ -384,7 +384,12 @@ function Standings({ event }: { event: TournamentEvent }) {
                                     {row.name}
                                 </p>
                                 <p className="text-xs" style={onInkMuted}>
-                                    {row.won}/{row.played} won{!mexicano && row.byes > 0 ? ` · ${row.byes} bye${row.byes === 1 ? '' : 's'}` : ''}
+                                    {row.won}/{row.played} won
+                                    {event.scheduleMode === 'KING_OF_COURT'
+                                        ? ` · top-up ${row.topUpPoints ?? 0}`
+                                        : !mexicano && row.byes > 0
+                                          ? ` · ${row.byes} bye${row.byes === 1 ? '' : 's'}`
+                                          : ''}
                                 </p>
                                 <p className="w-12 text-right text-[15px] font-bold" style={onInk}>
                                     {row.points}

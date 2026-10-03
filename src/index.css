@@ -140,3 +140,16 @@
 .home-rise {
   animation: home-rise 0.5s ease-out both;
 }
+
+/* Mobile Safari (and other mobile browsers) auto-zoom the whole page when
+   a focused input's font-size is under 16px, and can fail to zoom back
+   out again once the field blurs, leaving the viewport stuck zoomed in.
+   Several inputs here use a smaller Tailwind text size for their layout,
+   so this forces every real form control to >=16px regardless, which
+   stops the zoom from ever firing. !important is deliberate — this must
+   win over any Tailwind text-size utility on the element, everywhere. */
+input,
+select,
+textarea {
+  font-size: 16px !important;
+}

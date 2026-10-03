@@ -18,6 +18,8 @@ export interface RosterPlayer {
     skill: EventSkill;
     checkedIn: boolean;
     waitlisted: boolean;
+    /** Removed mid-tournament: finishes any current match, then is never scheduled again. */
+    removedFromPlay?: boolean;
     createdAt: string;
     isMe?: boolean;
 }
@@ -75,6 +77,8 @@ export interface TournamentEvent {
     slotMinutes: number | null;
     /** Americano only: the host's chosen last round ("Finish after this round"). */
     finalRound: number | null;
+    /** King of the Court has no rounds, byes or Standard round plan. */
+    scheduleMode?: 'STANDARD' | 'NON_STOP' | 'KING_OF_COURT';
     roster: RosterPlayer[];
     matches: EventMatch[];
     mexicanoRounds: MexicanoRound[];
@@ -174,12 +178,14 @@ const mapEvent = (e: ApiEvent): TournamentEvent => {
         plannedRounds: e.plannedRounds ?? null,
         slotMinutes: e.slotMinutes ?? null,
         finalRound: e.finalRound ?? null,
+        scheduleMode: e.scheduleMode,
         roster: e.entrants.map((p) => ({
             id: p.id,
             name: p.name,
             skill: SKILL_TO_CLIENT[p.skill] ?? 'Intermediate',
             checkedIn: p.checkedIn,
             waitlisted: Boolean(p.waitlisted),
+            removedFromPlay: Boolean(p.removedFromPlay),
             createdAt: p.createdAt,
         })),
         matches: (e.matches ?? []).map(mapMatch),
@@ -265,6 +271,8 @@ export interface StandingsRow {
     matchPoints: number;
     bonusPoints: number;
     byePoints: number;
+    /** King of the Court: 12 points per game short of the most-played player, added at the end. */
+    topUpPoints?: number;
     played: number;
     won: number;
     byes: number;
@@ -286,6 +294,7 @@ export async function fetchStandings(slug: string): Promise<StandingsRow[]> {
         matchPoints: r.matchPoints,
         bonusPoints: r.bonusPoints,
         byePoints: r.byePoints,
+        topUpPoints: r.topUpPoints ?? 0,
         played: r.played,
         won: r.won,
         byes: r.byes,
