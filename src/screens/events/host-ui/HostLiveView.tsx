@@ -48,7 +48,7 @@ export default function HostLiveView({ event, table }: { event: TournamentEvent;
                 </span>
             </div>
 
-            {liveTab === 'matches' && (
+            {liveTab === 'matches' && !kingMode && (
                 <>
                     <div>
                         <p className="text-[12px]" style={onInkMuted}>

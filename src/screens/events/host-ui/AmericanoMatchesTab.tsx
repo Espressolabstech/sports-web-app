@@ -369,7 +369,20 @@ export default function AmericanoMatchesTab({
                         </p>
                     </div>
                 )}
-                {progress.total > 0 && (
+                {kingMode && progress.total > 0 && (
+                    <div
+                        className="flex items-center justify-between rounded-2xl border px-3.5 py-3"
+                        style={{ borderColor: 'hsl(var(--event-on-ink)/0.09)', backgroundColor: 'hsl(var(--event-on-ink)/0.03)' }}
+                    >
+                        <p className="text-[11px] font-bold uppercase tracking-[0.08em]" style={onInkMuted}>
+                            Games completed
+                        </p>
+                        <p className="text-[20px] font-extrabold tabular-nums" style={onInk} aria-label={`${progress.complete} games completed`}>
+                            {progress.complete}
+                        </p>
+                    </div>
+                )}
+                {!kingMode && progress.total > 0 && (
                     <div
                         className="rounded-2xl border px-3.5 py-3"
                         style={{ borderColor: 'hsl(var(--event-on-ink)/0.09)', backgroundColor: 'hsl(var(--event-on-ink)/0.03)' }}
