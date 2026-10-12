@@ -713,8 +713,15 @@ export default function EventRegister({ slugOverride }: { slugOverride?: string 
                                                     </Field>
                                                     <Field label="Age" half error={errors.age}>
                                                         <input
+                                                            type="number"
+                                                            min={1}
+                                                            max={100}
                                                             value={profile.age}
-                                                            onChange={(e) => setProfile({ ...profile, age: e.target.value.replace(/\D/g, '').slice(0, 3) })}
+                                                            onChange={(e) => {
+                                                                let v = e.target.value.replace(/\D/g, '').slice(0, 3);
+                                                                if (v !== '' && Number(v) > 100) v = '100';
+                                                                setProfile({ ...profile, age: v });
+                                                            }}
                                                             placeholder="24"
                                                             inputMode="numeric"
                                                         />
