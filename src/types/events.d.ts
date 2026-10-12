@@ -202,6 +202,7 @@ declare global {
         id: string;
         name: string;
         email: string | null;
+        photoUrl: string | null;
         contact: string | null;
         sports: string[];
         padelLevel: string | null;

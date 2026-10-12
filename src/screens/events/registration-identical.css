@@ -1383,6 +1383,13 @@
     font-weight: 600;
     color: var(--muted-foreground);
 }
+.ccreg .host-avatar-photo {
+    height: 36px;
+    width: 36px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    object-fit: cover;
+}
 .ccreg .host-player strong {
     display: block;
     font-weight: 600;
@@ -1534,5 +1541,9 @@
         width: 28px;
         height: 28px;
         font-size: 9px;
+    }
+    .ccreg .host-avatar-photo {
+        width: 28px;
+        height: 28px;
     }
 }

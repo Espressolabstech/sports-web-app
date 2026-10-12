@@ -267,16 +267,19 @@ export default function EventHostPreview() {
                                         <tr key={p.id}>
                                             <td>
                                                 <div className="host-player">
-                                                    <span className="host-avatar" aria-hidden="true">
-                                                        {p.name
-                                                            .split(' ')
-                                                            .map((n) => n[0])
-                                                            .join('')}
-                                                    </span>
+                                                    {p.photoUrl ? (
+                                                        <img src={p.photoUrl} alt="" className="host-avatar-photo" />
+                                                    ) : (
+                                                        <span className="host-avatar" aria-hidden="true">
+                                                            {p.name
+                                                                .split(' ')
+                                                                .map((n) => n[0])
+                                                                .join('')}
+                                                        </span>
+                                                    )}
                                                     <div>
                                                         <strong>{p.name}</strong>
                                                         <span>{p.email}</span>
-                                                        <small>{p.id}</small>
                                                     </div>
                                                 </div>
                                             </td>
