@@ -1,0 +1,1538 @@
+/*
+ * Verbatim port of the prototype's own CSS (the Lovable "Court Collective"
+ * registration page) for the detailed registration flow. Selectors,
+ * spacing, sizes, radii AND colors are copied as-is from the prototype's
+ * styles.css :root — nothing here is reinterpreted or redirected to this
+ * app's own theme tokens. Scoped under .ccreg so nothing leaks onto any
+ * other screen.
+ */
+
+.ccreg {
+    --background: oklch(0.195 0.016 262);
+    --foreground: oklch(0.976 0.004 250);
+    --card: oklch(0.245 0.018 245);
+    --secondary: oklch(0.285 0.022 242);
+    --primary: oklch(0.903 0.2 120);
+    --primary-foreground: oklch(0.195 0.016 262);
+    --accent: oklch(0.33 0.025 244);
+    --muted-foreground: oklch(0.69 0.017 250);
+    --border: oklch(0.35 0.02 245);
+    --input: oklch(0.38 0.02 245);
+    --destructive: oklch(0.73 0.17 28);
+    --font-sans: 'Manrope', sans-serif;
+    --font-display: 'Barlow Condensed', sans-serif;
+
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.65;
+    min-height: 100vh;
+}
+.ccreg * {
+    border-color: var(--border);
+    letter-spacing: 0;
+}
+.ccreg ::selection {
+    background: var(--primary);
+    color: var(--primary-foreground);
+}
+.ccreg button,
+.ccreg a,
+.ccreg input,
+.ccreg select,
+.ccreg textarea {
+    outline-color: var(--primary);
+}
+.ccreg h1,
+.ccreg h2,
+.ccreg h3,
+.ccreg p {
+    margin: 0;
+}
+.ccreg h1,
+.ccreg h2,
+.ccreg .display {
+    font-family: var(--font-display);
+    font-weight: 700;
+    line-height: 1;
+}
+.ccreg input,
+.ccreg select,
+.ccreg textarea {
+    color: var(--foreground);
+    font-family: var(--font-sans);
+}
+.ccreg a {
+    text-decoration: none;
+}
+
+.ccreg .section-kicker {
+    font-size: 9px;
+    color: var(--primary);
+    font-weight: 700;
+    letter-spacing: 0;
+    margin-bottom: 13px;
+    text-transform: uppercase;
+}
+
+.ccreg .registration-main {
+    max-width: 1050px;
+    margin: 0 auto;
+    padding: 26px 48px 80px;
+}
+.ccreg .back-link {
+    font-size: 11px;
+    color: var(--muted-foreground);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+.ccreg .back-link svg {
+    width: 14px;
+}
+.ccreg .registration-grid {
+    display: grid;
+    grid-template-columns: 230px minmax(0, 1fr);
+    gap: 65px;
+    margin-top: 35px;
+}
+.ccreg .flow-side {
+    position: sticky;
+    top: 30px;
+    align-self: start;
+}
+.ccreg .flow-side h2 {
+    font-size: 31px;
+    line-height: 1.05;
+    text-transform: uppercase;
+}
+.ccreg .flow-side > p {
+    font-size: 11px;
+    color: var(--muted-foreground);
+    margin-top: 12px;
+}
+.ccreg .step-nav {
+    margin-top: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+.ccreg .step-indicator {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    color: var(--muted-foreground);
+    font-size: 12px;
+}
+.ccreg .step-indicator.active {
+    color: var(--foreground);
+}
+.ccreg .step-circle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 27px;
+    height: 27px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+.ccreg .step-indicator.active .step-circle,
+.ccreg .step-indicator.complete .step-circle {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--primary-foreground);
+}
+.ccreg .side-event {
+    border-top: 1px solid var(--border);
+    margin-top: 29px;
+    padding-top: 20px;
+}
+.ccreg .side-event strong {
+    font-size: 12px;
+}
+.ccreg .side-event p {
+    margin-top: 6px;
+}
+.ccreg .side-fee {
+    font-family: var(--font-display);
+    font-size: 35px;
+    margin-top: 19px;
+}
+.ccreg .side-fee small {
+    font-family: var(--font-sans);
+    font-size: 10px;
+    color: var(--muted-foreground);
+    display: block;
+}
+
+.ccreg .form-header {
+    margin-bottom: 30px;
+}
+.ccreg .form-header .section-kicker {
+    margin-bottom: 9px;
+}
+.ccreg .form-header h1 {
+    font-size: 43px;
+    text-transform: uppercase;
+}
+.ccreg .form-header p {
+    font-size: 12px;
+    color: var(--muted-foreground);
+    margin-top: 12px;
+}
+.ccreg .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 22px 18px;
+}
+.ccreg .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.ccreg .field.full {
+    grid-column: 1 / -1;
+}
+.ccreg .field label,
+.ccreg .field-label {
+    font-size: 11px;
+    font-weight: 600;
+}
+.ccreg .required {
+    color: var(--primary);
+}
+.ccreg .optional {
+    font-weight: 400;
+    color: var(--muted-foreground);
+    font-size: 10px;
+}
+.ccreg .field input,
+.ccreg .field textarea {
+    height: 46px;
+    background: var(--card);
+    font-size: 12px;
+    border: none;
+    border-radius: 6px;
+    padding: 0 12px;
+    outline-color: var(--primary);
+}
+.ccreg .field textarea {
+    height: 95px;
+    padding-top: 12px;
+}
+.ccreg .field select {
+    height: 46px;
+    width: 100%;
+    border: 1px solid var(--input);
+    border-radius: 6px;
+    background: var(--card);
+    padding: 0 12px;
+    font-size: 12px;
+    outline-color: var(--primary);
+}
+.ccreg .field-error {
+    font-size: 10px;
+    color: var(--destructive);
+}
+.ccreg .field-help {
+    font-size: 10px;
+    color: var(--muted-foreground);
+}
+.ccreg .form-actions {
+    display: flex;
+    justify-content: space-between;
+    border-top: 1px solid var(--border);
+    padding-top: 22px;
+    margin-top: 32px;
+    gap: 12px;
+}
+.ccreg .form-actions .next {
+    margin-left: auto;
+}
+.ccreg .choice-group {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+.ccreg .choice-group label {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 45px;
+    padding: 10px 15px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+}
+.ccreg .choice-group label.checked {
+    border-color: var(--primary);
+    background: color-mix(in oklch, var(--primary) 5%, var(--card));
+}
+.ccreg .choice-group input,
+.ccreg .check-line input {
+    accent-color: var(--primary);
+    height: 16px;
+    width: 16px;
+    flex-shrink: 0;
+}
+.ccreg .choice-group.vertical {
+    flex-direction: column;
+}
+.ccreg .level-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.ccreg .level-options label {
+    font-size: 11px;
+    align-items: flex-start;
+}
+.ccreg .level-options input {
+    margin-top: 3px;
+}
+.ccreg .level-options small {
+    display: block;
+    color: var(--muted-foreground);
+    font-size: 10px;
+    font-weight: 400;
+    margin-top: 3px;
+}
+.ccreg .upload-area {
+    border: 1px dashed var(--input);
+    border-radius: 6px;
+    background: var(--card);
+    display: flex;
+    align-items: center;
+    gap: 19px;
+    min-height: 118px;
+    padding: 18px;
+}
+.ccreg .upload-avatar {
+    height: 74px;
+    width: 74px;
+    border-radius: 4px;
+    background: var(--secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.ccreg .upload-avatar img {
+    height: 100%;
+    width: 100%;
+    object-fit: cover;
+}
+.ccreg .upload-avatar svg {
+    color: var(--muted-foreground);
+}
+.ccreg .upload-info p {
+    font-size: 10px;
+    color: var(--muted-foreground);
+    margin-top: 6px;
+}
+.ccreg .check-line {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 11px;
+    color: var(--muted-foreground);
+    line-height: 1.8;
+}
+.ccreg .check-line input {
+    margin-top: 4px;
+}
+.ccreg .terms-list {
+    display: flex;
+    flex-direction: column;
+    gap: 19px;
+    margin: 24px 0 28px;
+}
+.ccreg .term-item h3 {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+.ccreg .term-item p {
+    font-size: 11px;
+    color: var(--muted-foreground);
+    line-height: 1.9;
+}
+.ccreg .consent-checks {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+}
+.ccreg .review-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 25px;
+}
+.ccreg .review-head img {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+.ccreg .review-head h3 {
+    font-size: 17px;
+    font-weight: 700;
+}
+.ccreg .review-head p {
+    font-size: 11px;
+    color: var(--muted-foreground);
+}
+.ccreg .review-lines {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 25px;
+}
+.ccreg .review-lines dt {
+    font-size: 10px;
+    color: var(--muted-foreground);
+}
+.ccreg .review-lines dd {
+    font-size: 12px;
+    margin: 3px 0 0;
+    overflow-wrap: anywhere;
+}
+.ccreg .checkout-total {
+    padding: 22px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.ccreg .checkout-total > strong {
+    font-family: var(--font-display);
+    font-size: 36px;
+}
+.ccreg .payment-note {
+    font-size: 11px;
+    color: var(--muted-foreground);
+    margin-top: 18px;
+}
+.ccreg .success-icon {
+    color: var(--primary);
+    width: 46px;
+    height: 46px;
+    margin-bottom: 23px;
+}
+.ccreg .payment-message {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 22px;
+    margin-top: 24px;
+    font-size: 12px;
+    line-height: 1.9;
+}
+.ccreg .payment-message a {
+    color: var(--primary);
+}
+.ccreg .mobile-step {
+    display: none;
+}
+
+@media (max-width: 950px) {
+    .ccreg .registration-grid {
+        gap: 35px;
+        grid-template-columns: 190px minmax(0, 1fr);
+    }
+    .ccreg .registration-main {
+        padding-left: 28px;
+        padding-right: 28px;
+    }
+}
+
+@media (max-width: 700px) {
+    .ccreg .field-grid {
+        gap: 19px 12px;
+    }
+    .ccreg .field {
+        grid-column: 1 / -1;
+    }
+    .ccreg .field.half {
+        grid-column: auto;
+    }
+    .ccreg .level-options {
+        grid-template-columns: 1fr;
+    }
+    .ccreg .upload-area {
+        padding: 14px;
+        gap: 14px;
+    }
+    .ccreg .upload-avatar {
+        width: 60px;
+        height: 60px;
+    }
+    .ccreg .review-lines {
+        gap: 18px 12px;
+    }
+    .ccreg .review-lines dd {
+        font-size: 11px;
+    }
+    .ccreg .form-header {
+        margin-bottom: 24px;
+    }
+    .ccreg .form-header h1 {
+        font-size: 38px;
+    }
+    .ccreg .registration-main {
+        padding: 20px 22px 50px;
+    }
+    .ccreg .registration-grid {
+        grid-template-columns: 1fr;
+        gap: 22px;
+        margin-top: 20px;
+    }
+    .ccreg .flow-side {
+        position: static;
+    }
+    .ccreg .flow-side h2,
+    .ccreg .flow-side > p,
+    .ccreg .side-event {
+        display: none;
+    }
+    .ccreg .step-nav {
+        margin: 0;
+        flex-direction: row;
+        justify-content: space-between;
+        gap: 7px;
+    }
+    .ccreg .step-indicator {
+        font-size: 10px;
+        gap: 6px;
+    }
+    .ccreg .step-indicator > span:last-child {
+        display: none;
+    }
+    .ccreg .step-indicator.active > span:last-child {
+        display: inline;
+    }
+    .ccreg .step-circle {
+        height: 24px;
+        width: 24px;
+    }
+}
+
+.ccreg .site-header-like {
+    height: 94px;
+    max-width: 1240px;
+    padding: 0 48px;
+    margin: auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+.ccreg .wordmark {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.15;
+    color: var(--foreground);
+    text-transform: uppercase;
+}
+.ccreg .brand-logo {
+    height: 46px;
+    width: auto;
+}
+.ccreg .header-right {
+    display: flex;
+    gap: 28px;
+    align-items: center;
+}
+.ccreg .header-caption {
+    color: var(--muted-foreground);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+.ccreg .view-event-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--foreground);
+}
+.ccreg .powered-by {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+.ccreg .powered-by-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.6px;
+    color: var(--muted-foreground);
+    text-transform: uppercase;
+    line-height: 1;
+}
+.ccreg .playpass-logo {
+    height: 19px;
+    width: 82px;
+}
+@media (max-width: 700px) {
+    .ccreg .powered-by {
+        gap: 3px;
+    }
+    .ccreg .playpass-logo {
+        height: 18px;
+    }
+    .ccreg .powered-by-label {
+        font-size: 7px;
+    }
+}
+
+.ccreg .back-btn,
+.ccreg .continue-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 44px;
+    padding: 0 28px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.ccreg .back-btn {
+    background: transparent;
+    color: var(--muted-foreground);
+    padding: 0 8px;
+}
+.ccreg .continue-btn {
+    background: var(--primary);
+    color: var(--primary-foreground);
+}
+.ccreg .continue-btn:disabled {
+    opacity: 0.6;
+}
+
+.ccreg .upload-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+.ccreg .upload-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+/* ---- Landing / hero page (event info screen, registrationProfile events) ---- */
+
+.ccreg .page-width {
+    max-width: 1144px;
+    margin: auto;
+}
+.ccreg .home-main {
+    padding: 0 48px;
+}
+.ccreg .event-hero {
+    position: relative;
+    min-height: 515px;
+    overflow: hidden;
+    background: var(--card);
+    border-radius: 6px;
+}
+.ccreg .hero-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 55%;
+}
+.ccreg .hero-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, oklch(0.15 0.015 250 / 0.96), oklch(0.15 0.015 250 / 0.6) 48%, oklch(0.15 0.015 250 / 0.05));
+}
+.ccreg .hero-overlay::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(0deg, oklch(0.15 0.015 250 / 0.66), transparent);
+}
+.ccreg .hero-content {
+    position: relative;
+    padding: 42px 48px 45px;
+    max-width: 650px;
+}
+.ccreg .eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: uppercase;
+}
+.ccreg .status-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--primary);
+    border-radius: 50%;
+    display: inline-block;
+}
+.ccreg .hero-content h1 {
+    font-size: 78px;
+    margin: 23px 0 18px;
+    text-transform: uppercase;
+}
+.ccreg .hero-content h1 span {
+    color: var(--primary);
+}
+.ccreg .hero-description {
+    color: var(--foreground);
+    opacity: 0.85;
+    max-width: 385px;
+    font-size: 14px;
+    line-height: 1.8;
+}
+.ccreg .sport-tags {
+    display: flex;
+    gap: 8px;
+    margin-top: 21px;
+}
+.ccreg .sport-tag {
+    border: 1px solid color-mix(in oklch, var(--foreground) 35%, transparent);
+    border-radius: 3px;
+    padding: 4px 11px;
+    display: flex;
+    gap: 7px;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 700;
+}
+.ccreg .hero-cta {
+    margin-top: 29px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+.ccreg .hero-cta small {
+    font-size: 10px;
+    color: var(--muted-foreground);
+    max-width: 120px;
+    line-height: 1.6;
+}
+.ccreg .hero-corner {
+    position: absolute;
+    right: 26px;
+    bottom: 24px;
+    font-size: 10px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+.ccreg .info-strip {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr 1.2fr;
+    border-bottom: 1px solid var(--border);
+    padding: 29px 0 30px;
+}
+.ccreg .info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 0 22px;
+    border-right: 1px solid var(--border);
+}
+.ccreg .info-item:first-child {
+    padding-left: 0;
+}
+.ccreg .info-item:last-child {
+    border: 0;
+    padding-right: 0;
+}
+.ccreg .info-item svg {
+    width: 19px;
+    height: 19px;
+    color: var(--primary);
+    margin-top: 3px;
+}
+.ccreg .info-item label {
+    font-size: 9px;
+    letter-spacing: 0;
+    color: var(--muted-foreground);
+    display: block;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+.ccreg .info-item strong {
+    font-size: 12px;
+    font-weight: 600;
+    display: block;
+}
+.ccreg .info-item small {
+    font-size: 10px;
+    color: var(--muted-foreground);
+}
+.ccreg .content-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 340px;
+    gap: 64px;
+    padding: 49px 0 60px;
+}
+.ccreg .section-title {
+    font-size: 38px;
+    text-transform: uppercase;
+}
+.ccreg .section-copy {
+    color: var(--muted-foreground);
+    font-size: 12px;
+    margin-top: 15px;
+    max-width: 520px;
+    line-height: 1.9;
+}
+.ccreg .steps {
+    margin: 28px 0 31px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+}
+.ccreg .process-number {
+    font-family: var(--font-display);
+    font-size: 26px;
+    color: var(--primary);
+    border-top: 1px solid var(--border);
+    padding-top: 15px;
+}
+.ccreg .process-step h3 {
+    font-size: 12px;
+    font-weight: 700;
+    margin: 7px 0;
+}
+.ccreg .process-step p {
+    font-size: 11px;
+    color: var(--muted-foreground);
+    line-height: 1.8;
+}
+.ccreg .welcome-note {
+    display: flex;
+    gap: 13px;
+    align-items: flex-start;
+    border-top: 1px solid var(--border);
+    padding-top: 23px;
+}
+.ccreg .welcome-note svg {
+    color: var(--primary);
+    flex-shrink: 0;
+    width: 20px;
+    margin-top: 3px;
+}
+.ccreg .welcome-note h3 {
+    font-size: 12px;
+    font-weight: 700;
+}
+.ccreg .welcome-note p {
+    font-size: 11px;
+    color: var(--muted-foreground);
+    line-height: 1.8;
+    margin-top: 5px;
+}
+.ccreg .fee-panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 26px;
+    align-self: start;
+    box-shadow: 0 12px 40px oklch(0.1 0.01 250 / 0.2);
+}
+.ccreg .fee-eyebrow {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0;
+    color: var(--primary);
+}
+.ccreg .fee-price {
+    font-family: var(--font-display);
+    font-size: 49px;
+    font-weight: 600;
+    margin: 12px 0 0;
+    line-height: 1.2;
+}
+.ccreg .fee-label {
+    font-size: 10px;
+    color: var(--muted-foreground);
+}
+.ccreg .fee-divider {
+    border-top: 1px solid var(--border);
+    margin: 21px 0;
+}
+.ccreg .fee-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    gap: 10px;
+}
+.ccreg .fee-line strong {
+    color: var(--primary);
+}
+.ccreg .fee-detail {
+    font-size: 11px;
+    color: var(--muted-foreground);
+    line-height: 1.8;
+    margin-top: 12px;
+}
+.ccreg .fee-refund {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 20px 0;
+    color: var(--primary);
+    font-size: 10px;
+    line-height: 1.7;
+}
+.ccreg .fee-refund svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+.ccreg .full-cta {
+    width: 100%;
+}
+.ccreg .fee-footer {
+    text-align: center;
+    font-size: 9px;
+    color: var(--muted-foreground);
+    margin-top: 11px;
+}
+.ccreg .important-section {
+    border-top: 1px solid var(--border);
+    padding: 28px 0 36px;
+}
+.ccreg .important-heading {
+    display: flex;
+    gap: 9px;
+    align-items: center;
+    font-size: 10px;
+    font-weight: 700;
+    margin-bottom: 16px;
+}
+.ccreg .important-heading svg {
+    color: var(--warm, oklch(0.77 0.12 53));
+    width: 15px;
+    height: 15px;
+}
+.ccreg .important-list {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 11px 40px;
+    color: var(--muted-foreground);
+    font-size: 10px;
+    line-height: 1.8;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.ccreg .important-list li {
+    padding-left: 12px;
+    position: relative;
+}
+.ccreg .important-list li::before {
+    content: '•';
+    position: absolute;
+    left: 0;
+    color: var(--muted-foreground);
+}
+.ccreg .site-footer {
+    border-top: 1px solid var(--border);
+    padding: 24px 0 35px;
+    display: flex;
+    justify-content: space-between;
+    gap: 20px;
+    color: var(--muted-foreground);
+    font-size: 10px;
+}
+.ccreg .footer-links {
+    display: flex;
+    gap: 24px;
+}
+.ccreg .footer-links a {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--foreground);
+}
+.ccreg .footer-links svg {
+    height: 13px;
+    width: 13px;
+}
+
+@media (min-width: 1500px) {
+    .ccreg .event-hero {
+        min-height: 540px;
+    }
+    .ccreg .hero-content {
+        padding-top: 52px;
+    }
+}
+@media (max-width: 950px) {
+    .ccreg .content-grid {
+        gap: 30px;
+        grid-template-columns: minmax(0, 1fr) 300px;
+    }
+    .ccreg .site-header-like,
+    .ccreg .home-main {
+        padding-left: 28px;
+        padding-right: 28px;
+    }
+    .ccreg .info-item {
+        padding: 0 12px;
+    }
+    .ccreg .info-item strong {
+        font-size: 11px;
+    }
+    .ccreg .hero-content {
+        padding-left: 34px;
+    }
+    .ccreg .hero-content h1 {
+        font-size: 68px;
+    }
+}
+@media (max-width: 700px) {
+    .ccreg .site-header-like {
+        height: 78px;
+        padding: 0 20px;
+    }
+    .ccreg .wordmark {
+        font-size: 11px;
+        gap: 8px;
+    }
+    .ccreg .brand-logo {
+        height: 32px;
+    }
+    .ccreg .header-caption {
+        display: none;
+    }
+    .ccreg .header-right {
+        gap: 0;
+    }
+    .ccreg .home-main {
+        padding: 0 16px;
+    }
+    .ccreg .event-hero {
+        min-height: 510px;
+    }
+    .ccreg .hero-photo {
+        object-position: 58% center;
+    }
+    .ccreg .hero-content {
+        padding: 30px 24px;
+    }
+    .ccreg .hero-content h1 {
+        font-size: 60px;
+        margin-top: 27px;
+    }
+    .ccreg .hero-description {
+        max-width: 265px;
+        font-size: 12px;
+    }
+    .ccreg .eyebrow {
+        font-size: 8px;
+    }
+    .ccreg .hero-cta {
+        gap: 12px;
+        flex-wrap: wrap;
+    }
+    .ccreg .hero-cta small {
+        max-width: 100px;
+        font-size: 9px;
+    }
+    .ccreg .hero-corner {
+        bottom: 17px;
+        right: 20px;
+        font-size: 9px;
+    }
+    .ccreg .info-strip {
+        grid-template-columns: 1fr 1fr;
+        gap: 23px 0;
+        padding: 25px 8px;
+    }
+    .ccreg .info-item {
+        padding: 0 10px;
+    }
+    .ccreg .info-item:nth-child(2) {
+        border: 0;
+    }
+    .ccreg .info-item:nth-child(3) {
+        padding-left: 0;
+    }
+    .ccreg .info-item label {
+        font-size: 8px;
+    }
+    .ccreg .info-item strong {
+        font-size: 11px;
+    }
+    .ccreg .info-item svg {
+        width: 16px;
+        height: 16px;
+    }
+    .ccreg .content-grid {
+        grid-template-columns: 1fr;
+        gap: 30px;
+        padding: 34px 8px;
+    }
+    .ccreg .section-title {
+        font-size: 34px;
+    }
+    .ccreg .steps {
+        gap: 16px;
+    }
+    .ccreg .process-step p {
+        font-size: 10px;
+    }
+    .ccreg .fee-panel {
+        padding: 25px;
+    }
+    .ccreg .important-section {
+        padding: 26px 8px;
+    }
+    .ccreg .important-list {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    .ccreg .site-footer {
+        margin: 0 8px;
+        flex-direction: column;
+        padding: 21px 0 28px;
+        gap: 13px;
+    }
+    .ccreg .footer-links {
+        gap: 19px;
+    }
+}
+
+/* ---- Host preview (read-only player list + metrics, shared link) ---- */
+
+.ccreg .hosts-main {
+    max-width: 1240px;
+    margin: auto;
+    padding: 10px 48px 0;
+}
+.ccreg .host-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.ccreg .host-demo-tag {
+    font-size: 9px;
+    color: var(--primary);
+    border: 1px solid var(--border);
+    padding: 4px 9px;
+    border-radius: 4px;
+}
+.ccreg .host-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 20px;
+    margin: 27px 0 30px;
+}
+.ccreg .host-heading h1 {
+    font-size: 48px;
+}
+.ccreg .host-heading .section-kicker {
+    margin-bottom: 9px;
+}
+.ccreg .host-event-dates {
+    font-size: 12px;
+    text-align: right;
+}
+.ccreg .host-event-dates span {
+    display: block;
+    color: var(--muted-foreground);
+    font-size: 11px;
+}
+.ccreg .host-metrics {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    padding: 24px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+}
+.ccreg .host-metrics > div {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    border-right: 1px solid var(--border);
+    padding: 0 24px;
+}
+.ccreg .host-metrics > div:first-child {
+    padding-left: 0;
+}
+.ccreg .host-metrics > div:last-child {
+    border: 0;
+}
+.ccreg .host-metrics svg {
+    width: 19px;
+    height: 19px;
+    color: var(--muted-foreground);
+    margin-top: 3px;
+}
+.ccreg .host-metrics > div:nth-child(2) svg {
+    color: var(--primary);
+}
+.ccreg .host-metrics > div > span {
+    font-size: 11px;
+    color: var(--muted-foreground);
+}
+.ccreg .host-metrics strong {
+    display: block;
+    font-size: 28px;
+    color: var(--foreground);
+    font-weight: 600;
+    line-height: 1.5;
+}
+.ccreg .host-metrics strong small {
+    font-size: 10px;
+    font-weight: 400;
+    color: var(--muted-foreground);
+}
+.ccreg .host-metric-icon {
+    font-size: 20px !important;
+    line-height: 1.2;
+}
+.ccreg .host-list-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+}
+.ccreg .host-list-heading h2 {
+    font-family: var(--font-sans);
+    font-size: 18px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+.ccreg .host-list-heading h2 span {
+    font-size: 10px;
+    color: var(--muted-foreground);
+    background: var(--secondary);
+    padding: 5px 7px;
+    border-radius: 4px;
+}
+.ccreg .host-toolbar {
+    display: flex;
+    gap: 16px;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.ccreg .host-search {
+    position: relative;
+    width: 340px;
+    max-width: 100%;
+}
+.ccreg .host-search > svg {
+    position: absolute;
+    left: 12px;
+    top: 12px;
+    color: var(--muted-foreground);
+}
+.ccreg .host-search input {
+    padding-left: 36px;
+    height: 40px;
+    font-size: 12px;
+    background: var(--card);
+    width: 100%;
+    border-radius: 6px;
+}
+.ccreg .host-sort {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--muted-foreground);
+}
+.ccreg .host-filters {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.ccreg .host-filter {
+    width: 165px;
+    flex-shrink: 0;
+}
+.ccreg .host-filter-label {
+    display: block;
+    font-size: 10px;
+    color: var(--muted-foreground);
+    margin-bottom: 5px;
+}
+.ccreg .host-filter select {
+    background: var(--card);
+    font-size: 11px;
+    height: 36px;
+    width: 100%;
+    border: 1px solid var(--input);
+    border-radius: 6px;
+    padding: 0 10px;
+}
+.ccreg .host-filter-icon {
+    color: var(--muted-foreground);
+    margin-top: 19px;
+    flex-shrink: 0;
+}
+.ccreg .host-reset {
+    margin-top: 19px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted-foreground);
+}
+.ccreg .host-result-count {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--muted-foreground);
+    align-self: flex-end;
+    padding-bottom: 9px;
+    white-space: nowrap;
+}
+.ccreg .host-table-scroll {
+    overflow-x: auto;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+.ccreg .host-table {
+    border-collapse: collapse;
+    text-align: left;
+    width: 100%;
+    min-width: 980px;
+}
+.ccreg .host-table th {
+    font-weight: 500;
+    font-size: 10px;
+    color: var(--muted-foreground);
+    background: var(--card);
+    padding: 13px 16px;
+    white-space: nowrap;
+}
+.ccreg .host-table th > span {
+    font-size: 9px;
+}
+.ccreg .host-table td {
+    font-size: 11px;
+    padding: 15px 16px;
+    border-top: 1px solid var(--border);
+    white-space: nowrap;
+}
+.ccreg .host-table td:first-child,
+.ccreg .host-table th:first-child {
+    padding-left: 14px;
+}
+.ccreg .host-table tbody tr:hover {
+    background: var(--card);
+}
+.ccreg .host-player {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+.ccreg .host-avatar {
+    height: 36px;
+    width: 36px;
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    background: var(--secondary);
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted-foreground);
+}
+.ccreg .host-player strong {
+    display: block;
+    font-weight: 600;
+    font-size: 12px;
+}
+.ccreg .host-player div > span {
+    display: block;
+    color: var(--muted-foreground);
+    font-size: 10px;
+}
+.ccreg .host-player small {
+    color: var(--muted-foreground);
+    font-size: 9px;
+}
+.ccreg .host-sport {
+    font-size: 10px;
+    padding: 4px 7px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+}
+.ccreg .host-sport-both {
+    color: var(--primary);
+    border-color: color-mix(in oklch, var(--primary) 25%, var(--border));
+}
+.ccreg .host-levels {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+.ccreg .host-levels small {
+    font-size: 8px;
+    color: var(--muted-foreground);
+    display: inline-block;
+    width: 20px;
+}
+.ccreg .host-registered small {
+    display: block;
+    font-size: 9px;
+    color: var(--muted-foreground);
+}
+.ccreg .host-empty {
+    text-align: center;
+    padding: 50px 20px;
+    color: var(--muted-foreground);
+}
+.ccreg .host-empty svg {
+    margin: 0 auto 12px;
+}
+.ccreg .host-empty h3 {
+    font-size: 14px;
+}
+.ccreg .host-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 0 32px;
+    color: var(--muted-foreground);
+    font-size: 11px;
+}
+.ccreg .host-pagination > div {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+.ccreg .host-pagination button {
+    height: 30px;
+    width: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--foreground);
+}
+.ccreg .host-pagination button:disabled {
+    opacity: 0.4;
+}
+.ccreg .host-pagination > div > span {
+    min-width: 70px;
+    text-align: center;
+}
+
+@media (max-width: 700px) {
+    .ccreg .hosts-main {
+        padding: 8px 20px 0;
+    }
+    .ccreg .host-heading {
+        margin: 22px 0;
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 12px;
+    }
+    .ccreg .host-heading h1 {
+        font-size: 36px;
+    }
+    .ccreg .host-event-dates {
+        text-align: left;
+        font-size: 10px;
+    }
+    .ccreg .host-metrics {
+        grid-template-columns: 1fr;
+        row-gap: 20px;
+        padding: 20px 0;
+        margin-bottom: 26px;
+    }
+    .ccreg .host-metrics > div {
+        padding: 0 12px;
+        gap: 10px;
+    }
+    .ccreg .host-metrics > div:nth-child(2) {
+        border: 0;
+    }
+    .ccreg .host-metrics strong {
+        font-size: 24px;
+    }
+    .ccreg .host-search {
+        width: 100%;
+    }
+    .ccreg .host-filters {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+    .ccreg .host-filter {
+        width: 100%;
+    }
+    .ccreg .host-filter-icon {
+        display: none;
+    }
+    .ccreg .host-result-count {
+        margin: 0;
+    }
+    .ccreg .host-reset {
+        margin: 0;
+    }
+    .ccreg .host-table th:first-child,
+    .ccreg .host-table td:first-child {
+        position: sticky;
+        left: 0;
+        background: var(--background);
+        border-right: 1px solid var(--border);
+    }
+    .ccreg .host-table th:first-child {
+        background: var(--card);
+    }
+    .ccreg .host-avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 9px;
+    }
+}

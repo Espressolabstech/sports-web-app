@@ -27,7 +27,6 @@ export default function HostLiveView({ event, table }: { event: TournamentEvent;
     const kingMode = event.scheduleMode === 'KING_OF_COURT';
     const mexicano = event.format.toLowerCase().includes('mexicano');
     const rows = table as StandingRow[];
-    const done = event.matches.filter((m) => m.state === 'completed').length;
 
     return (
         <div className="space-y-4">
@@ -48,24 +47,6 @@ export default function HostLiveView({ event, table }: { event: TournamentEvent;
                 </span>
             </div>
 
-            {liveTab === 'matches' && !kingMode && (
-                <>
-                    <div>
-                        <p className="text-[12px]" style={onInkMuted}>
-                            {done} of {event.matches.length} matches complete
-                        </p>
-                        <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full" style={{ backgroundColor: 'hsl(var(--event-on-ink)/0.1)' }}>
-                            <div
-                                className="h-full rounded-full"
-                                style={{
-                                    width: `${event.matches.length ? (done / event.matches.length) * 100 : 0}%`,
-                                    backgroundColor: 'hsl(var(--event-accent))',
-                                }}
-                            />
-                        </div>
-                    </div>
-                </>
-            )}
 
             <div className="flex gap-1 rounded-2xl p-1" style={{ backgroundColor: 'hsl(var(--event-ink-soft))' }}>
                 {(['matches', 'standings'] as const).map((t) => (

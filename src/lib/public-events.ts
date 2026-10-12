@@ -5,6 +5,7 @@ import {
     getEventRegistrationByPhone,
     registerForEvent as apiRegisterForEvent,
     confirmEventPayment as apiConfirmEventPayment,
+    getRegistrationPhotoUploadUrl,
 } from '../api/adapters/events';
 
 export type EventSkill = 'Beginner' | 'Intermediate' | 'Advance';
@@ -79,6 +80,10 @@ export interface TournamentEvent {
     finalRound: number | null;
     /** King of the Court has no rounds, byes or Standard round plan. */
     scheduleMode?: 'STANDARD' | 'NON_STOP' | 'KING_OF_COURT';
+    /** Multi-day events only: the last day of play, inclusive. Null means a single-day event. */
+    endDate: Date | null;
+    /** This event collects a full player profile (photo, level, city, consent, etc.) at registration. */
+    registrationProfile: boolean;
     roster: RosterPlayer[];
     matches: EventMatch[];
     mexicanoRounds: MexicanoRound[];
@@ -179,6 +184,8 @@ const mapEvent = (e: ApiEvent): TournamentEvent => {
         slotMinutes: e.slotMinutes ?? null,
         finalRound: e.finalRound ?? null,
         scheduleMode: e.scheduleMode,
+        endDate: e.eventEndDate ? new Date(String(e.eventEndDate).slice(0, 10)) : null,
+        registrationProfile: Boolean(e.registrationProfile),
         roster: e.entrants.map((p) => ({
             id: p.id,
             name: p.name,
@@ -342,6 +349,7 @@ export async function submitRegistration(
     slug: string,
     data: { name: string; phone: string; skill: EventSkill },
     friend?: { name: string; phone: string },
+    detailed?: DetailedRegistrationFields,
 ): Promise<{
     registration: EventRegistration | null;
     razorpay: ApiEventRazorpayOrder | null;
@@ -351,6 +359,7 @@ export async function submitRegistration(
         phone: data.phone,
         skill: SKILL_TO_API[data.skill],
         friend,
+        ...detailed,
     });
 
     if (!res.data.entrant) {
@@ -390,12 +399,14 @@ export async function confirmPayment(
         razorpaySignature: string;
     },
     friend?: { name: string; phone: string },
+    detailed?: DetailedRegistrationFields,
 ): Promise<EventRegistration> {
     const res = await apiConfirmEventPayment(slug, {
         name: data.name,
         phone: data.phone,
         skill: SKILL_TO_API[data.skill],
         friend,
+        ...detailed,
         ...payment,
     });
 
@@ -418,6 +429,24 @@ export async function confirmPayment(
                   }
                 : undefined,
     };
+}
+
+/**
+ * Detailed registration only. Uploads the player's profile photo straight
+ * to storage (presigned URL, no login) and returns the public URL to send
+ * along with the rest of the registration.
+ */
+export async function uploadRegistrationPhoto(slug: string, file: Blob): Promise<string> {
+    const mimetype = file.type || 'image/jpeg';
+    const { data } = await getRegistrationPhotoUploadUrl(slug, mimetype);
+
+    await fetch(data.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': mimetype },
+        body: file,
+    });
+
+    return data.publicUrl;
 }
 
 /**

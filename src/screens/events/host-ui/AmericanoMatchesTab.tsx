@@ -2,7 +2,7 @@
 // the bench, a round-by-round game-progress grid, an "all matchups"
 // archive, and a tap-to-score pad. Replaces the old separate Scoring and
 // Schedule tabs with one integrated view.
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, useState } from 'react';
 import { ArrowRight, X } from 'lucide-react';
 import { nameOf, MATCH_POINTS, type OrganizerEvent, type OrganizerMatch } from './types';
 import { courtColor } from './types';
@@ -180,8 +180,6 @@ export default function AmericanoMatchesTab({
     onScore?: (match: OrganizerMatch, a: number, b: number, golden?: 'A' | 'B') => void;
 }) {
     const [sheet, setSheet] = useState<{ match: OrganizerMatch; round: number } | null>(null);
-    const [roundFilter, setRoundFilter] = useState<number | null>(null);
-    const [roundsOpen, setRoundsOpen] = useState(false);
     // King of the Court has no rounds: every game is one list, in play order.
     const kingMode = event.scheduleMode === 'KING_OF_COURT';
 
@@ -247,12 +245,6 @@ export default function AmericanoMatchesTab({
     const activePlayers = new Set(activeEntries.flatMap(({ match }) => [...match.teamA, ...match.teamB]));
     const activeResting = event.entrants.filter((e) => e.checkedIn && !e.waitlisted && !activePlayers.has(e.id));
 
-    const currentRound =
-        rounds.find((r) => r.matches.some((m) => m.state === 'active'))?.round ??
-        rounds.find((r) => r.matches.some((m) => m.state === 'queued'))?.round ??
-        rounds[rounds.length - 1]?.round;
-    const selectedRound = rounds.find((r) => r.round === (roundFilter ?? currentRound)) ?? rounds[0];
-
     const matchCard = ({ match, round }: { match: OrganizerMatch; round: number }, label: string) => {
         const [playerA1, playerA2] = teamNames(event, match.teamA);
         const [playerB1, playerB2] = teamNames(event, match.teamB);
@@ -262,10 +254,7 @@ export default function AmericanoMatchesTab({
             <button
                 key={`${round}-${match.court}-${match.queueIndex}`}
                 type="button"
-                onClick={() => {
-                    setRoundsOpen(false);
-                    setSheet({ match, round });
-                }}
+                onClick={() => setSheet({ match, round })}
                 aria-label={`${active ? 'Score' : completed ? 'View score for' : 'View'} Court ${match.court}, game ${matchNumbers.get(match.queueIndex)}, round ${round}`}
                 className="flex h-auto w-full min-w-0 flex-col overflow-hidden rounded-2xl border p-0 text-left"
                 style={{
@@ -312,8 +301,6 @@ export default function AmericanoMatchesTab({
             </button>
         );
     };
-
-    const liveRound = rounds.find((r) => r.matches.some((m) => m.state === 'active'))?.round ?? null;
 
     if (rounds.length === 0) {
         return (
@@ -369,7 +356,7 @@ export default function AmericanoMatchesTab({
                         </p>
                     </div>
                 )}
-                {kingMode && progress.total > 0 && (
+                {progress.total > 0 && (
                     <div
                         className="flex items-center justify-between rounded-2xl border px-3.5 py-3"
                         style={{ borderColor: 'hsl(var(--event-on-ink)/0.09)', backgroundColor: 'hsl(var(--event-on-ink)/0.03)' }}
@@ -382,160 +369,7 @@ export default function AmericanoMatchesTab({
                         </p>
                     </div>
                 )}
-                {!kingMode && progress.total > 0 && (
-                    <div
-                        className="rounded-2xl border px-3.5 py-3"
-                        style={{ borderColor: 'hsl(var(--event-on-ink)/0.09)', backgroundColor: 'hsl(var(--event-on-ink)/0.03)' }}
-                    >
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
-                                <p className="text-[11px] font-bold uppercase tracking-[0.08em]" style={onInkMuted}>
-                                    Game progress
-                                </p>
-                                <p
-                                    className="text-[11px] font-semibold tabular-nums"
-                                    style={onInk}
-                                    aria-label={`${progress.complete} of ${progress.total} games completed`}
-                                >
-                                    {progress.complete} of {progress.total}
-                                </p>
-                            </div>
-                            {liveRound !== null && (
-                                <span className="flex items-center gap-1" aria-label="Games in progress">
-                                    <span className="relative flex h-1.5 w-1.5">
-                                        <span
-                                            className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-60"
-                                            style={{ backgroundColor: 'hsl(var(--event-accent))' }}
-                                        />
-                                        <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ backgroundColor: 'hsl(var(--event-accent))' }} />
-                                    </span>
-                                    <span className="text-[10px] font-bold uppercase tracking-[0.1em]" style={{ color: 'hsl(var(--event-accent))' }}>
-                                        Live
-                                    </span>
-                                </span>
-                            )}
-                        </div>
-                        {!kingMode && (<>
-                        <div className="mt-3 flex items-start justify-between gap-2 overflow-x-auto" aria-label="Games by round">
-                            {rounds.map((round) => {
-                                const live = round.matches.some((m) => m.state === 'active');
-                                return (
-                                    <div
-                                        key={round.round}
-                                        className="flex w-8 shrink-0 flex-col items-center gap-1.5"
-                                        aria-label={`Round ${round.round}: ${round.matches.filter((m) => m.state === 'completed').length} of ${round.matches.length} games played${live ? ', live' : ''}`}
-                                    >
-                                        <span aria-hidden="true" className="grid min-h-5 w-5 grid-cols-2 content-center justify-items-center gap-1">
-                                            {round.matches.map((m, index) => (
-                                                <span
-                                                    key={index}
-                                                    className={cn(
-                                                        'h-2 w-2 rounded-full transition-colors',
-                                                        round.matches.length === 3 && index === 0 && 'col-span-2',
-                                                        round.matches.length === 1 && 'col-span-2',
-                                                    )}
-                                                    style={
-                                                        m.state === 'completed'
-                                                            ? { backgroundColor: 'hsl(var(--event-success))' }
-                                                            : m.state === 'active'
-                                                              ? { backgroundColor: 'hsl(var(--event-accent))', boxShadow: '0 0 0 3px hsl(var(--event-accent)/0.2)' }
-                                                              : { backgroundColor: 'hsl(var(--event-on-ink)/0.15)' }
-                                                    }
-                                                />
-                                            ))}
-                                        </span>
-                                        <span className="text-[10px] font-bold tabular-nums" style={live ? { color: 'hsl(var(--event-accent))' } : onInkMuted}>
-                                            R{round.round}
-                                        </span>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                        <button
-                            type="button"
-                            className="mt-3 flex h-10 w-full items-center justify-between border-t px-0 pt-2 text-[13px] font-semibold"
-                            style={{ borderColor: 'hsl(var(--event-on-ink)/0.09)', ...onInk }}
-                            onClick={() => {
-                                setRoundFilter(null);
-                                setRoundsOpen(true);
-                            }}
-                        >
-                            All matchups
-                            <ArrowRight className="h-4 w-4" style={onInkMuted} aria-hidden="true" />
-                        </button>
-                        </>)}
-                    </div>
-                )}
             </section>
-
-            {roundsOpen && selectedRound && (
-                <div
-                    className="fixed inset-0 z-[55] flex items-end justify-center"
-                    style={{ backgroundColor: 'hsl(var(--event-ink)/0.7)' }}
-                    onClick={() => setRoundsOpen(false)}
-                >
-                    <div
-                        className="mx-auto flex max-h-[88dvh] w-full max-w-lg flex-col rounded-t-[28px]"
-                        style={{ backgroundColor: 'hsl(var(--event-ink-soft))' }}
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <div className="shrink-0 border-b px-4 pb-3 pt-5" style={bandBorder}>
-                            <p className="text-[15px] font-semibold" style={onInk}>
-                                All matchups
-                            </p>
-                            <div className="mt-3.5 flex gap-2 overflow-x-auto pb-1">
-                                {rounds.map((round) => {
-                                    const selected = round.round === selectedRound.round;
-                                    const done = round.matches.every((m) => m.state === 'completed');
-                                    const live = round.matches.some((m) => m.state === 'active');
-                                    const chipStyle: CSSProperties = selected
-                                        ? { backgroundColor: 'hsl(var(--event-accent))', color: 'hsl(var(--event-accent-foreground))' }
-                                        : done
-                                          ? { backgroundColor: 'hsl(var(--event-on-ink)/0.04)', color: 'hsl(var(--event-on-ink-muted))', opacity: 0.6 }
-                                          : live
-                                            ? { backgroundColor: 'hsl(var(--event-on-ink)/0.06)', color: 'hsl(var(--event-on-ink))', border: '1.5px solid hsl(var(--event-open))' }
-                                            : { backgroundColor: 'hsl(var(--event-on-ink)/0.06)', color: 'hsl(var(--event-on-ink))' };
-                                    return (
-                                        <button
-                                            key={round.round}
-                                            onClick={() => setRoundFilter(round.round)}
-                                            className="flex h-12 min-w-14 shrink-0 flex-col items-center justify-center gap-0 rounded-xl px-3 py-1.5"
-                                            style={chipStyle}
-                                        >
-                                            <span className="text-[12px] font-bold">R{round.round}</span>
-                                            <span className="text-[9px] font-medium">{done ? 'Played' : live ? 'Live' : 'Next'}</span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                        <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] pt-4">
-                            <p className="mb-3 text-[12px] font-semibold" style={onInkMuted}>
-                                Round {selectedRound.round} · {selectedRound.matches.filter((m) => m.state === 'completed').length} of{' '}
-                                {selectedRound.matches.length} games played
-                            </p>
-                            <div className="grid grid-cols-2 gap-2.5">
-                                {selectedRound.matches.map((match) => matchCard({ match, round: selectedRound.round }, `Court ${match.court}`))}
-                            </div>
-                            <div className="mt-5 border-t pt-4" style={bandBorder}>
-                                <p className="text-[12px] font-bold" style={onInk}>
-                                    On bench · Round {selectedRound.round}
-                                </p>
-                                <p className="mt-1 text-[12px] leading-relaxed" style={onInkMuted}>
-                                    {selectedRound.resting.length ? selectedRound.resting.map((id) => nameOf(event, id)).join(' · ') : 'No players on the bench'}
-                                </p>
-                                {selectedRound.resting.length > 0 && (
-                                    <p className="mt-1 text-[11px]" style={onInkMuted}>
-                                        {selectedRound.matches.every((m) => m.state === 'completed')
-                                            ? '12 bye points each'
-                                            : '12 bye points each after this round is scored'}
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
 
             {sheet && (
                 <ScorePad

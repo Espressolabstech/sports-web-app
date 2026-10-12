@@ -22,6 +22,7 @@ import {
     type EventRegistration,
 } from '../../lib/public-events';
 import { AnimatedLoader } from '../../components/AnimatedLoader';
+import EventLandingIdentical from './EventLandingIdentical';
 
 function MiniCountdown({ target }: { target: Date }) {
     const t = useCountdown(target);
@@ -40,8 +41,12 @@ function MiniCountdown({ target }: { target: Date }) {
     );
 }
 
-export default function EventLanding() {
-    const { slug } = useParams();
+export default function EventLanding({
+    slugOverride,
+    registerHref,
+}: { slugOverride?: string; registerHref?: string } = {}) {
+    const params = useParams();
+    const slug = slugOverride ?? params.slug;
     const navigate = useNavigate();
     const [reg, setReg] = useState<EventRegistration | null>(null);
     const [zoom, setZoom] = useState(false);
@@ -87,6 +92,13 @@ export default function EventLanding() {
                 </Link>
             </div>
         );
+    }
+
+    // Detailed-registration events get the dedicated hero/auction-style
+    // landing page end to end — the standard event landing never renders
+    // for them, so there's no old-UI route left to stumble into.
+    if (event.registrationProfile) {
+        return <EventLandingIdentical event={event} registerHref={registerHref} />;
     }
 
     const poster = event.posterUrl;

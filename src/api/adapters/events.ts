@@ -39,6 +39,17 @@ export const confirmEventPayment = async (
     });
 };
 
+export const getRegistrationPhotoUploadUrl = async (
+    slug: string,
+    mimetype: string,
+): Promise<ApiResponse<RegistrationPhotoUploadUrlData>> => {
+    return apiClient({
+        url: endpoints.registrationPhotoUploadUrl(slug),
+        method: 'POST',
+        data: { mimetype },
+    });
+};
+
 /** Looks up whether a phone number is already registered for this event — 404s if not. */
 export const getEventRegistrationByPhone = async (
     slug: string,
@@ -49,4 +60,11 @@ export const getEventRegistrationByPhone = async (
         method: 'GET',
         params: { phone },
     });
+};
+
+/** Read-only player list + metrics for a detailed-registration event — no login. */
+export const getHostPreview = async (
+    slug: string,
+): Promise<ApiResponse<ApiHostPreviewData>> => {
+    return apiClient({ url: endpoints.hostPreview(slug), method: 'GET' });
 };

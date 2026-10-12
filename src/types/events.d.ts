@@ -91,6 +91,10 @@ declare global {
         /** Americano only: the host's chosen last round ("Finish after this round"). */
         finalRound: number | null;
         scheduleMode?: 'STANDARD' | 'NON_STOP' | 'KING_OF_COURT';
+        /** Multi-day events only: the last day of play, inclusive. Null means a single-day event. */
+        eventEndDate: string | null;
+        /** Opt-in: this event collects a full player profile (photo, level, city, consent, etc.) at registration. */
+        registrationProfile: boolean;
         createdAt: string;
         updatedAt: string;
         entrants: ApiEventEntrant[];
@@ -130,7 +134,16 @@ declare global {
         phone: string;
     }
 
-    interface RegisterForEventBody {
+    /** Only sent for events with `registrationProfile` on; ignored otherwise. */
+    interface DetailedRegistrationFields {
+        email?: string;
+        photoUrl?: string;
+        consent?: boolean;
+        consentVersion?: string;
+        profile?: Record<string, unknown>;
+    }
+
+    interface RegisterForEventBody extends DetailedRegistrationFields {
         name: string;
         phone: string;
         skill?: ApiEventEntrant['skill'];
@@ -157,7 +170,7 @@ declare global {
         friendTicketCode: string | null;
     }
 
-    interface ConfirmEventPaymentBody {
+    interface ConfirmEventPaymentBody extends DetailedRegistrationFields {
         name: string;
         phone: string;
         skill?: ApiEventEntrant['skill'];
@@ -165,6 +178,11 @@ declare global {
         razorpayOrderId: string;
         razorpayPaymentId: string;
         razorpaySignature: string;
+    }
+
+    interface RegistrationPhotoUploadUrlData {
+        uploadUrl: string;
+        publicUrl: string;
     }
 
     interface ApiEventPaymentConfirmationData {
@@ -178,6 +196,34 @@ declare global {
     interface ApiEventRegistrationLookupData {
         entrant: ApiEventEntrant;
         ticketCode: string;
+    }
+
+    interface ApiHostPreviewPlayer {
+        id: string;
+        name: string;
+        email: string | null;
+        contact: string | null;
+        sports: string[];
+        padelLevel: string | null;
+        pickleballLevel: string | null;
+        interest: string | null;
+        dayAvailability: string[];
+        registeredAt: string;
+    }
+
+    interface ApiHostPreviewData {
+        event: {
+            title: string;
+            eventDate: string;
+            eventEndDate: string | null;
+            venueName: string;
+            priceInr: number;
+        };
+        metrics: {
+            totalPlayers: number;
+            collectedInr: number;
+        };
+        players: ApiHostPreviewPlayer[];
     }
 }
 

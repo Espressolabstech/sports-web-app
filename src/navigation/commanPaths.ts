@@ -18,6 +18,7 @@ export const path = {
     eventLive: '/events/:slug/live',
     eventPass: '/events/:slug/pass',
     eventHosts: '/events/:slug/hosts',
+    eventHostPreview: '/events/:slug/host-preview',
     eventRules: '/events/:slug/rules',
     eventPlayers: '/events/:slug/players',
     eventStandings: '/events/:slug/standings',

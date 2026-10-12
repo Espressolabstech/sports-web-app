@@ -6,6 +6,7 @@ export const endpoints = {
     resendOtp: '/resend-otp',
     updateName: '/user/update-name',
     venueApplication: '/venue-applications',
+    contactInterest: '/contact-interest',
 
     // Home / Venue Discovery
     venues: '/home/venues',
@@ -52,4 +53,6 @@ export const endpoints = {
     eventRegistrationLookup: (slug: string) => `/public/events/${slug}/registration`,
     registerForEvent: (slug: string) => `/public/events/${slug}/register`,
     confirmEventPayment: (slug: string) => `/public/events/${slug}/confirm-payment`,
+    registrationPhotoUploadUrl: (slug: string) => `/public/events/${slug}/registration-photo-upload-url`,
+    hostPreview: (slug: string) => `/public/events/${slug}/host-preview`,
 };

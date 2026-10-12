@@ -21,6 +21,7 @@ import EventRegister from '../screens/events/EventRegister';
 import EventLive from '../screens/events/EventLive';
 import EventPass from '../screens/events/EventPass';
 import EventHosts from '../screens/events/EventHosts';
+import EventHostPreview from '../screens/events/EventHostPreview';
 import EventSubPage from '../screens/events/EventSubPage';
 
 export const router = createBrowserRouter([
@@ -88,6 +89,37 @@ export const router = createBrowserRouter([
         path: path.eventRegister,
         element: <EventRegister />,
     },
+    // Dedicated vanity links for The Court Collective 2026 (one real event,
+    // slug hardcoded) — shareable without the generic /events/:slug shape.
+    // Landing page first; its own "Register as a player" button is what
+    // sends a visitor into the form, same as every other event.
+    {
+        path: '/the-court-collective',
+        element: (
+            <EventLanding
+                slugOverride="the-court-collective-2026-2026-10-31"
+                registerHref="/the-court-collective/registration"
+            />
+        ),
+    },
+    {
+        path: '/the-court-collective/registration',
+        element: <EventRegister slugOverride="the-court-collective-2026-2026-10-31" />,
+    },
+    // Every other generic /events/:slug/* page for this one event is locked
+    // — it only ever exists at its vanity URL — except host-preview, which
+    // stays reachable at its real-slug path (no vanity alias for it).
+    ...(
+        ['', '/register', '/live', '/pass', '/hosts', '/rules', '/players', '/standings'] as const
+    ).map((suffix) => ({
+        path: `/events/the-court-collective-2026-2026-10-31${suffix}`,
+        element: (
+            <Navigate
+                to={suffix === '/register' ? '/the-court-collective/registration' : '/the-court-collective'}
+                replace
+            />
+        ),
+    })),
     {
         path: path.eventLive,
         element: <EventLive />,
@@ -99,6 +131,10 @@ export const router = createBrowserRouter([
     {
         path: path.eventHosts,
         element: <EventHosts />,
+    },
+    {
+        path: path.eventHostPreview,
+        element: <EventHostPreview />,
     },
     {
         path: path.eventRules,

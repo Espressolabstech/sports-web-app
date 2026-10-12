@@ -26,3 +26,12 @@ export const updateUserName = async (
 export const submitVenueApplication = async (data: VenueApplicationBody) => {
     return apiClient({ url: endpoints.venueApplication, method: 'POST', data });
 };
+
+export const submitContactInterest = async (data: {
+    email: string;
+    source: string;
+    company?: string;
+    website?: string;
+}) => {
+    return apiClient({ url: endpoints.contactInterest, method: 'POST', data });
+};
