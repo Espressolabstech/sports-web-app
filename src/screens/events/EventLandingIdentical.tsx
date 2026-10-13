@@ -219,9 +219,6 @@ export default function EventLandingIdentical({
                     <footer className="site-footer">
                         <span>Copyright PlayPass</span>
                         <div className="footer-links">
-                            <Link to={`/events/${event.slug}/host-preview`}>
-                                Host preview <ArrowUpRight />
-                            </Link>
                             <a href="https://www.instagram.com/gameday.events/" target="_blank" rel="noreferrer">
                                 <Instagram /> @gameday.events <ArrowUpRight />
                             </a>
