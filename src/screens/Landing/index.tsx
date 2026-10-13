@@ -216,6 +216,7 @@ export default function Landing() {
                 <footer className="mt-14 flex flex-col gap-1 border-t border-primary-foreground/10 pt-6 md:mt-20">
                     <p className="text-xs text-primary-foreground/40">© {new Date().getFullYear()} PlayPass</p>
                     <p className="text-xs text-primary-foreground/40">Technology for the sports industry.</p>
+                    <p className="text-xs text-primary-foreground/40">PlayPass is a part of the Tower Overseas group.</p>
                 </footer>
             </div>
         </div>
