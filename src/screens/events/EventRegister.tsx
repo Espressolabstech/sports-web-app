@@ -604,7 +604,7 @@ export default function EventRegister({
             </header>
 
             <main className="registration-main">
-                <Link to={`/events/${event.slug}`} className="back-link">
+                <Link to={auctionOnly ? '/court-collective' : `/events/${event.slug}`} className="back-link">
                     <ArrowLeft /> Back to the event
                 </Link>
                 <div className="registration-grid">
@@ -702,7 +702,7 @@ export default function EventRegister({
                                     organisers will be in touch with updates.
                                 </p>
                                 <div className="mt-6 flex items-center justify-center gap-3">
-                                    <button onClick={() => navigate(`/events/${event.slug}`)} className="continue-btn">
+                                    <button onClick={() => navigate('/court-collective')} className="continue-btn">
                                         Back to the event <ArrowRight />
                                     </button>
                                 </div>
