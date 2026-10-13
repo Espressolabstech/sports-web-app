@@ -106,21 +106,16 @@ export const router = createBrowserRouter([
         path: '/the-court-collective/registration',
         element: <EventRegister slugOverride="the-court-collective-2026-2026-10-31" />,
     },
-    // Free player-auction entry — same landing page, but its own registration
-    // flow with no Razorpay/fee step, ending in a player entry card instead
-    // of a receipt.
+    // Temporary manual-UPI registration path — disabled now that the real
+    // Razorpay flow is live again. Redirects rather than 404s, in case the
+    // old link is still shared/bookmarked anywhere.
     {
         path: '/court-collective',
-        element: (
-            <EventLanding
-                slugOverride="the-court-collective-2026-2026-10-31"
-                registerHref="/court-collective/registration"
-            />
-        ),
+        element: <Navigate to="/the-court-collective" replace />,
     },
     {
         path: '/court-collective/registration',
-        element: <EventRegister slugOverride="the-court-collective-2026-2026-10-31" mode="auction-entry" />,
+        element: <Navigate to="/the-court-collective/registration" replace />,
     },
     // Every other generic /events/:slug/* page for this one event is locked
     // — it only ever exists at its vanity URL — except host-preview, which

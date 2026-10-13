@@ -286,7 +286,7 @@ export default function EventRegister({
 
     const validateAvailability = () => {
         const e: Record<string, string> = {};
-        if (multiDay && profile.dayAvailability.length === 0) e.dayAvailability = 'Select at least one day';
+        if (multiDay && profile.dayAvailability.length === 0) e.dayAvailability = 'Please confirm your availability';
         if (!profile.interest) e.interest = 'Choose one';
         return e;
     };
@@ -1016,31 +1016,26 @@ export default function EventRegister({
                                     {stepName === 'Availability' && (
                                         <div className="field-grid">
                                             <Field
-                                                label={multiDay ? 'Which day(s) can you play?' : 'Are you available to play?'}
+                                                label={multiDay ? 'Availability' : 'Are you available to play?'}
                                                 error={errors.dayAvailability}
                                             >
                                                 <div className="choice-group vertical">
                                                     {multiDay ? (
-                                                        eventDays.map((day) => {
-                                                            const checked = profile.dayAvailability.includes(day);
-                                                            return (
-                                                                <label key={day} className={checked ? 'checked' : ''}>
-                                                                    <input
-                                                                        type="checkbox"
-                                                                        checked={checked}
-                                                                        onChange={(e) =>
-                                                                            setProfile({
-                                                                                ...profile,
-                                                                                dayAvailability: e.target.checked
-                                                                                    ? [...profile.dayAvailability, day]
-                                                                                    : profile.dayAvailability.filter((d) => d !== day),
-                                                                            })
-                                                                        }
-                                                                    />
-                                                                    {format(new Date(day), 'EEEE d MMMM')}
-                                                                </label>
-                                                            );
-                                                        })
+                                                        <label className={profile.dayAvailability.length === eventDays.length ? 'checked' : ''}>
+                                                            <input
+                                                                type="checkbox"
+                                                                checked={profile.dayAvailability.length === eventDays.length}
+                                                                onChange={(e) =>
+                                                                    setProfile({
+                                                                        ...profile,
+                                                                        dayAvailability: e.target.checked ? eventDays : [],
+                                                                    })
+                                                                }
+                                                            />
+                                                            {`I confirm I am available on ${eventDays
+                                                                .map((day) => format(new Date(day), 'EEE d MMM'))
+                                                                .join(' & ')} to play`}
+                                                        </label>
                                                     ) : (
                                                         <label className="checked">
                                                             <input type="checkbox" checked readOnly />
