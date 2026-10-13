@@ -394,7 +394,10 @@ export default function EventHostPreview() {
                                                     )}
                                                     <div>
                                                         <strong>{p.name}</strong>
-                                                        <span>{p.email}</span>
+                                                        <span>
+                                                            {p.email}
+                                                            {p.gender && ` · ${p.gender}`}
+                                                        </span>
                                                     </div>
                                                 </div>
                                             </td>

@@ -1311,6 +1311,11 @@
 .ccreg .hosts-main {
     max-width: 1240px;
     margin: auto;
+    /* The player table is wider than small screens on purpose (it scrolls
+       horizontally inside .host-table-scroll) — without this, that width
+       bleeds out past this page's own container and pans the whole page
+       sideways on mobile instead of just the table. */
+    overflow-x: hidden;
     padding: 10px 48px 0;
 }
 .ccreg .host-topline {
@@ -1501,6 +1506,8 @@
 }
 .ccreg .host-table-scroll {
     overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-x pan-y;
     border-top: 1px solid var(--border);
     border-bottom: 1px solid var(--border);
 }
@@ -1622,7 +1629,7 @@
     justify-content: center;
     padding: 40px 16px;
     overflow-y: auto;
-    background: color-mix(in oklch, var(--ink, #11151c) 85%, transparent);
+    background: color-mix(in oklch, var(--background) 85%, transparent);
 }
 .ccreg .host-detail-card {
     position: relative;
