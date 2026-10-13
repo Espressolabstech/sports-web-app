@@ -63,6 +63,24 @@ const STEP_META: Record<string, { title: string; subtitle: string }> = {
     },
 };
 
+/** YYYY-MM-DD from a Date's own local calendar fields — never via toISOString(),
+ *  which converts to UTC first and silently shifts the date by a day in any
+ *  timezone ahead of UTC (e.g. 31 Oct local midnight → "2026-10-30"). */
+function toLocalISODate(date: Date): string {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+/** Parses a YYYY-MM-DD string as a local calendar date — never via
+ *  `new Date(ymd)`, which parses date-only strings as UTC midnight and can
+ *  display as the wrong day once formatted in local time. */
+function parseLocalISODate(ymd: string): Date {
+    const [y, m, d] = ymd.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
 /** ISO (YYYY-MM-DD) day strings from start to end, inclusive. */
 function daySpan(start: Date, end: Date): string[] {
     const days: string[] = [];
@@ -71,7 +89,7 @@ function daySpan(start: Date, end: Date): string[] {
     const last = new Date(end);
     last.setHours(0, 0, 0, 0);
     while (d.getTime() <= last.getTime()) {
-        days.push(d.toISOString().slice(0, 10));
+        days.push(toLocalISODate(d));
         d.setDate(d.getDate() + 1);
     }
     return days;
@@ -1033,7 +1051,7 @@ export default function EventRegister({
                                                                 }
                                                             />
                                                             {`I confirm I am available on ${eventDays
-                                                                .map((day) => format(new Date(day), 'EEE d MMM'))
+                                                                .map((day) => format(parseLocalISODate(day), 'EEE d MMM'))
                                                                 .join(' & ')} to play`}
                                                         </label>
                                                     ) : (
@@ -1150,7 +1168,7 @@ export default function EventRegister({
                                                     [
                                                         'Availability',
                                                         multiDay
-                                                            ? profile.dayAvailability.map((d) => format(new Date(d), 'd MMM')).join(', ') || 'Not selected'
+                                                            ? profile.dayAvailability.map((d) => format(parseLocalISODate(d), 'd MMM')).join(', ') || 'Not selected'
                                                             : format(event.start, 'd MMM'),
                                                     ],
                                                     ['Instagram', profile.instagram || 'Not provided'],
