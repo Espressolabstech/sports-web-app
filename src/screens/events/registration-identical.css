@@ -1607,6 +1607,97 @@
     color: var(--primary);
     border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
 }
+.ccreg .host-row-clickable {
+    cursor: pointer;
+}
+.ccreg .host-row-clickable:hover {
+    background: color-mix(in oklch, var(--primary) 4%, transparent);
+}
+.ccreg .host-detail-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 16px;
+    overflow-y: auto;
+    background: color-mix(in oklch, var(--ink, #11151c) 85%, transparent);
+}
+.ccreg .host-detail-card {
+    position: relative;
+    width: 100%;
+    max-width: 560px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 28px;
+}
+.ccreg .host-detail-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: transparent;
+    color: var(--foreground);
+    font-size: 12px;
+}
+.ccreg .host-detail-head {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 22px;
+}
+.ccreg .host-detail-head h2 {
+    font-size: 20px;
+    font-weight: 700;
+}
+.ccreg .host-detail-head p {
+    font-size: 12px;
+    color: var(--muted-foreground);
+    margin-top: 2px;
+}
+.ccreg .host-detail-lines {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 20px;
+}
+.ccreg .host-detail-lines dt {
+    font-size: 10px;
+    color: var(--muted-foreground);
+}
+.ccreg .host-detail-lines dd {
+    font-size: 12px;
+    margin: 3px 0 0;
+    overflow-wrap: anywhere;
+}
+.ccreg .host-detail-payment {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+}
+.ccreg .host-detail-payment a {
+    color: var(--primary);
+}
+.ccreg .host-detail-payment small {
+    color: var(--muted-foreground);
+}
+@media (max-width: 600px) {
+    .ccreg .host-detail-lines {
+        grid-template-columns: 1fr;
+    }
+}
 .ccreg .host-manual-payment a {
     color: var(--primary);
 }

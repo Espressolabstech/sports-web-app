@@ -61,6 +61,7 @@ export default function EventHostPreview() {
     const [level, setLevel] = useState<LevelFilter>('all');
     const [sort, setSort] = useState<SortBy>('recent');
     const [page, setPage] = useState(1);
+    const [selectedPlayer, setSelectedPlayer] = useState<ApiHostPreviewPlayer | null>(null);
 
     const [token, setToken] = useState<string | null>(() => (slug ? localStorage.getItem(tokenKeyFor(slug)) : null));
     const [phone, setPhone] = useState('');
@@ -378,7 +379,7 @@ export default function EventHostPreview() {
                                 {shown.map((p) => {
                                     const both = p.sports.length > 1;
                                     return (
-                                        <tr key={p.id}>
+                                        <tr key={p.id} className="host-row-clickable" onClick={() => setSelectedPlayer(p)}>
                                             <td>
                                                 <div className="host-player">
                                                     {p.photoUrl ? (
@@ -418,14 +419,25 @@ export default function EventHostPreview() {
                                             </td>
                                             <td>{p.interest || '—'}</td>
                                             <td className="whitespace-nowrap">
-                                                {p.contact ? <a href={`tel:${p.contact}`}>{p.contact}</a> : '—'}
+                                                {p.contact ? (
+                                                    <a href={`tel:${p.contact}`} onClick={(e) => e.stopPropagation()}>
+                                                        {p.contact}
+                                                    </a>
+                                                ) : (
+                                                    '—'
+                                                )}
                                             </td>
                                             <td>
                                                 {p.paymentMethod === 'MANUAL_QR' ? (
                                                     <div className="host-manual-payment">
                                                         <span className="host-payment-badge">Manual (QR)</span>
                                                         {p.paymentProofUrl && (
-                                                            <a href={p.paymentProofUrl} target="_blank" rel="noreferrer">
+                                                            <a
+                                                                href={p.paymentProofUrl}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
                                                                 View proof
                                                             </a>
                                                         )}
@@ -483,6 +495,89 @@ export default function EventHostPreview() {
                     <span>Host preview · {preview.event.title}</span>
                 </footer>
             </main>
+
+            {selectedPlayer && (
+                <div className="host-detail-overlay" onClick={() => setSelectedPlayer(null)}>
+                    <div className="host-detail-card" onClick={(e) => e.stopPropagation()}>
+                        <button className="host-detail-close" onClick={() => setSelectedPlayer(null)} aria-label="Close">
+                            ✕
+                        </button>
+                        <div className="host-detail-head">
+                            {selectedPlayer.photoUrl ? (
+                                <img src={selectedPlayer.photoUrl} alt="" className="host-avatar-photo" />
+                            ) : (
+                                <span className="host-avatar" aria-hidden="true">
+                                    {selectedPlayer.name
+                                        .split(' ')
+                                        .map((n) => n[0])
+                                        .join('')}
+                                </span>
+                            )}
+                            <div>
+                                <h2>{selectedPlayer.name}</h2>
+                                <p>
+                                    {[selectedPlayer.city, selectedPlayer.age && `${selectedPlayer.age} years`, selectedPlayer.gender]
+                                        .filter(Boolean)
+                                        .join(' · ') || '—'}
+                                </p>
+                            </div>
+                        </div>
+                        <dl className="host-detail-lines">
+                            {(
+                                [
+                                    ['Email', selectedPlayer.email || '—'],
+                                    ['Mobile', selectedPlayer.contact || '—'],
+                                    ['Instagram', selectedPlayer.instagram || 'Not provided'],
+                                    ['Sports', selectedPlayer.sports.join(' & ') || '—'],
+                                    [
+                                        'Playing levels',
+                                        selectedPlayer.sports
+                                            .map(
+                                                (s) =>
+                                                    `${s}: ${s === 'Padel' ? selectedPlayer.padelLevel : selectedPlayer.pickleballLevel}`,
+                                            )
+                                            .join(' / ') || '—',
+                                    ],
+                                    ['Jersey size', selectedPlayer.jersey || '—'],
+                                    [
+                                        'Availability',
+                                        selectedPlayer.dayAvailability.length
+                                            ? selectedPlayer.dayAvailability.map((d) => format(new Date(d), 'd MMM')).join(', ')
+                                            : '—',
+                                    ],
+                                    ['League interest', selectedPlayer.interest || '—'],
+                                    ['Achievements', selectedPlayer.achievements || 'Not provided'],
+                                    ['Playing video', selectedPlayer.videoLink || 'Not provided'],
+                                    [
+                                        'Registered',
+                                        format(new Date(selectedPlayer.registeredAt), 'd MMM yyyy'),
+                                    ],
+                                ] as [string, string][]
+                            ).map(([title, value]) => (
+                                <div key={title}>
+                                    <dt>{title}</dt>
+                                    <dd>{value}</dd>
+                                </div>
+                            ))}
+                        </dl>
+                        <div className="host-detail-payment">
+                            {selectedPlayer.paymentMethod === 'MANUAL_QR' ? (
+                                <>
+                                    <span className="host-payment-badge">Manual (QR)</span>
+                                    {selectedPlayer.paymentProofUrl && (
+                                        <a href={selectedPlayer.paymentProofUrl} target="_blank" rel="noreferrer">
+                                            View proof
+                                        </a>
+                                    )}
+                                    {selectedPlayer.paymentUpiRef && <small>UPI: {selectedPlayer.paymentUpiRef}</small>}
+                                </>
+                            ) : (
+                                <span className="host-payment-badge host-payment-badge-online">Online</span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
