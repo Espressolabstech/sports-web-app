@@ -7,6 +7,8 @@
 // Open Graph/Twitter tags (including the event's own card image) instead of
 // the SPA shell; everyone else is unaffected and falls through to the normal
 // static/rewrite pipeline untouched.
+import { next } from '@vercel/edge';
+
 export const config = {
     matcher: ['/the-court-collective', '/court-collective', '/events/the-court-collective-2026-2026-10-31'],
 };
@@ -21,11 +23,12 @@ const DESCRIPTION =
 export default function middleware(request: Request) {
     const userAgent = request.headers.get('user-agent') || '';
     if (!BOT_USER_AGENT.test(userAgent)) {
-        // Not a crawler — hand the request straight back to Vercel's normal
-        // static/rewrite handling (no framework-specific "next()" helper is
-        // available outside Next.js; re-issuing the fetch is the documented
-        // way to fall through to the origin on Edge Middleware).
-        return fetch(request);
+        // Not a crawler — fall through to Vercel's normal static/rewrite
+        // handling. `fetch(request)` looks like an equivalent "passthrough"
+        // but actually re-enters this same middleware on Vercel (the matched
+        // path doesn't change), causing an infinite redirect loop — `next()`
+        // is the real continuation primitive.
+        return next();
     }
 
     const { origin } = new URL(request.url);
