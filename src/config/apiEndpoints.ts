@@ -55,4 +55,5 @@ export const endpoints = {
     confirmEventPayment: (slug: string) => `/public/events/${slug}/confirm-payment`,
     registrationPhotoUploadUrl: (slug: string) => `/public/events/${slug}/registration-photo-upload-url`,
     hostPreview: (slug: string) => `/public/events/${slug}/host-preview`,
+    hostPreviewLogin: (slug: string) => `/public/events/${slug}/host-login`,
 };

@@ -220,6 +220,17 @@
     padding: 0 12px;
     outline-color: var(--primary);
 }
+.ccreg .field-input-plain {
+    height: 46px;
+    width: 100%;
+    background: var(--card);
+    color: var(--foreground);
+    font-size: 13px;
+    border: none;
+    border-radius: 6px;
+    padding: 0 14px;
+    outline-color: var(--primary);
+}
 .ccreg .field textarea {
     height: 95px;
     padding-top: 12px;

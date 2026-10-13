@@ -63,8 +63,23 @@ export const getEventRegistrationByPhone = async (
 };
 
 /** Read-only player list + metrics for a detailed-registration event — no login. */
+/**
+ * `token` is the event-scoped host-viewer login (see hostPreviewLogin
+ * below), never the app's own player/organizer session token — passed
+ * explicitly as a header so it overrides whatever the shared apiClient
+ * would otherwise attach for this device.
+ */
 export const getHostPreview = async (
     slug: string,
+    token: string,
 ): Promise<ApiResponse<ApiHostPreviewData>> => {
-    return apiClient({ url: endpoints.hostPreview(slug), method: 'GET' });
+    return apiClient({
+        url: endpoints.hostPreview(slug),
+        method: 'GET',
+        headers: { Authorization: `Bearer ${token}` },
+    });
+};
+
+export const hostPreviewLogin = async (slug: string, phone: string): Promise<ApiResponse<null>> => {
+    return apiClient({ url: endpoints.hostPreviewLogin(slug), method: 'POST', data: { phone } });
 };

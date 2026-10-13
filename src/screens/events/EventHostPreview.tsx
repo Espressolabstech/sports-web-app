@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -12,9 +12,16 @@ import {
     ChevronRight,
     SlidersHorizontal,
     RotateCcw,
+    LockKeyhole,
 } from 'lucide-react';
-import { getHostPreview } from '../../api/adapters/events';
+import { getHostPreview, hostPreviewLogin } from '../../api/adapters/events';
+import { verifyOtp } from '../../api/adapters/auth';
 import './registration-identical.css';
+
+/** Separate from the app's own __token cookie on purpose — this is a
+ * one-event-scoped viewer login, not a player/organizer session, and must
+ * never overwrite or be overwritten by one on a shared device. */
+const tokenKeyFor = (slug: string) => `host-preview-token:${slug}`;
 
 const PAGE_SIZE = 10;
 
@@ -55,11 +62,67 @@ export default function EventHostPreview() {
     const [sort, setSort] = useState<SortBy>('recent');
     const [page, setPage] = useState(1);
 
-    const { data, isLoading } = useQuery({
-        queryKey: ['host-preview', slug],
-        queryFn: () => getHostPreview(slug!),
-        enabled: !!slug,
+    const [token, setToken] = useState<string | null>(() => (slug ? localStorage.getItem(tokenKeyFor(slug)) : null));
+    const [phone, setPhone] = useState('');
+    const [otp, setOtp] = useState('');
+    const [otpSent, setOtpSent] = useState(false);
+    const [authBusy, setAuthBusy] = useState(false);
+    const [authError, setAuthError] = useState('');
+
+    const logout = () => {
+        if (slug) localStorage.removeItem(tokenKeyFor(slug));
+        setToken(null);
+        setOtpSent(false);
+        setOtp('');
+    };
+
+    const sendOtp = async () => {
+        if (!slug || !/^\d{10}$/.test(phone)) {
+            setAuthError('Enter a valid 10-digit mobile number');
+            return;
+        }
+        setAuthBusy(true);
+        setAuthError('');
+        try {
+            await hostPreviewLogin(slug, phone);
+            setOtpSent(true);
+        } catch (err) {
+            setAuthError(err instanceof Error ? err.message : 'Could not send OTP');
+        } finally {
+            setAuthBusy(false);
+        }
+    };
+
+    const verify = async () => {
+        if (!slug || otp.trim().length === 0) {
+            setAuthError('Enter the OTP');
+            return;
+        }
+        setAuthBusy(true);
+        setAuthError('');
+        try {
+            const result = await verifyOtp({ phone, otp: otp.trim() });
+            const newToken = result.data.token;
+            localStorage.setItem(tokenKeyFor(slug), newToken);
+            setToken(newToken);
+        } catch (err) {
+            setAuthError(err instanceof Error ? err.message : 'Invalid OTP');
+        } finally {
+            setAuthBusy(false);
+        }
+    };
+
+    const { data, isLoading, error } = useQuery({
+        queryKey: ['host-preview', slug, token],
+        queryFn: () => getHostPreview(slug!, token!),
+        enabled: !!slug && !!token,
+        retry: false,
     });
+
+    useEffect(() => {
+        if (error) logout();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [error]);
 
     const preview = data?.data;
 
@@ -99,6 +162,56 @@ export default function EventHostPreview() {
         setLevel('all');
         setPage(1);
     };
+
+    if (!token) {
+        return (
+            <div className="ccreg flex min-h-screen flex-col items-center justify-center gap-5 px-6 text-center">
+                <LockKeyhole className="h-6 w-6" style={{ color: 'var(--primary)' }} />
+                <div>
+                    <h1 className="text-lg font-bold" style={{ color: 'var(--foreground)' }}>
+                        Host preview login
+                    </h1>
+                    <p className="mt-1 text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                        This number must already be added as a viewer for this event.
+                    </p>
+                </div>
+                <div className="w-full max-w-[280px] space-y-3">
+                    {!otpSent ? (
+                        <>
+                            <input
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                placeholder="Mobile number"
+                                inputMode="numeric"
+                                className="field-input-plain"
+                            />
+                            <button onClick={sendOtp} disabled={authBusy} className="continue-btn w-full justify-center">
+                                {authBusy ? 'Sending…' : 'Send OTP'}
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <input
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                placeholder="Enter OTP"
+                                inputMode="numeric"
+                                className="field-input-plain"
+                            />
+                            <button onClick={verify} disabled={authBusy} className="continue-btn w-full justify-center">
+                                {authBusy ? 'Verifying…' : 'Verify & continue'}
+                            </button>
+                        </>
+                    )}
+                    {authError && (
+                        <p className="text-xs" style={{ color: 'var(--destructive)' }}>
+                            {authError}
+                        </p>
+                    )}
+                </div>
+            </div>
+        );
+    }
 
     if (isLoading) {
         return (
