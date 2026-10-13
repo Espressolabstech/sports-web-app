@@ -225,6 +225,9 @@ export default function EventLandingIdentical({
                             <a href="https://www.instagram.com/gameday.events/" target="_blank" rel="noreferrer">
                                 <Instagram /> @gameday.events <ArrowUpRight />
                             </a>
+                            <a href="https://www.instagram.com/playpasshq/" target="_blank" rel="noreferrer">
+                                <Instagram /> @playpasshq <ArrowUpRight />
+                            </a>
                             <a href="https://wa.me/919327362989" target="_blank" rel="noreferrer">
                                 <MessageCircle /> WhatsApp +91-9327362989 <ArrowUpRight />
                             </a>
