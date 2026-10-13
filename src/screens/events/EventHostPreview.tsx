@@ -432,7 +432,7 @@ export default function EventHostPreview() {
                                                         {p.paymentUpiRef && <small>UPI: {p.paymentUpiRef}</small>}
                                                     </div>
                                                 ) : (
-                                                    '—'
+                                                    <span className="host-payment-badge host-payment-badge-online">Online</span>
                                                 )}
                                             </td>
                                             <td className="host-registered">

@@ -1603,6 +1603,10 @@
     color: #caa33a;
     border: 1px solid color-mix(in oklch, #caa33a 35%, var(--border));
 }
+.ccreg .host-payment-badge-online {
+    color: var(--primary);
+    border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
+}
 .ccreg .host-manual-payment a {
     color: var(--primary);
 }
