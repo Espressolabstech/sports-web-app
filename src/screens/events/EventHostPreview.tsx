@@ -18,6 +18,14 @@ import { getHostPreview, hostPreviewLogin } from '../../api/adapters/events';
 import { verifyOtp } from '../../api/adapters/auth';
 import './registration-identical.css';
 
+/** Parses a YYYY-MM-DD string as a local calendar date — never via
+ *  `new Date(ymd)`, which parses date-only strings as UTC midnight and can
+ *  display as the wrong day once formatted in local time. */
+function parseLocalISODate(ymd: string): Date {
+    const [y, m, d] = ymd.split('-').map(Number);
+    return new Date(y, m - 1, d);
+}
+
 /** Separate from the app's own __token cookie on purpose — this is a
  * one-event-scoped viewer login, not a player/organizer session, and must
  * never overwrite or be overwritten by one on a shared device. */
@@ -545,7 +553,7 @@ export default function EventHostPreview() {
                                     [
                                         'Availability',
                                         selectedPlayer.dayAvailability.length
-                                            ? selectedPlayer.dayAvailability.map((d) => format(new Date(d), 'd MMM')).join(', ')
+                                            ? selectedPlayer.dayAvailability.map((d) => format(parseLocalISODate(d), 'd MMM')).join(', ')
                                             : '—',
                                     ],
                                     ['League interest', selectedPlayer.interest || '—'],
