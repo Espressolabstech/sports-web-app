@@ -31,9 +31,11 @@ function RegisterButton({ href, full = false }: { href: string; full?: boolean }
 export default function EventLandingIdentical({
     event,
     registerHref,
+    freeEntry,
 }: {
     event: TournamentEvent;
     registerHref?: string;
+    freeEntry?: boolean;
 }) {
     const href = registerHref ?? `/events/${event.slug}/register`;
     const dates =
@@ -169,25 +171,44 @@ export default function EventLandingIdentical({
                         </section>
 
                         <aside className="fee-panel">
-                            <div className="fee-eyebrow">YOUR PLACE IN THE AUCTION</div>
-                            <div className="fee-price">₹{event.priceInr.toLocaleString('en-IN')}</div>
-                            <p className="fee-label">Player registration fee</p>
-                            <div className="fee-divider" />
-                            <div className="fee-line">
-                                <span>Auction base price</span>
-                                <strong>₹3,000 / player</strong>
-                            </div>
-                            <p className="fee-detail">
-                                Picked at the auction? You play for your team and get paid your auction
-                                price.
-                            </p>
-                            <div className="fee-refund">
-                                <ShieldCheck />
-                                <span>
-                                    Not picked? Get a <strong>100% refund</strong> within 10 days after
-                                    the tournament ends.
-                                </span>
-                            </div>
+                            {freeEntry ? (
+                                <>
+                                    <div className="fee-eyebrow">YOUR PLACE IN THE AUCTION</div>
+                                    <div className="fee-price">FREE</div>
+                                    <p className="fee-label">Player auction entry</p>
+                                    <div className="fee-divider" />
+                                    <div className="fee-line">
+                                        <span>Auction base price</span>
+                                        <strong>₹3,000 / player</strong>
+                                    </div>
+                                    <p className="fee-detail">
+                                        Picked at the auction? You play for your team and get paid your
+                                        auction price.
+                                    </p>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="fee-eyebrow">YOUR PLACE IN THE AUCTION</div>
+                                    <div className="fee-price">₹{event.priceInr.toLocaleString('en-IN')}</div>
+                                    <p className="fee-label">Player registration fee</p>
+                                    <div className="fee-divider" />
+                                    <div className="fee-line">
+                                        <span>Auction base price</span>
+                                        <strong>₹3,000 / player</strong>
+                                    </div>
+                                    <p className="fee-detail">
+                                        Picked at the auction? You play for your team and get paid your
+                                        auction price.
+                                    </p>
+                                    <div className="fee-refund">
+                                        <ShieldCheck />
+                                        <span>
+                                            Not picked? Get a <strong>100% refund</strong> within 10 days after
+                                            the tournament ends.
+                                        </span>
+                                    </div>
+                                </>
+                            )}
                             <RegisterButton href={href} full />
                             <p className="fee-footer">Registration closes 20 October 2026</p>
                         </aside>

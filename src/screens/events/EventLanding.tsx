@@ -44,7 +44,8 @@ function MiniCountdown({ target }: { target: Date }) {
 export default function EventLanding({
     slugOverride,
     registerHref,
-}: { slugOverride?: string; registerHref?: string } = {}) {
+    freeEntry,
+}: { slugOverride?: string; registerHref?: string; freeEntry?: boolean } = {}) {
     const params = useParams();
     const slug = slugOverride ?? params.slug;
     const navigate = useNavigate();
@@ -98,7 +99,7 @@ export default function EventLanding({
     // landing page end to end — the standard event landing never renders
     // for them, so there's no old-UI route left to stumble into.
     if (event.registrationProfile) {
-        return <EventLandingIdentical event={event} registerHref={registerHref} />;
+        return <EventLandingIdentical event={event} registerHref={registerHref} freeEntry={freeEntry} />;
     }
 
     const poster = event.posterUrl;
