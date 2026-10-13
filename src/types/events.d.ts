@@ -215,6 +215,13 @@ declare global {
         paymentMethod: string | null;
         paymentProofUrl: string | null;
         paymentUpiRef: string | null;
+        instagram: string | null;
+        age: number | null;
+        gender: string | null;
+        city: string | null;
+        jersey: string | null;
+        achievements: string | null;
+        videoLink: string | null;
     }
 
     interface ApiHostPreviewData {
