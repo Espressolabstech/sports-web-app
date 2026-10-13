@@ -141,6 +141,8 @@ declare global {
         consent?: boolean;
         consentVersion?: string;
         profile?: Record<string, unknown>;
+        /** Auction-entry flow only — confirms the entrant immediately, no Razorpay step. */
+        skipPayment?: boolean;
     }
 
     interface RegisterForEventBody extends DetailedRegistrationFields {

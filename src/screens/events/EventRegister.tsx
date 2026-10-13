@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { format } from 'date-fns';
-import { ArrowLeft, ArrowRight, Camera, Check, CircleCheck, Download, LockKeyhole } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BadgeCheck, Camera, Check, CircleCheck, Download, LockKeyhole } from 'lucide-react';
 import { toast } from 'sonner';
 import { AnimatedLoader } from '../../components/AnimatedLoader';
 import {
@@ -48,6 +48,10 @@ const STEP_META: Record<string, { title: string; subtitle: string }> = {
     'Review & pay': {
         title: 'YOUR NEXT MOVE.',
         subtitle: 'Review your player profile, then pay securely via Razorpay.',
+    },
+    'Review & confirm': {
+        title: 'YOUR NEXT MOVE.',
+        subtitle: 'Review your player details and confirm your auction entry.',
     },
     Payment: {
         title: 'YOUR NEXT MOVE.',
@@ -144,7 +148,11 @@ const TERMS: [string, string][] = [
     ],
 ];
 
-export default function EventRegister({ slugOverride }: { slugOverride?: string } = {}) {
+export default function EventRegister({
+    slugOverride,
+    mode = 'payment',
+}: { slugOverride?: string; mode?: 'payment' | 'auction-entry' } = {}) {
+    const auctionOnly = mode === 'auction-entry';
     const params = useParams();
     const slug = slugOverride ?? params.slug;
     const navigate = useNavigate();
@@ -165,6 +173,7 @@ export default function EventRegister({ slugOverride }: { slugOverride?: string 
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
     const [paid, setPaid] = useState(false);
     const [confirmingPayment, setConfirmingPayment] = useState(false);
+    const [ticketCode, setTicketCode] = useState('');
 
     // Detailed registration (event.registrationProfile) only — collects a
     // full player profile + photo + consent. Single-entrant: a friend's
@@ -197,8 +206,11 @@ export default function EventRegister({ slugOverride }: { slugOverride?: string 
     }, [slug, event, navigate]);
 
     const steps = useMemo(
-        () => (detailed ? ['Your details', 'Your game', 'Availability', 'Consent', 'Review & pay'] : ['Your details', 'Payment']),
-        [detailed],
+        () =>
+            detailed
+                ? ['Your details', 'Your game', 'Availability', 'Consent', auctionOnly ? 'Review & confirm' : 'Review & pay']
+                : ['Your details', 'Payment'],
+        [detailed, auctionOnly],
     );
     const lastStep = steps.length - 1;
 
@@ -365,6 +377,7 @@ export default function EventRegister({ slugOverride }: { slugOverride?: string 
                     photoUrl,
                     consent: profile.consent,
                     consentVersion: CONSENT_VERSION,
+                    skipPayment: auctionOnly || undefined,
                     profile: {
                         instagram: profile.instagram.trim(),
                         age: Number(profile.age),
@@ -390,6 +403,7 @@ export default function EventRegister({ slugOverride }: { slugOverride?: string 
             // Free entry or waitlist spot — already registered, nothing to pay.
             if (registration) {
                 finalizeRegistration(registration);
+                setTicketCode(registration.ticketCode);
                 if (waitlist) {
                     navigate(`/events/${event.slug}/pass`, { replace: true });
                 } else {
@@ -456,11 +470,13 @@ export default function EventRegister({ slugOverride }: { slugOverride?: string 
         }
     };
 
-    const finalLabel = waitlist
-        ? 'Join waitlist'
-        : detailed
-          ? `Pay via Razorpay · ₹${totalInr.toLocaleString('en-IN')}`
-          : 'Confirm registration';
+    const finalLabel = auctionOnly
+        ? 'Confirm auction entry'
+        : waitlist
+          ? 'Join waitlist'
+          : detailed
+            ? `Pay via Razorpay · ₹${totalInr.toLocaleString('en-IN')}`
+            : 'Confirm registration';
 
     const dates =
         event.endDate && multiDay
@@ -573,7 +589,7 @@ export default function EventRegister({ slugOverride }: { slugOverride?: string 
                         <p>
                             {event.title}
                             <br />
-                            Player registration
+                            {auctionOnly ? 'Player auction entry' : 'Player registration'}
                         </p>
                         <div className="step-nav">
                             {steps.map((s, i) => (
@@ -590,10 +606,12 @@ export default function EventRegister({ slugOverride }: { slugOverride?: string 
                                 <br />
                                 Auction · 23 October 2026
                             </p>
-                            <div className="side-fee">
-                                ₹{event.priceInr.toLocaleString('en-IN')}
-                                <small>Player registration fee</small>
-                            </div>
+                            {!auctionOnly && (
+                                <div className="side-fee">
+                                    ₹{event.priceInr.toLocaleString('en-IN')}
+                                    <small>Player registration fee</small>
+                                </div>
+                            )}
                         </div>
                     </aside>
 
@@ -605,6 +623,64 @@ export default function EventRegister({ slugOverride }: { slugOverride?: string 
                                     Confirming your payment…
                                 </p>
                             </div>
+                        ) : paid && auctionOnly ? (
+                            <>
+                                <CircleCheck className="success-icon" />
+                                <div className="form-header">
+                                    <p className="section-kicker">AUCTION ENTRY CONFIRMED</p>
+                                    <h1>YOU'RE IN THE AUCTION.</h1>
+                                    <p>
+                                        Thanks, {form.name.trim()}. Your player profile is confirmed for{' '}
+                                        {event.title} auction.
+                                    </p>
+                                </div>
+                                <section className="auction-entry-card" aria-label="Player auction entry card">
+                                    <header className="auction-card-header">
+                                        <img src={courtCollectiveLogo} alt="The Court Collective" />
+                                        <span>
+                                            <BadgeCheck size={16} /> OFFICIAL PLAYER ENTRY
+                                        </span>
+                                    </header>
+                                    <div className="auction-card-player">
+                                        {photoPreview && <img src={photoPreview} alt={`${form.name.trim()}'s player photo`} />}
+                                        <div>
+                                            <p>PLAYER</p>
+                                            <h2>{form.name.trim()}</h2>
+                                            <span>{profile.sports.join(' & ')}</span>
+                                        </div>
+                                    </div>
+                                    <div className="auction-card-code">
+                                        <p>PLAYER CODE</p>
+                                        <strong>{ticketCode}</strong>
+                                    </div>
+                                    <dl className="auction-card-details">
+                                        <div>
+                                            <dt>PLAYER AUCTION</dt>
+                                            <dd>23 October 2026</dd>
+                                        </div>
+                                        <div>
+                                            <dt>TOURNAMENT</dt>
+                                            <dd>31 Oct – 1 Nov 2026</dd>
+                                        </div>
+                                        <div>
+                                            <dt>VENUE</dt>
+                                            <dd>{event.venueName}</dd>
+                                        </div>
+                                    </dl>
+                                    <footer>
+                                        THE COURT COLLECTIVE 2026 <span>AUCTION ENTRY</span>
+                                    </footer>
+                                </section>
+                                <p className="payment-note">
+                                    Your entry is confirmed. Selection at the auction is not guaranteed. The
+                                    organisers will be in touch with updates.
+                                </p>
+                                <div className="mt-6 flex items-center justify-center gap-3">
+                                    <button onClick={() => navigate(`/events/${event.slug}`)} className="continue-btn">
+                                        Back to the event <ArrowRight />
+                                    </button>
+                                </div>
+                            </>
                         ) : paid ? (
                             <>
                                 <CircleCheck className="success-icon" />
@@ -1027,7 +1103,7 @@ export default function EventRegister({ slugOverride }: { slugOverride?: string 
                                         </>
                                     )}
 
-                                    {stepName === 'Review & pay' && (
+                                    {(stepName === 'Review & pay' || stepName === 'Review & confirm') && (
                                         <>
                                             <div className="review-head">
                                                 {photoPreview && <img src={photoPreview} alt="Your profile" />}
@@ -1067,22 +1143,33 @@ export default function EventRegister({ slugOverride }: { slugOverride?: string 
                                                     </div>
                                                 ))}
                                             </dl>
-                                            <div className="checkout-total">
-                                                <div>
-                                                    <strong style={{ fontSize: 15, fontFamily: 'var(--font-sans)' }}>Player registration</strong>
-                                                    <p className="field-help">{event.title}</p>
-                                                </div>
-                                                <strong>₹{totalInr.toLocaleString('en-IN')}</strong>
-                                            </div>
-                                            <p className="payment-note">
-                                                <LockKeyhole size={13} className="inline mr-2" />
-                                                Pay securely via Razorpay. Your registration is confirmed after
-                                                payment.
-                                            </p>
-                                            {waitlist && (
+                                            {!auctionOnly && (
+                                                <>
+                                                    <div className="checkout-total">
+                                                        <div>
+                                                            <strong style={{ fontSize: 15, fontFamily: 'var(--font-sans)' }}>Player registration</strong>
+                                                            <p className="field-help">{event.title}</p>
+                                                        </div>
+                                                        <strong>₹{totalInr.toLocaleString('en-IN')}</strong>
+                                                    </div>
+                                                    <p className="payment-note">
+                                                        <LockKeyhole size={13} className="inline mr-2" />
+                                                        Pay securely via Razorpay. Your registration is confirmed after
+                                                        payment.
+                                                    </p>
+                                                    {waitlist && (
+                                                        <p className="payment-note">
+                                                            This event is full — no payment is taken for the waitlist. If a
+                                                            spot opens we'll message you with a payment link.
+                                                        </p>
+                                                    )}
+                                                </>
+                                            )}
+                                            {auctionOnly && (
                                                 <p className="payment-note">
-                                                    This event is full — no payment is taken for the waitlist. If a
-                                                    spot opens we'll message you with a payment link.
+                                                    <LockKeyhole size={13} className="inline mr-2" />
+                                                    No payment is required. Confirming this entry puts your profile
+                                                    forward for the player auction.
                                                 </p>
                                             )}
                                         </>
