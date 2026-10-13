@@ -370,6 +370,7 @@ export default function EventHostPreview() {
                                     </th>
                                     <th scope="col">Interest</th>
                                     <th scope="col">Mobile</th>
+                                    <th scope="col">Payment</th>
                                     <th scope="col">Registered</th>
                                 </tr>
                             </thead>
@@ -418,6 +419,21 @@ export default function EventHostPreview() {
                                             <td>{p.interest || '—'}</td>
                                             <td className="whitespace-nowrap">
                                                 {p.contact ? <a href={`tel:${p.contact}`}>{p.contact}</a> : '—'}
+                                            </td>
+                                            <td>
+                                                {p.paymentMethod === 'MANUAL_QR' ? (
+                                                    <div className="host-manual-payment">
+                                                        <span className="host-payment-badge">Manual (QR)</span>
+                                                        {p.paymentProofUrl && (
+                                                            <a href={p.paymentProofUrl} target="_blank" rel="noreferrer">
+                                                                View proof
+                                                            </a>
+                                                        )}
+                                                        {p.paymentUpiRef && <small>UPI: {p.paymentUpiRef}</small>}
+                                                    </div>
+                                                ) : (
+                                                    '—'
+                                                )}
                                             </td>
                                             <td className="host-registered">
                                                 {format(new Date(p.registeredAt), 'd MMM')}
