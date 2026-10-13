@@ -1819,16 +1819,6 @@
     .ccreg .host-reset {
         margin: 0;
     }
-    .ccreg .host-table th:first-child,
-    .ccreg .host-table td:first-child {
-        position: sticky;
-        left: 0;
-        background: var(--background);
-        border-right: 1px solid var(--border);
-    }
-    .ccreg .host-table th:first-child {
-        background: var(--card);
-    }
     .ccreg .host-avatar {
         width: 28px;
         height: 28px;
