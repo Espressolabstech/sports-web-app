@@ -834,7 +834,7 @@ export default function EventRegister({ slugOverride }: { slugOverride?: string 
 
                                     {stepName === 'Your game' && (
                                         <div className="field-grid">
-                                            <Field label="Which sports do you play?" error={errors.sports} help="Select both if you play both.">
+                                            <Field label="Which sports do you play?" full error={errors.sports} help="Select both if you play both.">
                                                 <div className="choice-group">
                                                     {(['Padel', 'Pickleball'] as const).map((sport) => (
                                                         <label key={sport} className={profile.sports.includes(sport) ? 'checked' : ''}>
@@ -1167,6 +1167,7 @@ function Field({
     help,
     children,
     half = false,
+    full = false,
 }: {
     label: string;
     optional?: boolean;
@@ -1174,9 +1175,10 @@ function Field({
     help?: string;
     children: React.ReactNode;
     half?: boolean;
+    full?: boolean;
 }) {
     return (
-        <div className={`field ${half ? 'half' : ''}`}>
+        <div className={`field ${half ? 'half' : ''} ${full ? 'full' : ''}`}>
             <label>
                 {label} {optional ? <span className="optional">(optional)</span> : <span className="required">*</span>}
             </label>
