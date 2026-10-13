@@ -14,7 +14,6 @@ import {
     submitRegistration,
     spotsLeft,
     uploadRegistrationPhoto,
-    type EventSkill,
 } from '../../lib/public-events';
 import playpassLogo from '../../assets/logo-white-v2-cropped.png';
 import courtCollectiveLogo from '../../assets/court-collective-logo.png';
@@ -108,15 +107,6 @@ const blankDetailed: DetailedForm = {
     guardianConsent: false,
     thirdParty: false,
     thirdPartyConsent: false,
-};
-
-const SKILL_BLURB: Record<EventSkill, string> = {
-    Beginner:
-        'New to the game or a handful of sessions in. Still getting used to the underarm serve, the glass rebounds and staying with your partner.',
-    Intermediate:
-        'Playing weekly for a while. You rally consistently off both walls, serve and return with control, move as a pair and can use the lob and the volley to take the net.',
-    Advance:
-        'Competitive, match-hardened play. Reliable bandeja and vibora, comfortable off the back glass, and you build points tactically at pace.',
 };
 
 const TERMS: [string, string][] = [
@@ -670,12 +660,6 @@ export default function EventRegister({ slugOverride }: { slugOverride?: string 
                                 >
                                     {stepName === 'Your details' && (
                                         <div className="field-grid">
-                                            <div className="field full">
-                                                <p className="field-label" style={{ color: 'var(--primary)' }}>
-                                                    {event.skillLevel} level
-                                                </p>
-                                                <p className="field-help">{SKILL_BLURB[event.skillLevel]}</p>
-                                            </div>
                                             <Field label="Full name" error={errors.name}>
                                                 <input
                                                     value={form.name}
@@ -966,8 +950,8 @@ export default function EventRegister({ slugOverride }: { slugOverride?: string 
                                             <Field label="Do you wish to own a team in the league OR sponsor the event?" error={errors.interest}>
                                                 <div className="choice-group vertical">
                                                     {[
-                                                        ['Team ownership', 'Yes, share me details about owning a team'],
-                                                        ['Sponsorship', 'Yes, share me details about sponsorship'],
+                                                        ['Team ownership', 'Yes, share details about owning a team'],
+                                                        ['Sponsorship', 'Yes, share details about sponsorship'],
                                                         ['Not now', 'Not now'],
                                                     ].map(([value, label]) => (
                                                         <label key={value} className={profile.interest === value ? 'checked' : ''}>
