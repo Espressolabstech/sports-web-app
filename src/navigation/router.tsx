@@ -115,7 +115,6 @@ export const router = createBrowserRouter([
             <EventLanding
                 slugOverride="the-court-collective-2026-2026-10-31"
                 registerHref="/court-collective/registration"
-                freeEntry
             />
         ),
     },

@@ -6,6 +6,7 @@ import {
     registerForEvent as apiRegisterForEvent,
     confirmEventPayment as apiConfirmEventPayment,
     getRegistrationPhotoUploadUrl,
+    getPaymentProofUploadUrl,
 } from '../api/adapters/events';
 
 export type EventSkill = 'Beginner' | 'Intermediate' | 'Advance';
@@ -439,6 +440,20 @@ export async function confirmPayment(
 export async function uploadRegistrationPhoto(slug: string, file: Blob): Promise<string> {
     const mimetype = file.type || 'image/jpeg';
     const { data } = await getRegistrationPhotoUploadUrl(slug, mimetype);
+
+    await fetch(data.uploadUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': mimetype },
+        body: file,
+    });
+
+    return data.publicUrl;
+}
+
+/** Temporary manual-payment path (shared UPI QR, no Razorpay) — uploads the payment screenshot. */
+export async function uploadPaymentProof(slug: string, file: Blob): Promise<string> {
+    const mimetype = file.type || 'image/jpeg';
+    const { data } = await getPaymentProofUploadUrl(slug, mimetype);
 
     await fetch(data.uploadUrl, {
         method: 'PUT',

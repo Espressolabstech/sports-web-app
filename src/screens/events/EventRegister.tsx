@@ -14,10 +14,14 @@ import {
     submitRegistration,
     spotsLeft,
     uploadRegistrationPhoto,
+    uploadPaymentProof,
 } from '../../lib/public-events';
 import playpassLogo from '../../assets/logo-white-v2-cropped.png';
 import courtCollectiveLogo from '../../assets/court-collective-logo.png';
+import paymentQr from '../../assets/payment-qr-upi.jpg';
 import './registration-identical.css';
+
+const PAYMENT_UPI_ID = 'gdper@upi';
 
 const LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Pro'] as const;
 const LEVEL_DESCRIPTIONS: Record<(typeof LEVELS)[number], string> = {
@@ -174,6 +178,12 @@ export default function EventRegister({
     const [paid, setPaid] = useState(false);
     const [confirmingPayment, setConfirmingPayment] = useState(false);
     const [ticketCode, setTicketCode] = useState('');
+    // Temporary manual-payment path (shared UPI QR, no Razorpay) for the
+    // auction-entry flow, until a real gateway is wired up for it.
+    const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
+    const [paymentProofPreview, setPaymentProofPreview] = useState('');
+    const [upiRef, setUpiRef] = useState('');
+    const [uploadingProof, setUploadingProof] = useState(false);
 
     // Detailed registration (event.registrationProfile) only — collects a
     // full player profile + photo + consent. Single-entrant: a friend's
@@ -350,6 +360,10 @@ export default function EventRegister({
     };
 
     const submit = async () => {
+        if (auctionOnly && !paymentProofFile && !upiRef.trim()) {
+            setErrors({ paymentProof: 'Upload a payment screenshot or enter your UPI reference' });
+            return;
+        }
         setSubmitting(true);
         try {
             const details = {
@@ -372,12 +386,26 @@ export default function EventRegister({
                         setUploadingPhoto(false);
                     }
                 }
+                let paymentProofUrl: string | undefined;
+                if (auctionOnly && paymentProofFile) {
+                    setUploadingProof(true);
+                    try {
+                        paymentProofUrl = await uploadPaymentProof(event.slug, paymentProofFile);
+                    } finally {
+                        setUploadingProof(false);
+                    }
+                }
+
                 detailedFields = {
                     email: profile.email.trim(),
                     photoUrl,
                     consent: profile.consent,
                     consentVersion: CONSENT_VERSION,
                     skipPayment: auctionOnly || undefined,
+                    ...(auctionOnly && {
+                        paymentProofUrl,
+                        paymentUpiRef: upiRef.trim() || undefined,
+                    }),
                     profile: {
                         instagram: profile.instagram.trim(),
                         age: Number(profile.age),
@@ -606,12 +634,10 @@ export default function EventRegister({
                                 <br />
                                 Auction · 23 October 2026
                             </p>
-                            {!auctionOnly && (
-                                <div className="side-fee">
-                                    ₹{event.priceInr.toLocaleString('en-IN')}
-                                    <small>Player registration fee</small>
-                                </div>
-                            )}
+                            <div className="side-fee">
+                                ₹{event.priceInr.toLocaleString('en-IN')}
+                                <small>Player registration fee</small>
+                            </div>
                         </div>
                     </aside>
 
@@ -1143,34 +1169,95 @@ export default function EventRegister({
                                                     </div>
                                                 ))}
                                             </dl>
-                                            {!auctionOnly && (
-                                                <>
-                                                    <div className="checkout-total">
-                                                        <div>
-                                                            <strong style={{ fontSize: 15, fontFamily: 'var(--font-sans)' }}>Player registration</strong>
-                                                            <p className="field-help">{event.title}</p>
-                                                        </div>
-                                                        <strong>₹{totalInr.toLocaleString('en-IN')}</strong>
-                                                    </div>
-                                                    <p className="payment-note">
-                                                        <LockKeyhole size={13} className="inline mr-2" />
-                                                        Pay securely via Razorpay. Your registration is confirmed after
-                                                        payment.
-                                                    </p>
-                                                    {waitlist && (
-                                                        <p className="payment-note">
-                                                            This event is full — no payment is taken for the waitlist. If a
-                                                            spot opens we'll message you with a payment link.
-                                                        </p>
-                                                    )}
-                                                </>
+                                            <div className="checkout-total">
+                                                <div>
+                                                    <strong style={{ fontSize: 15, fontFamily: 'var(--font-sans)' }}>Player registration</strong>
+                                                    <p className="field-help">{event.title}</p>
+                                                </div>
+                                                <strong>₹{totalInr.toLocaleString('en-IN')}</strong>
+                                            </div>
+                                            <p className="payment-note">
+                                                <LockKeyhole size={13} className="inline mr-2" />
+                                                {auctionOnly
+                                                    ? 'Pay by UPI below. Your registration is confirmed once the organisers verify your payment.'
+                                                    : 'Pay securely via Razorpay. Your registration is confirmed after payment.'}
+                                            </p>
+                                            {waitlist && (
+                                                <p className="payment-note">
+                                                    This event is full — no payment is taken for the waitlist. If a
+                                                    spot opens we'll message you with a payment link.
+                                                </p>
                                             )}
                                             {auctionOnly && (
-                                                <p className="payment-note">
-                                                    <LockKeyhole size={13} className="inline mr-2" />
-                                                    No payment is required. Confirming this entry puts your profile
-                                                    forward for the player auction.
-                                                </p>
+                                                <div className="upi-box">
+                                                    <div className="upi-qr">
+                                                        <img
+                                                            src={paymentQr}
+                                                            alt={`UPI QR code — scan to pay ₹${totalInr.toLocaleString('en-IN')} to ${PAYMENT_UPI_ID}`}
+                                                            width={200}
+                                                            height={200}
+                                                        />
+                                                    </div>
+                                                    <div className="upi-info">
+                                                        <p className="section-kicker">SCAN TO PAY ₹{totalInr.toLocaleString('en-IN')}</p>
+                                                        <p>Scan with any UPI app (GPay, PhonePe, Paytm) or pay to:</p>
+                                                        <p className="upi-id">{PAYMENT_UPI_ID}</p>
+                                                        <Field label="Payment screenshot" optional>
+                                                            <label className="upload-btn">
+                                                                <Camera size={14} /> {paymentProofFile ? 'Change screenshot' : 'Upload screenshot'}
+                                                                <input
+                                                                    type="file"
+                                                                    accept="image/jpeg,image/png,image/webp"
+                                                                    className="hidden"
+                                                                    onChange={(e) => {
+                                                                        const file = e.target.files?.[0];
+                                                                        if (!file) return;
+                                                                        if (
+                                                                            !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ||
+                                                                            file.size > 5 * 1024 * 1024
+                                                                        ) {
+                                                                            setErrors((prev) => ({
+                                                                                ...prev,
+                                                                                paymentProof: 'Choose a JPG, PNG or WebP screenshot under 5 MB.',
+                                                                            }));
+                                                                            return;
+                                                                        }
+                                                                        setPaymentProofFile(file);
+                                                                        setPaymentProofPreview(URL.createObjectURL(file));
+                                                                        setErrors((prev) => {
+                                                                            const rest = { ...prev };
+                                                                            delete rest.paymentProof;
+                                                                            return rest;
+                                                                        });
+                                                                    }}
+                                                                />
+                                                            </label>
+                                                            {paymentProofPreview && (
+                                                                <img src={paymentProofPreview} alt="Payment screenshot" className="upi-shot" />
+                                                            )}
+                                                        </Field>
+                                                        <Field
+                                                            label="UPI ID you paid from"
+                                                            optional
+                                                            error={errors.paymentProof}
+                                                            help="Upload a screenshot or enter your UPI ID — at least one is required."
+                                                        >
+                                                            <input
+                                                                value={upiRef}
+                                                                onChange={(e) => {
+                                                                    setUpiRef(e.target.value);
+                                                                    setErrors((prev) => {
+                                                                        const rest = { ...prev };
+                                                                        delete rest.paymentProof;
+                                                                        return rest;
+                                                                    });
+                                                                }}
+                                                                placeholder="yourname@bank"
+                                                                maxLength={100}
+                                                            />
+                                                        </Field>
+                                                    </div>
+                                                </div>
                                             )}
                                         </>
                                     )}
@@ -1211,7 +1298,9 @@ export default function EventRegister({
                                         <button type="submit" className="continue-btn next" disabled={submitting || checkingDuplicate}>
                                             {uploadingPhoto
                                                 ? 'Uploading photo…'
-                                                : submitting
+                                                : uploadingProof
+                                                  ? 'Uploading screenshot…'
+                                                  : submitting
                                                   ? 'Please wait…'
                                                   : checkingDuplicate
                                                     ? 'Checking…'

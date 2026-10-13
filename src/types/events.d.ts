@@ -212,6 +212,9 @@ declare global {
         interest: string | null;
         dayAvailability: string[];
         registeredAt: string;
+        paymentMethod: string | null;
+        paymentProofUrl: string | null;
+        paymentUpiRef: string | null;
     }
 
     interface ApiHostPreviewData {

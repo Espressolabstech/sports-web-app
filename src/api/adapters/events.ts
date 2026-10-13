@@ -50,6 +50,18 @@ export const getRegistrationPhotoUploadUrl = async (
     });
 };
 
+/** Temporary manual-payment path (shared UPI QR, no Razorpay) — presigned URL for the payment screenshot. */
+export const getPaymentProofUploadUrl = async (
+    slug: string,
+    mimetype: string,
+): Promise<ApiResponse<RegistrationPhotoUploadUrlData>> => {
+    return apiClient({
+        url: endpoints.paymentProofUploadUrl(slug),
+        method: 'POST',
+        data: { mimetype },
+    });
+};
+
 /** Looks up whether a phone number is already registered for this event — 404s if not. */
 export const getEventRegistrationByPhone = async (
     slug: string,
