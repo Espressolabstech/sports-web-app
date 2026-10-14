@@ -1355,8 +1355,8 @@ function Field({
             <label>
                 {label} {optional ? <span className="optional">(optional)</span> : <span className="required">*</span>}
             </label>
-            {children}
             {help && <p className="field-help">{help}</p>}
+            {children}
             {error && (
                 <p className="field-error" role="alert">
                     {error}
