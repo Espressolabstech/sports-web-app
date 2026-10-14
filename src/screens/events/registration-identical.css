@@ -250,8 +250,9 @@
     color: var(--destructive);
 }
 .ccreg .field-help {
-    font-size: 10px;
-    color: var(--muted-foreground);
+    font-size: 11px;
+    color: var(--foreground);
+    opacity: 0.75;
 }
 .ccreg .form-actions {
     display: flex;
@@ -280,6 +281,8 @@
     border-radius: 6px;
     cursor: pointer;
     font-size: 12px;
+    color: var(--foreground);
+    font-weight: 600;
 }
 .ccreg .choice-group label.checked {
     border-color: var(--primary);
