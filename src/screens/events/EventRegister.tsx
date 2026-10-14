@@ -1014,11 +1014,11 @@ export default function EventRegister({
                                                     ))}
                                                 </select>
                                             </Field>
-                                            <Field label="Tournaments played or achievements" optional>
+                                            <Field label="Tournaments Played, Achievements & anything else you would like to tell us about yourself" optional>
                                                 <textarea
                                                     value={profile.achievements}
                                                     onChange={(e) => setProfile({ ...profile, achievements: e.target.value.slice(0, 2000) })}
-                                                    placeholder="Tournaments played, rankings, notable wins…"
+                                                    placeholder="Tournaments played, rankings, notable wins, and anything else"
                                                 />
                                             </Field>
                                             <Field label="Video link of you playing" optional error={errors.videoLink} help="A video or Instagram link starting with https://.">
