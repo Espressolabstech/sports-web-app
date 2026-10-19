@@ -650,7 +650,7 @@ export default function EventRegister({
                             <p>
                                 {event.venueName}
                                 <br />
-                                Auction · 23 October 2026
+                                Auction · TBA
                             </p>
                             <div className="side-fee">
                                 ₹{event.priceInr.toLocaleString('en-IN')}

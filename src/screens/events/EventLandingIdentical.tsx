@@ -109,7 +109,7 @@ export default function EventLandingIdentical({
                             <Gavel />
                             <div>
                                 <label>Player auction</label>
-                                <strong>23 OCTOBER, 2026</strong>
+                                <strong>TBA</strong>
                                 <small>Find your team.</small>
                             </div>
                         </div>
@@ -117,7 +117,7 @@ export default function EventLandingIdentical({
                             <Clock3 />
                             <div>
                                 <label>Register by</label>
-                                <strong>20 OCTOBER, 2026</strong>
+                                <strong>20 November, 2026</strong>
                                 <small>Don't miss your spot.</small>
                             </div>
                         </div>
@@ -189,7 +189,7 @@ export default function EventLandingIdentical({
                                 </span>
                             </div>
                             <RegisterButton href={href} full />
-                            <p className="fee-footer">Registration closes 20 October 2026</p>
+                            <p className="fee-footer">Registration closes 20 November 2026</p>
                         </aside>
                     </div>
 
