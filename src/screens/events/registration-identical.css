@@ -929,6 +929,50 @@
     align-items: center;
     gap: 7px;
 }
+.ccreg .hero-dates {
+    position: absolute;
+    z-index: 1;
+    right: 48px;
+    top: 50%;
+    transform: translateY(-55%);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 22px 26px 20px;
+    border: 1px solid color-mix(in oklab, var(--foreground) 18%, transparent);
+    border-radius: 12px;
+    background: color-mix(in oklab, var(--background) 62%, transparent);
+    backdrop-filter: blur(10px);
+}
+.ccreg .hero-dates-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    color: var(--primary);
+}
+.ccreg .hero-dates-days {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-family: var(--font-display, inherit);
+    font-size: 96px;
+    line-height: 0.9;
+    font-weight: 800;
+    color: var(--foreground);
+    margin: 10px 0 8px;
+}
+.ccreg .hero-dates-days i {
+    width: 2px;
+    height: 64px;
+    background: var(--primary);
+    transform: skewX(-14deg);
+}
+.ccreg .hero-dates-month {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.32em;
+    color: var(--foreground);
+}
 .ccreg .info-strip {
     display: grid;
     grid-template-columns: 1.2fr 1fr 1fr 1.2fr;
@@ -1194,6 +1238,15 @@
     }
     .ccreg .hero-content h1 {
         font-size: 68px;
+    }
+    .ccreg .hero-dates {
+        right: 28px;
+    }
+    .ccreg .hero-dates-days {
+        font-size: 72px;
+    }
+    .ccreg .hero-dates-days i {
+        height: 48px;
     }
 }
 @media (max-width: 700px) {
@@ -1830,5 +1883,105 @@
     .ccreg .host-avatar-photo {
         width: 28px;
         height: 28px;
+    }
+}
+
+@media (max-width: 700px) {
+    .ccreg .event-hero {
+        display: flex;
+        flex-direction: column;
+        padding: 30px 24px 26px;
+    }
+    .ccreg .hero-content {
+        display: contents;
+        padding: 0;
+    }
+    .ccreg .hero-dates {
+        position: relative;
+        right: auto;
+        top: auto;
+        transform: none;
+        order: 4;
+        margin: 2px 0 16px;
+        flex-direction: row;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 13px;
+        width: max-content;
+        max-width: 100%;
+    }
+    .ccreg .hero-cta {
+        order: 5;
+    }
+    .ccreg .hero-dates-label {
+        display: none;
+    }
+    .ccreg .hero-dates-days {
+        font-size: 34px;
+        margin: 0;
+        gap: 8px;
+    }
+    .ccreg .hero-dates-days i {
+        height: 26px;
+    }
+    .ccreg .hero-dates-month {
+        font-size: 10px;
+        letter-spacing: 0.16em;
+        white-space: nowrap;
+    }
+}
+@media (prefers-reduced-motion: no-preference) {
+    .ccreg .hero-content {
+        animation: arrive 0.65s ease both;
+    }
+}
+@keyframes arrive {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+@media (max-width: 700px) and (prefers-reduced-motion: no-preference) {
+    .ccreg .hero-content > * {
+        animation: arrive 0.65s ease both;
+    }
+}
+@media (max-width: 700px) {
+    /* keeps hero text above the absolutely-positioned photo when reduced-motion disables the animation above */
+    .ccreg .hero-content > * {
+        position: relative;
+    }
+    .ccreg .event-hero {
+        min-height: 0;
+    }
+    .ccreg .hero-content .sport-tags {
+        order: 3;
+        margin: 22px 0 0;
+        gap: 10px;
+    }
+    .ccreg .hero-dates {
+        order: 4;
+        margin: 12px 0 0;
+    }
+    .ccreg .hero-cta {
+        order: 5;
+        margin-top: 24px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    .ccreg .hero-cta small {
+        max-width: none;
+    }
+    .ccreg .hero-corner {
+        order: 6;
+        position: relative;
+        right: auto;
+        bottom: auto;
+        margin-top: 18px;
     }
 }

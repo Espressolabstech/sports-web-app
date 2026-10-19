@@ -36,10 +36,10 @@ export default function EventLandingIdentical({
     registerHref?: string;
 }) {
     const href = registerHref ?? `/events/${event.slug}/register`;
-    const dates =
-        event.endDate && event.start.toDateString() !== event.endDate.toDateString()
-            ? `${format(event.start, 'd MMM').toUpperCase()} — ${format(event.endDate, 'd MMM, yyyy').toUpperCase()}`
-            : format(event.start, 'd MMM, yyyy').toUpperCase();
+    const multiDay = Boolean(event.endDate && event.start.toDateString() !== event.endDate.toDateString());
+    const dates = multiDay
+        ? `${format(event.start, 'd MMM').toUpperCase()} — ${format(event.endDate!, 'd MMM, yyyy').toUpperCase()}`
+        : format(event.start, 'd MMM, yyyy').toUpperCase();
 
     return (
         <div className="ccreg">
@@ -60,6 +60,19 @@ export default function EventLandingIdentical({
                     <section className="event-hero">
                         <img src={event.posterUrl || courtHero} alt={event.title} className="hero-photo" />
                         <div className="hero-overlay" />
+                        <div className="hero-dates" aria-label={`Match days: ${dates}`}>
+                            <span className="hero-dates-label">MATCH DAYS</span>
+                            <div className="hero-dates-days">
+                                <span>{format(event.start, 'd')}</span>
+                                {multiDay && (
+                                    <>
+                                        <i />
+                                        <span>{format(event.endDate!, 'd')}</span>
+                                    </>
+                                )}
+                            </div>
+                            <span className="hero-dates-month">{format(event.start, 'MMMM yyyy').toUpperCase()}</span>
+                        </div>
                         <div className="hero-content">
                             <div className="eyebrow">
                                 <span className="status-dot" /> PLAYER REGISTRATIONS OPEN{' '}
