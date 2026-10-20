@@ -1172,7 +1172,7 @@ export default function EventRegister({
                                                             : format(event.start, 'd MMM'),
                                                     ],
                                                     ['Instagram', profile.instagram || 'Not provided'],
-                                                    ['League interest', profile.interest],
+                                                    ['Ownership/Partnership Interest', profile.interest],
                                                     ['Achievements', profile.achievements || 'Not provided'],
                                                     ['Playing video', profile.videoLink || 'Not provided'],
                                                 ].map(([title, value]) => (
