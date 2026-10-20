@@ -1670,6 +1670,10 @@
     color: var(--primary);
     border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
 }
+.ccreg .host-payment-badge-refunded {
+    color: var(--destructive);
+    border-color: color-mix(in oklch, var(--destructive) 35%, var(--border));
+}
 .ccreg .host-row-clickable {
     cursor: pointer;
 }

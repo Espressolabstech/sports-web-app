@@ -439,9 +439,13 @@ export default function EventHostPreview() {
                                                 )}
                                             </td>
                                             <td>
-                                                {p.paymentMethod === 'MANUAL_QR' ? (
+                                                {p.paymentMethod?.startsWith('MANUAL_QR') ? (
                                                     <div className="host-manual-payment">
-                                                        <span className="host-payment-badge">Manual (QR)</span>
+                                                        {p.paymentMethod.endsWith('_REFUNDED') ? (
+                                                            <span className="host-payment-badge host-payment-badge-refunded">Refunded</span>
+                                                        ) : (
+                                                            <span className="host-payment-badge">Manual (QR)</span>
+                                                        )}
                                                         {p.paymentProofUrl && (
                                                             <a
                                                                 href={p.paymentProofUrl}
@@ -454,6 +458,8 @@ export default function EventHostPreview() {
                                                         )}
                                                         {p.paymentUpiRef && <small>UPI: {p.paymentUpiRef}</small>}
                                                     </div>
+                                                ) : p.paymentMethod?.endsWith('_REFUNDED') ? (
+                                                    <span className="host-payment-badge host-payment-badge-refunded">Refunded</span>
                                                 ) : (
                                                     <span className="host-payment-badge host-payment-badge-online">Online</span>
                                                 )}
@@ -572,9 +578,13 @@ export default function EventHostPreview() {
                             ))}
                         </dl>
                         <div className="host-detail-payment">
-                            {selectedPlayer.paymentMethod === 'MANUAL_QR' ? (
+                            {selectedPlayer.paymentMethod?.startsWith('MANUAL_QR') ? (
                                 <>
-                                    <span className="host-payment-badge">Manual (QR)</span>
+                                    {selectedPlayer.paymentMethod.endsWith('_REFUNDED') ? (
+                                        <span className="host-payment-badge host-payment-badge-refunded">Refunded</span>
+                                    ) : (
+                                        <span className="host-payment-badge">Manual (QR)</span>
+                                    )}
                                     {selectedPlayer.paymentProofUrl && (
                                         <a href={selectedPlayer.paymentProofUrl} target="_blank" rel="noreferrer">
                                             View proof
@@ -582,6 +592,8 @@ export default function EventHostPreview() {
                                     )}
                                     {selectedPlayer.paymentUpiRef && <small>UPI: {selectedPlayer.paymentUpiRef}</small>}
                                 </>
+                            ) : selectedPlayer.paymentMethod?.endsWith('_REFUNDED') ? (
+                                <span className="host-payment-badge host-payment-badge-refunded">Refunded</span>
                             ) : (
                                 <span className="host-payment-badge host-payment-badge-online">Online</span>
                             )}
