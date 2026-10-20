@@ -13,6 +13,7 @@ import {
     SlidersHorizontal,
     RotateCcw,
     LockKeyhole,
+    Download,
 } from 'lucide-react';
 import { getHostPreview, hostPreviewLogin } from '../../api/adapters/events';
 import { verifyOtp } from '../../api/adapters/auth';
@@ -32,6 +33,57 @@ function parseLocalISODate(ymd: string): Date {
 const tokenKeyFor = (slug: string) => `host-preview-token:${slug}`;
 
 const PAGE_SIZE = 10;
+
+function paymentLabel(method: string | null): string {
+    if (method?.endsWith('_REFUNDED') || method === 'REFUNDED') return 'Refunded';
+    if (method === 'MANUAL_QR') return 'Manual (QR)';
+    return 'Online';
+}
+
+function csvCell(value: unknown): string {
+    let s = value == null ? '' : String(value);
+    // Stops spreadsheet apps from running player-entered text as a formula.
+    if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function downloadPlayersCsv(players: ApiHostPreviewPlayer[], fileName: string) {
+    const columns: [string, (p: ApiHostPreviewPlayer) => unknown][] = [
+        ['Name', (p) => p.name],
+        ['Mobile', (p) => p.contact],
+        ['Email', (p) => p.email],
+        ['Gender', (p) => p.gender],
+        ['Age', (p) => p.age],
+        ['City', (p) => p.city],
+        ['Sports', (p) => p.sports.join(', ')],
+        ['Padel level', (p) => p.padelLevel],
+        ['Pickleball level', (p) => p.pickleballLevel],
+        ['Day availability', (p) => p.dayAvailability.map((d) => format(parseLocalISODate(d), 'd MMM yyyy')).join(', ')],
+        ['Interest', (p) => p.interest],
+        ['Jersey size', (p) => p.jersey],
+        ['Instagram', (p) => p.instagram],
+        ['Achievements', (p) => p.achievements],
+        ['Video link', (p) => p.videoLink],
+        ['Photo', (p) => p.photoUrl],
+        ['Payment', (p) => paymentLabel(p.paymentMethod)],
+        ['UPI reference', (p) => p.paymentUpiRef],
+        ['Payment proof', (p) => p.paymentProofUrl],
+        ['Registered at', (p) => format(new Date(p.registeredAt), 'd MMM yyyy, h:mm a')],
+        ['Player ID', (p) => p.id],
+    ];
+    const lines = [
+        columns.map(([header]) => csvCell(header)).join(','),
+        ...players.map((p) => columns.map(([, get]) => csvCell(get(p))).join(',')),
+    ];
+    // BOM so Excel opens names/achievements with non-ASCII characters correctly.
+    const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    a.click();
+    URL.revokeObjectURL(url);
+}
 
 type SportFilter = 'all' | 'Padel' | 'Pickleball' | 'Both';
 type LevelFilter = 'all' | 'Beginner' | 'Intermediate' | 'Advanced' | 'Pro';
@@ -298,9 +350,25 @@ export default function EventHostPreview() {
                         <h2>
                             Players <span>{preview.players.length}</span>
                         </h2>
-                        <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-                            Only paid players are registered
-                        </span>
+                        <div className="host-list-actions">
+                            <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                                Only paid players are registered
+                            </span>
+                            <button
+                                type="button"
+                                className="host-export"
+                                disabled={results.length === 0}
+                                onClick={() =>
+                                    downloadPlayersCsv(
+                                        results,
+                                        `${slug}-players-${format(new Date(), 'yyyy-MM-dd')}.csv`,
+                                    )
+                                }
+                            >
+                                <Download size={14} />
+                                Export CSV{filtered ? ` (${results.length})` : ''}
+                            </button>
+                        </div>
                     </div>
                     <div className="host-toolbar">
                         <div className="host-search">

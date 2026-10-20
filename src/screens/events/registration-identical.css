@@ -1670,6 +1670,35 @@
     color: var(--primary);
     border-color: color-mix(in oklch, var(--primary) 35%, var(--border));
 }
+.ccreg .host-list-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+.ccreg .host-export {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 34px;
+    padding: 0 13px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--foreground);
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+}
+.ccreg .host-export:hover:not(:disabled) {
+    border-color: color-mix(in oklch, var(--primary) 50%, var(--border));
+    color: var(--primary);
+}
+.ccreg .host-export:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 .ccreg .host-payment-badge-refunded {
     color: var(--destructive);
     border-color: color-mix(in oklch, var(--destructive) 35%, var(--border));
