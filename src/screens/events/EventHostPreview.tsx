@@ -186,6 +186,7 @@ export default function EventHostPreview() {
     }, [error]);
 
     const preview = data?.data;
+    const feesPaidCount = preview?.players.filter((p) => paymentLabel(p.paymentMethod) !== 'Refunded').length ?? 0;
 
     const results = useMemo(() => {
         if (!preview) return [];
@@ -332,7 +333,7 @@ export default function EventHostPreview() {
                         <span>
                             Fees paid
                             <strong>
-                                {preview.metrics.totalPlayers} <small>of {preview.metrics.totalPlayers} players</small>
+                                {feesPaidCount} <small>of {preview.metrics.totalPlayers} players</small>
                             </strong>
                         </span>
                     </div>
@@ -340,7 +341,7 @@ export default function EventHostPreview() {
                         <span className="host-metric-icon">₹</span>
                         <span>
                             Collected
-                            <strong>₹{preview.metrics.collectedInr.toLocaleString('en-IN')}</strong>
+                            <strong>₹{(feesPaidCount * preview.event.priceInr).toLocaleString('en-IN')}</strong>
                         </span>
                     </div>
                 </div>
