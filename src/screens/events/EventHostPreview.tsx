@@ -188,6 +188,7 @@ export default function EventHostPreview() {
 
     const preview = data?.data;
     const feesPaidCount = preview?.players.filter((p) => paymentLabel(p.paymentMethod) !== 'Refunded').length ?? 0;
+    const refundedCount = (preview?.players.length ?? 0) - feesPaidCount;
 
     const results = useMemo(() => {
         if (!preview) return [];
@@ -325,17 +326,15 @@ export default function EventHostPreview() {
                     <div>
                         <Users />
                         <span>
-                            Total players
-                            <strong>{preview.metrics.totalPlayers}</strong>
+                            Registered players
+                            <strong>{feesPaidCount}</strong>
                         </span>
                     </div>
                     <div>
                         <CircleCheck />
                         <span>
-                            Fees paid
-                            <strong>
-                                {feesPaidCount} <small>of {preview.metrics.totalPlayers} players</small>
-                            </strong>
+                            Total refunded
+                            <strong>{refundedCount}</strong>
                         </span>
                     </div>
                     <div>
