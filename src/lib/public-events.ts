@@ -85,6 +85,8 @@ export interface TournamentEvent {
     endDate: Date | null;
     /** This event collects a full player profile (photo, level, city, consent, etc.) at registration. */
     registrationProfile: boolean;
+    /** 'team' = fixed-pair team tournament, rendered by the team pages. */
+    eventType: 'individual' | 'team';
     roster: RosterPlayer[];
     matches: EventMatch[];
     mexicanoRounds: MexicanoRound[];
@@ -187,6 +189,7 @@ const mapEvent = (e: ApiEvent): TournamentEvent => {
         scheduleMode: e.scheduleMode,
         endDate: e.eventEndDate ? new Date(String(e.eventEndDate).slice(0, 10)) : null,
         registrationProfile: Boolean(e.registrationProfile),
+        eventType: e.eventType === 'TEAM' ? 'team' : 'individual',
         roster: e.entrants.map((p) => ({
             id: p.id,
             name: p.name,
