@@ -13,6 +13,7 @@ export function EventCard({ event }: { event: ApiEvent }) {
     const navigate = useNavigate();
     const start = new Date(`${String(event.eventDate).slice(0, 10)}T${event.time}:00`);
     const filled = event.entrants.length;
+    const teams = event._count?.teams ?? 0;
 
     return (
         <button
@@ -59,7 +60,7 @@ export function EventCard({ event }: { event: ApiEvent }) {
                         {getSportLabel(event.sport)}
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                        {filled}/{event.capacity}
+                        {event.eventType === 'TEAM' ? `${teams} ${teams === 1 ? 'team' : 'teams'}` : `${filled}/${event.capacity}`}
                     </p>
                 </div>
                 <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />

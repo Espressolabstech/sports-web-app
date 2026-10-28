@@ -57,4 +57,12 @@ export const endpoints = {
     paymentProofUploadUrl: (slug: string) => `/public/events/${slug}/payment-proof-upload-url`,
     hostPreview: (slug: string) => `/public/events/${slug}/host-preview`,
     hostPreviewLogin: (slug: string) => `/public/events/${slug}/host-login`,
+
+    teamEvent: (slug: string) => `/public/events/${slug}/team`,
+    teamRegister: (slug: string) => `/public/events/${slug}/team/register`,
+    teamConfirmPayment: (slug: string) => `/public/events/${slug}/team/confirm-payment`,
+    auctionLive: (slug: string) => `/public/events/${slug}/auction/live`,
+    auctionTeamLogin: (slug: string) => `/public/events/${slug}/auction/team-login`,
+    auctionTeamVerify: (slug: string) => `/public/events/${slug}/auction/team-verify`,
+    auctionTeamBoard: (slug: string) => `/public/events/${slug}/auction/board`,
 };

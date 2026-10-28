@@ -20,9 +20,16 @@ import EventLanding from '../screens/events/EventLanding';
 import EventRegister from '../screens/events/EventRegister';
 import EventLive from '../screens/events/EventLive';
 import EventPass from '../screens/events/EventPass';
-import EventHosts from '../screens/events/EventHosts';
 import EventHostPreview from '../screens/events/EventHostPreview';
+import EventHosts from '../screens/events/EventHosts';
 import EventSubPage from '../screens/events/EventSubPage';
+import AuctionLive from '../screens/events/auction/AuctionLive';
+import AuctionResults from '../screens/events/auction/AuctionResults';
+import ExternalRedirect from '../components/ExternalRedirect';
+import { TeamEventRoute } from '../screens/events/team/TeamRoute';
+import config from '../config/config';
+
+const COURT_COLLECTIVE_SLUG = 'the-court-collective-2026-2026-10-31';
 
 export const router = createBrowserRouter([
     {
@@ -87,7 +94,7 @@ export const router = createBrowserRouter([
     },
     {
         path: path.eventRegister,
-        element: <EventRegister />,
+        element: <TeamEventRoute view="register"><EventRegister /></TeamEventRoute>,
     },
     // Dedicated vanity links for The Court Collective 2026 (one real event,
     // slug hardcoded) — shareable without the generic /events/:slug shape.
@@ -133,35 +140,49 @@ export const router = createBrowserRouter([
     })),
     {
         path: path.eventLive,
-        element: <EventLive />,
+        element: <TeamEventRoute view="live"><EventLive /></TeamEventRoute>,
     },
     {
         path: path.eventPass,
-        element: <EventPass />,
+        element: <TeamEventRoute view="pass"><EventPass /></TeamEventRoute>,
     },
     {
         path: path.eventHosts,
         element: <EventHosts />,
     },
+    // Host view (registered players) — kept here while The Court Collective
+    // still uses it; the auction console lives in the organizer app.
     {
         path: path.eventHostPreview,
         element: <EventHostPreview />,
     },
+    // Public auction pages: live screen (anyone) and team view (team users).
+    { path: '/events/:slug/auction/live', element: <AuctionLive /> },
+    { path: '/events/:slug/auction/team', element: <AuctionResults /> },
+    // Vanity links for The Court Collective 2026.
+    { path: '/auction', element: <Navigate to="/auction/live" replace /> },
+    { path: '/auction/live', element: <AuctionLive slugOverride={COURT_COLLECTIVE_SLUG} /> },
+    { path: '/auction/team', element: <AuctionResults slugOverride={COURT_COLLECTIVE_SLUG} /> },
+    { path: '/auction/results', element: <Navigate to="/auction/team" replace /> },
+    {
+        path: '/auction/control',
+        element: <ExternalRedirect to={`${config.organizerAppUrl}/host/events/${COURT_COLLECTIVE_SLUG}/auction`} />,
+    },
     {
         path: path.eventRules,
-        element: <EventSubPage section="rules" />,
+        element: <TeamEventRoute view="landing"><EventSubPage section="rules" /></TeamEventRoute>,
     },
     {
         path: path.eventPlayers,
-        element: <EventSubPage section="players" />,
+        element: <TeamEventRoute view="live"><EventSubPage section="players" /></TeamEventRoute>,
     },
     {
         path: path.eventStandings,
-        element: <EventSubPage section="standings" />,
+        element: <TeamEventRoute view="live"><EventSubPage section="standings" /></TeamEventRoute>,
     },
     {
         path: path.eventDetail,
-        element: <EventLanding />,
+        element: <TeamEventRoute view="landing"><EventLanding /></TeamEventRoute>,
     },
     {
         path: '*',
