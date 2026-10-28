@@ -95,6 +95,22 @@ function daySpan(start: Date, end: Date): string[] {
     return days;
 }
 
+const MAX_IMAGE_MB = 5;
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+
+/** Why a picked image can't be used (format, then size), or null if it's fine. */
+function imageProblem(file: File, what: string): string | null {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        const ext = file.name.split('.').pop()?.toUpperCase();
+        return `${ext ? `${ext} files aren't` : "This file type isn't"} supported. Please upload your ${what} as a JPG, PNG or WebP image.`;
+    }
+    if (file.size > MAX_IMAGE_MB * 1024 * 1024) {
+        const sizeMb = (file.size / (1024 * 1024)).toFixed(1);
+        return `This ${what} is ${sizeMb} MB — the limit is ${MAX_IMAGE_MB} MB. Please pick a smaller image or take a screenshot of it.`;
+    }
+    return null;
+}
+
 /**
  * Copies a picked file's bytes into memory. On Android, a file picked from
  * Google Photos/Drive is only a handle that goes stale once the tab is
@@ -880,12 +896,13 @@ export default function EventRegister({
                                                                         className="hidden"
                                                                         onChange={async (e) => {
                                                                             const picked = e.target.files?.[0];
+                                                                            // Clear so re-picking the same file fires onChange again.
+                                                                            e.target.value = '';
                                                                             if (!picked) return;
-                                                                            if (
-                                                                                !['image/jpeg', 'image/png', 'image/webp'].includes(picked.type) ||
-                                                                                picked.size > 5 * 1024 * 1024
-                                                                            ) {
-                                                                                setErrors((prev) => ({ ...prev, photo: 'Choose a JPG, PNG or WebP photo under 5 MB.' }));
+                                                                            const problem = imageProblem(picked, 'photo');
+                                                                            if (problem) {
+                                                                                setErrors((prev) => ({ ...prev, photo: problem }));
+                                                                                toast.error("Photo can't be used", { description: problem });
                                                                                 return;
                                                                             }
                                                                             let file: File;
@@ -1243,15 +1260,13 @@ export default function EventRegister({
                                                                     className="hidden"
                                                                     onChange={async (e) => {
                                                                         const picked = e.target.files?.[0];
+                                                                        // Clear so re-picking the same file fires onChange again.
+                                                                        e.target.value = '';
                                                                         if (!picked) return;
-                                                                        if (
-                                                                            !['image/jpeg', 'image/png', 'image/webp'].includes(picked.type) ||
-                                                                            picked.size > 5 * 1024 * 1024
-                                                                        ) {
-                                                                            setErrors((prev) => ({
-                                                                                ...prev,
-                                                                                paymentProof: 'Choose a JPG, PNG or WebP screenshot under 5 MB.',
-                                                                            }));
+                                                                        const problem = imageProblem(picked, 'payment screenshot');
+                                                                        if (problem) {
+                                                                            setErrors((prev) => ({ ...prev, paymentProof: problem }));
+                                                                            toast.error("Screenshot can't be used", { description: problem });
                                                                             return;
                                                                         }
                                                                         let file: File;
