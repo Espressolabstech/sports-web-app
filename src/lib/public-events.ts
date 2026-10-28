@@ -440,13 +440,7 @@ export async function confirmPayment(
 export async function uploadRegistrationPhoto(slug: string, file: Blob): Promise<string> {
     const mimetype = file.type || 'image/jpeg';
     const { data } = await getRegistrationPhotoUploadUrl(slug, mimetype);
-
-    await fetch(data.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': mimetype },
-        body: file,
-    });
-
+    await putToStorage(data.uploadUrl, file, mimetype, 'photo');
     return data.publicUrl;
 }
 
@@ -454,14 +448,25 @@ export async function uploadRegistrationPhoto(slug: string, file: Blob): Promise
 export async function uploadPaymentProof(slug: string, file: Blob): Promise<string> {
     const mimetype = file.type || 'image/jpeg';
     const { data } = await getPaymentProofUploadUrl(slug, mimetype);
-
-    await fetch(data.uploadUrl, {
-        method: 'PUT',
-        headers: { 'Content-Type': mimetype },
-        body: file,
-    });
-
+    await putToStorage(data.uploadUrl, file, mimetype, 'payment screenshot');
     return data.publicUrl;
+}
+
+/** PUTs a file to a presigned URL, turning a network or storage failure into a message the registrant can act on. */
+async function putToStorage(uploadUrl: string, file: Blob, mimetype: string, what: string): Promise<void> {
+    let res: Response;
+    try {
+        res = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': mimetype },
+            body: file,
+        });
+    } catch {
+        throw new Error(`Couldn't upload your ${what}. Check your connection, re-select the image and try again.`);
+    }
+    if (!res.ok) {
+        throw new Error(`Couldn't upload your ${what} (${res.status}). Please try again.`);
+    }
 }
 
 /**

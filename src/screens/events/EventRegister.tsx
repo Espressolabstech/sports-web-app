@@ -95,6 +95,18 @@ function daySpan(start: Date, end: Date): string[] {
     return days;
 }
 
+/**
+ * Copies a picked file's bytes into memory. On Android, a file picked from
+ * Google Photos/Drive is only a handle that goes stale once the tab is
+ * backgrounded (e.g. switching to Instagram for the reel link) — the upload
+ * then dies with "Failed to fetch". Reading it up front avoids that, and
+ * surfaces an unreadable file right at selection instead of at submit.
+ */
+async function readIntoMemory(file: File): Promise<File> {
+    const bytes = await file.arrayBuffer();
+    return new File([bytes], file.name, { type: file.type });
+}
+
 type DetailedForm = {
     email: string;
     instagram: string;
@@ -866,14 +878,21 @@ export default function EventRegister({
                                                                         type="file"
                                                                         accept="image/jpeg,image/png,image/webp"
                                                                         className="hidden"
-                                                                        onChange={(e) => {
-                                                                            const file = e.target.files?.[0];
-                                                                            if (!file) return;
+                                                                        onChange={async (e) => {
+                                                                            const picked = e.target.files?.[0];
+                                                                            if (!picked) return;
                                                                             if (
-                                                                                !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ||
-                                                                                file.size > 5 * 1024 * 1024
+                                                                                !['image/jpeg', 'image/png', 'image/webp'].includes(picked.type) ||
+                                                                                picked.size > 5 * 1024 * 1024
                                                                             ) {
                                                                                 setErrors((prev) => ({ ...prev, photo: 'Choose a JPG, PNG or WebP photo under 5 MB.' }));
+                                                                                return;
+                                                                            }
+                                                                            let file: File;
+                                                                            try {
+                                                                                file = await readIntoMemory(picked);
+                                                                            } catch {
+                                                                                setErrors((prev) => ({ ...prev, photo: "Couldn't read that photo. Try saving it to your phone first, or pick another." }));
                                                                                 return;
                                                                             }
                                                                             setPhotoFile(file);
@@ -1222,16 +1241,26 @@ export default function EventRegister({
                                                                     type="file"
                                                                     accept="image/jpeg,image/png,image/webp"
                                                                     className="hidden"
-                                                                    onChange={(e) => {
-                                                                        const file = e.target.files?.[0];
-                                                                        if (!file) return;
+                                                                    onChange={async (e) => {
+                                                                        const picked = e.target.files?.[0];
+                                                                        if (!picked) return;
                                                                         if (
-                                                                            !['image/jpeg', 'image/png', 'image/webp'].includes(file.type) ||
-                                                                            file.size > 5 * 1024 * 1024
+                                                                            !['image/jpeg', 'image/png', 'image/webp'].includes(picked.type) ||
+                                                                            picked.size > 5 * 1024 * 1024
                                                                         ) {
                                                                             setErrors((prev) => ({
                                                                                 ...prev,
                                                                                 paymentProof: 'Choose a JPG, PNG or WebP screenshot under 5 MB.',
+                                                                            }));
+                                                                            return;
+                                                                        }
+                                                                        let file: File;
+                                                                        try {
+                                                                            file = await readIntoMemory(picked);
+                                                                        } catch {
+                                                                            setErrors((prev) => ({
+                                                                                ...prev,
+                                                                                paymentProof: "Couldn't read that screenshot. Try saving it to your phone first, or pick another.",
                                                                             }));
                                                                             return;
                                                                         }
