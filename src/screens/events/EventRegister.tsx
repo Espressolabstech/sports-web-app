@@ -305,6 +305,9 @@ export default function EventRegister({
             const age = Number(profile.age);
             if (!Number.isFinite(age) || age < 1 || age > 100) e.age = 'Enter a valid age';
             if (!profile.gender) e.gender = 'Select one';
+            // A rejected pick (wrong format / too big / unreadable) keeps them
+            // on this step instead of quietly continuing without a photo.
+            if (errors.photo) e.photo = errors.photo;
         }
         if (!detailed && friendOpen) {
             const friendName = friend.name.trim();
