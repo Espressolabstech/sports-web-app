@@ -12,7 +12,7 @@ const PHASE_LABEL: Record<string, string> = {
 export function EventCard({ event }: { event: ApiEvent }) {
     const navigate = useNavigate();
     const start = new Date(`${String(event.eventDate).slice(0, 10)}T${event.time}:00`);
-    const filled = event.entrants.length;
+    const filled = event.entrantCounts?.registered ?? event.entrants.length;
 
     return (
         <button

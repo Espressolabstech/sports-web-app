@@ -97,7 +97,10 @@ declare global {
         registrationProfile: boolean;
         createdAt: string;
         updatedAt: string;
+        /** Event detail: empty until the event is live (no public player list before play). */
         entrants: ApiEventEntrant[];
+        /** Event detail: spots taken / waitlisted, sent instead of the player list. */
+        entrantCounts?: { registered: number; waitlisted: number };
         matches: ApiEventMatch[];
         mexicanoRounds: ApiEventMexicanoRound[];
         hosts: ApiEventHost[];

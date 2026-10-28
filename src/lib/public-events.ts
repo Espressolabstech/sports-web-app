@@ -85,7 +85,11 @@ export interface TournamentEvent {
     endDate: Date | null;
     /** This event collects a full player profile (photo, level, city, consent, etc.) at registration. */
     registrationProfile: boolean;
+    /** Empty before the event is live — the API sends only counts until then. */
     roster: RosterPlayer[];
+    /** Players holding a spot (not waitlisted). */
+    registeredCount: number;
+    waitlistCount: number;
     matches: EventMatch[];
     mexicanoRounds: MexicanoRound[];
     hosts: ApiEventHost[];
@@ -196,6 +200,10 @@ const mapEvent = (e: ApiEvent): TournamentEvent => {
             removedFromPlay: Boolean(p.removedFromPlay),
             createdAt: p.createdAt,
         })),
+        // Counts come from the API; the event list (and an older API) only
+        // sends entrants, so fall back to counting those.
+        registeredCount: e.entrantCounts?.registered ?? e.entrants.filter((p) => !p.waitlisted).length,
+        waitlistCount: e.entrantCounts?.waitlisted ?? e.entrants.filter((p) => p.waitlisted).length,
         matches: (e.matches ?? []).map(mapMatch),
         mexicanoRounds: (e.mexicanoRounds ?? []).map(mapMexicanoRound),
         hosts: e.hosts,
@@ -231,7 +239,7 @@ export function waitlistOf(event: TournamentEvent) {
 }
 
 export function fillStatus(event: TournamentEvent) {
-    const filled = playingRoster(event).length;
+    const filled = event.registeredCount;
     const pct = event.capacity > 0 ? Math.min(100, Math.round((filled / event.capacity) * 100)) : 0;
     const status: FillStatusValue = pct >= 100 ? 'full' : pct >= 60 ? 'filling' : 'open';
     const label = status === 'full' ? 'Full' : status === 'filling' ? 'Filling up' : 'Open';
@@ -239,7 +247,7 @@ export function fillStatus(event: TournamentEvent) {
 }
 
 export function spotsLeft(event: TournamentEvent) {
-    return Math.max(0, event.capacity - playingRoster(event).length);
+    return Math.max(0, event.capacity - event.registeredCount);
 }
 
 export function shortName(name: string) {

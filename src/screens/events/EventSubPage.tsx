@@ -125,7 +125,7 @@ export default function EventSubPage({ section }: { section: Section }) {
                     (gated ? (
                         <LockedPlayers event={event} />
                     ) : (
-                        <Players roster={roster} capacity={event.capacity} />
+                        <Players roster={roster} registered={event.registeredCount} capacity={event.capacity} />
                     ))}
                 {section === 'standings' && <Standings event={event} />}
             </main>
@@ -259,12 +259,14 @@ function LockedPlayers({ event }: { event: TournamentEvent }) {
 
 function Players({
     roster,
+    registered,
     capacity,
 }: {
     roster: (RosterPlayer & { isMe: boolean })[];
+    registered: number;
     capacity: number;
 }) {
-    if (roster.length === 0) {
+    if (roster.length === 0 && registered === 0) {
         return (
             <div className="rounded-2xl px-6 py-14 text-center" style={card}>
                 <Users className="mx-auto h-8 w-8" style={{ color: 'hsl(var(--event-lime))' }} />
@@ -281,35 +283,39 @@ function Players({
     return (
         <div className="space-y-3">
             <p className="px-1 text-[12px]" style={onInkMuted}>
-                {roster.length}/{capacity} registered
+                {registered}/{capacity} registered
+                {/* Before the event is live the API sends counts only, so the list holds at most "You". */}
+                {roster.every((p) => p.isMe) && ' · Player names appear once the event starts'}
             </p>
-            <div className="overflow-hidden rounded-2xl" style={card}>
-                {roster.map((p, i) => (
-                    <div
-                        key={p.id}
-                        className="flex items-center gap-3 px-4 py-3"
-                        style={i > 0 ? { borderTop: '1px solid hsl(var(--event-on-ink)/0.08)' } : undefined}
-                    >
-                        <div className="min-w-0 flex-1">
-                            <p className="truncate text-[15px] font-medium" style={onInk}>
-                                {p.name}
-                                {p.isMe && (
-                                    <span
-                                        className="ml-2 text-[11px] font-semibold"
-                                        style={{ color: 'hsl(var(--event-accent))' }}
-                                    >
-                                        You
-                                    </span>
-                                )}
-                            </p>
-                            <p className="truncate text-[12px]" style={onInkMuted}>
-                                {p.skill}
-                                {p.waitlisted ? ' · Waitlisted' : ''}
-                            </p>
+            {roster.length > 0 && (
+                <div className="overflow-hidden rounded-2xl" style={card}>
+                    {roster.map((p, i) => (
+                        <div
+                            key={p.id}
+                            className="flex items-center gap-3 px-4 py-3"
+                            style={i > 0 ? { borderTop: '1px solid hsl(var(--event-on-ink)/0.08)' } : undefined}
+                        >
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate text-[15px] font-medium" style={onInk}>
+                                    {p.name}
+                                    {p.isMe && (
+                                        <span
+                                            className="ml-2 text-[11px] font-semibold"
+                                            style={{ color: 'hsl(var(--event-accent))' }}
+                                        >
+                                            You
+                                        </span>
+                                    )}
+                                </p>
+                                <p className="truncate text-[12px]" style={onInkMuted}>
+                                    {p.skill}
+                                    {p.waitlisted ? ' · Waitlisted' : ''}
+                                </p>
+                            </div>
                         </div>
-                    </div>
-                ))}
-            </div>
+                    ))}
+                </div>
+            )}
         </div>
     );
 }
