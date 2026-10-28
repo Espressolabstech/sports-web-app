@@ -59,7 +59,7 @@ export function EventCard({ event }: { event: ApiEvent }) {
                         {getSportLabel(event.sport)}
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                        {filled}/{event.capacity}
+                        {event.eventType === 'TEAM' ? `${teams} ${teams === 1 ? 'team' : 'teams'}` : `${filled}/${event.capacity}`}
                     </p>
                 </div>
                 <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-foreground" />

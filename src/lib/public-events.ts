@@ -191,6 +191,7 @@ const mapEvent = (e: ApiEvent): TournamentEvent => {
         scheduleMode: e.scheduleMode,
         endDate: e.eventEndDate ? new Date(String(e.eventEndDate).slice(0, 10)) : null,
         registrationProfile: Boolean(e.registrationProfile),
+        eventType: e.eventType === 'TEAM' ? 'team' : 'individual',
         roster: e.entrants.map((p) => ({
             id: p.id,
             name: p.name,
