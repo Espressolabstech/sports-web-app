@@ -1,24 +1,33 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Shuffle } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { getAuctionTeamBoard } from '../../../api/adapters/auction';
 import AuctionTeamLoginGate from '../../../components/events/AuctionTeamLoginGate';
 import { useAuctionTeamSession, type AuctionTeamSession } from '../../../lib/auction-team-session';
 import { useEventLive } from '../../../lib/auction-live';
-import { rupees, MIN_SQUAD, MIN_WOMEN } from '../../../lib/auction';
+import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/pp-ui';
 import { AnimatedLoader } from '../../../components/AnimatedLoader';
-import AuctionShell, { TeamLogo } from './AuctionShell';
+import { filterAuctionLots, rupees } from '../../../lib/auction';
+import AuctionShell from './AuctionShell';
+import { AuctionTeamCards } from './AuctionTeamCards';
+import { AuctionTeamInsights } from './AuctionTeamInsights';
+import { statuses, statusKey } from './auction-statuses';
 
-/** The prototype folds LIVE into the WAITING bucket for its results tabs/counts. */
-type ResultStatus = 'SOLD' | 'UNSOLD' | 'WAITING';
-const bucket = (status: AuctionLotStatus): ResultStatus => (status === 'LIVE' ? 'WAITING' : status);
+type Tab = 'teams' | 'players' | 'insights';
+const TABS: { value: Tab; label: string }[] = [
+    { value: 'teams', label: 'Teams' },
+    { value: 'players', label: 'Players' },
+    { value: 'insights', label: 'Insights' },
+];
 
 function AuctionResultsInner({ slug, session, logout }: { slug: string; session: AuctionTeamSession; logout: () => void }) {
     const queryClient = useQueryClient();
-    const [tab, setTab] = useState<'teams' | 'players'>('teams');
-    const [status, setStatus] = useState<ResultStatus>('SOLD');
+    const [tab, setTab] = useState<Tab>('teams');
+    const [status, setStatus] = useState('sold');
     const [q, setQ] = useState('');
+    const [category, setCategory] = useState('all');
+    const [gender, setGender] = useState('all');
 
     const { data, isLoading, error } = useQuery({
         queryKey: ['auction-team-board', slug, session.token],
@@ -33,34 +42,9 @@ function AuctionResultsInner({ slug, session, logout }: { slug: string; session:
     }, [error, logout]);
 
     const board = data?.data;
-
-    const counts = useMemo(() => {
-        const c: Record<ResultStatus, number> = { SOLD: 0, UNSOLD: 0, WAITING: 0 };
-        board?.lots.forEach((l) => c[bucket(l.status)]++);
-        return c;
-    }, [board]);
-
-    const rows = useMemo(() => {
-        if (!board) return [];
-        const needle = q.trim().toLowerCase();
-        const lots = board.lots.filter((l) => bucket(l.status) === status);
-        // Sold: auction sales in the order they happened, then every retained
-        // player together at the bottom (retentions have no sale time).
-        if (status === 'SOLD') {
-            lots.sort((a, b) => {
-                if (a.retained !== b.retained) return a.retained ? 1 : -1;
-                if (a.retained) return a.name.localeCompare(b.name);
-                return new Date(a.soldAt ?? 0).getTime() - new Date(b.soldAt ?? 0).getTime();
-            });
-        }
-        return lots
-            .map((l) => ({ l, t: board.teams.find((t) => t.id === l.teamId) }))
-            .filter((r) => !needle || `${r.l.name} ${r.t?.name ?? ''}`.toLowerCase().includes(needle));
-    }, [board, q, status]);
-
     if (isLoading || !board) {
         return (
-            <AuctionShell slug={slug} title="TEAM VIEW">
+            <AuctionShell slug={slug} kicker="THE COURT COLLECTIVE 2026 · PLAYER AUCTION" title="TEAM HUB">
                 <div className="flex justify-center py-16">
                     <AnimatedLoader />
                 </div>
@@ -69,124 +53,98 @@ function AuctionResultsInner({ slug, session, logout }: { slug: string; session:
     }
 
     const { teams, lots, categories } = board;
-    const statusLabel = (s: ResultStatus) => s[0] + s.slice(1).toLowerCase();
+    // Searching also matches the buying team's name.
+    const rows = filterAuctionLots(lots, { category, gender, status, search: '' })
+        .map((l) => ({ l, t: teams.find((t) => t.id === l.teamId) }))
+        .filter((r) => !q.trim() || `${r.l.name} ${r.l.number ?? ''} ${r.t?.name ?? ''}`.toLowerCase().includes(q.trim().toLowerCase()));
 
     return (
-        <AuctionShell slug={slug} title="TEAM VIEW">
+        <AuctionShell slug={slug} isLive={!!board.state.currentLotId} kicker="THE COURT COLLECTIVE 2026 · PLAYER AUCTION" title="TEAM HUB">
             <div className="auction-tabs" role="tablist" aria-label="Results view">
-                {(['teams', 'players'] as const).map((t) => (
-                    <button key={t} role="tab" aria-selected={tab === t} onClick={() => setTab(t)}>
-                        {t === 'teams' ? 'Teams' : 'Players'}
-                    </button>
+                {TABS.map((t) => (
+                    <Button variant="ghost" key={t.value} role="tab" aria-selected={tab === t.value} onClick={() => setTab(t.value)}>
+                        {t.label}
+                    </Button>
                 ))}
             </div>
-
-            {tab === 'teams' ? (
-                <div className="auction-team-grid">
-                    {teams.map((t) => {
-                        const squad = [...lots.filter((l) => l.status === 'SOLD' && l.teamId === t.id)].sort(
-                            (a, b) => Number(b.retained) - Number(a.retained),
-                        );
-                        const barPct = t.purseInr ? Math.min(100, (t.spentInr / t.purseInr) * 100) : 0;
-                        return (
-                            <article key={t.id} className="auction-team-card">
-                                <header>
-                                    <TeamLogo name={t.name} logoUrl={t.logoUrl} size={36} />
-                                    <div>
-                                        <h3>{t.name}</h3>
-                                        <span>
-                                            {t.squadCount}/{MIN_SQUAD} players · {t.womenCount}/{MIN_WOMEN} women
-                                        </span>
-                                    </div>
-                                </header>
-                                <div className="auction-purse">
-                                    <span>Remaining purse</span>
-                                    <strong>{rupees(t.remainingInr)}</strong>
-                                    <small>of {rupees(t.purseInr)}</small>
-                                </div>
-                                <div className="auction-bar">
-                                    <span style={{ width: `${barPct}%` }} />
-                                </div>
-                                <ul>
-                                    {squad.length ? (
-                                        squad.map((l) => (
-                                            <li key={l.id}>
-                                                <span>
-                                                    {l.name}
-                                                    {l.retained && <span className="pp-status pp-status-info auction-result-badge">Retained</span>}
-                                                </span>
-                                                <strong>{rupees(l.priceInr ?? 0)}</strong>
-                                            </li>
-                                        ))
-                                    ) : (
-                                        <li style={{ color: 'var(--muted-foreground)' }}>No players yet</li>
-                                    )}
-                                </ul>
-                            </article>
-                        );
-                    })}
-                </div>
+            {tab === 'insights' ? (
+                <AuctionTeamInsights teams={teams} categories={categories} lots={lots} />
+            ) : tab === 'teams' ? (
+                <AuctionTeamCards teams={teams} lots={lots} />
             ) : (
                 <>
-                    <div className="auction-toolbar-row">
-                        <div className="auction-seg" role="group" aria-label="Player status">
-                            {(['SOLD', 'UNSOLD', 'WAITING'] as const).map((s) => (
-                                <button key={s} aria-pressed={status === s} onClick={() => setStatus(s)}>
-                                    {statusLabel(s)} <span>{counts[s]}</span>
-                                </button>
-                            ))}
-                        </div>
+                    <div className="auction-lot-tabs" aria-label="Player categories">
+                        <Button variant="outline" aria-pressed={category === 'all'} onClick={() => setCategory('all')}>
+                            All categories
+                        </Button>
+                        {categories.map((g) => (
+                            <Button key={g.id} variant="outline" aria-pressed={category === g.id} onClick={() => setCategory(g.id)}>
+                                {g.name} <span>{lots.filter((l) => l.categoryId === g.id).length}</span>
+                            </Button>
+                        ))}
+                    </div>
+                    <div className="pp-draw-filters">
                         <div className="host-search">
                             <Search size={16} />
-                            <input aria-label="Search players" placeholder="Search players or teams" value={q} onChange={(e) => setQ(e.target.value)} />
+                            <Input aria-label="Search players" placeholder="Player number, name or team" value={q} onChange={(e) => setQ(e.target.value)} />
                         </div>
+                        <Select value={status} onValueChange={setStatus}>
+                            <SelectTrigger aria-label="Auction status">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="pp-console pp-menu">
+                                <SelectItem value="all">All statuses</SelectItem>
+                                <SelectItem value="waiting">Waiting</SelectItem>
+                                <SelectItem value="live">On block</SelectItem>
+                                <SelectItem value="sold">Sold</SelectItem>
+                                <SelectItem value="unsold">Unsold</SelectItem>
+                                <SelectItem value="retained">Retained</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Select value={gender} onValueChange={setGender}>
+                            <SelectTrigger aria-label="Player gender">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="pp-console pp-menu">
+                                <SelectItem value="all">All genders</SelectItem>
+                                <SelectItem value="Male">Male</SelectItem>
+                                <SelectItem value="Female">Female</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
-                    {status === 'WAITING' && (
-                        <p className="auction-random-note" role="note">
-                            <Shuffle size={14} aria-hidden="true" />
-                            Players are listed in a random order — this is not the order they will be called in their category.
-                        </p>
-                    )}
-                    <div className="host-table-scroll">
-                        <table className="host-table auction-table">
-                            <thead>
-                                <tr>
-                                    <th>Player</th>
-                                    <th>Team</th>
-                                    <th style={{ textAlign: 'right' }}>Sold for</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {rows.map(({ l, t }) => {
-                                    const category = categories.find((c) => c.id === l.categoryId);
-                                    return (
-                                        <tr key={l.id}>
-                                            <td>
-                                                <strong>{l.name}</strong>
-                                                {category && <span className="auction-lot-chip">{category.name}</span>}
-                                                {l.status === 'LIVE' && <span className="pp-status pp-status-warning auction-result-badge">On the block</span>}
-                                                {l.retained && <span className="pp-status pp-status-info auction-result-badge">Retained</span>}
-                                            </td>
-                                            <td>
-                                                {t ? (
-                                                    <span className="auction-team-cell">
-                                                        <TeamLogo name={t.name} logoUrl={t.logoUrl} size={22} />
-                                                        {t.name}
-                                                    </span>
-                                                ) : (
-                                                    '—'
-                                                )}
-                                            </td>
-                                            <td style={{ textAlign: 'right', fontWeight: 600 }}>{l.priceInr ? rupees(l.priceInr) : '—'}</td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
-                        {!rows.length && (
-                            <p style={{ padding: 32, textAlign: 'center', color: 'var(--muted-foreground)', fontSize: 13 }}>No players here yet</p>
-                        )}
+                    <div className="pp-draw-legend">
+                        {Object.values(statuses).map((s) => (
+                            <span key={s.text} className={`pp-status pp-status-${s.tone}`}>
+                                <s.Icon size={12} />
+                                {s.text}
+                            </span>
+                        ))}
                     </div>
+                    <div className="pp-number-grid">
+                        {rows.map(({ l, t }) => {
+                            const s = statuses[statusKey(l)];
+                            return (
+                                <div key={l.id} className="pp-number-tile rounded-lg border" aria-label={`Player ${l.number}, ${l.name}, ${s.text}`}>
+                                    <div className="pp-number-top">
+                                        <strong>{String(l.number ?? 0).padStart(3, '0')}</strong>
+                                        <span className={`pp-status pp-status-${s.tone}`}>
+                                            <s.Icon size={12} />
+                                            {s.text}
+                                        </span>
+                                    </div>
+                                    <span className="pp-number-name">{l.name}</span>
+                                    <span className="pp-number-detail">
+                                        {categories.find((g) => g.id === l.categoryId)?.name ?? 'Unassigned'} · {l.gender === 'Female' ? 'Female' : 'Male'}
+                                    </span>
+                                    <span className="pp-number-price">
+                                        {l.status === 'SOLD' ? rupees(l.priceInr ?? 0) : rupees(l.effectiveBasePriceInr)}
+                                        {l.status === 'SOLD' && <small>{t?.name}</small>}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                    {!rows.length && <p className="p-8 text-center text-muted-foreground text-sm">No players here yet</p>}
                 </>
             )}
         </AuctionShell>
@@ -198,7 +156,7 @@ export default function AuctionResults({ slugOverride }: { slugOverride?: string
     const slug = slugOverride ?? params.slug!;
     const { session, login, logout } = useAuctionTeamSession(slug);
     return (
-        <AuctionTeamLoginGate slug={slug} session={session} onLogin={login} title="Team view login">
+        <AuctionTeamLoginGate slug={slug} session={session} onLogin={login} title="Team Hub login">
             {session && <AuctionResultsInner slug={slug} session={session} logout={logout} />}
         </AuctionTeamLoginGate>
     );

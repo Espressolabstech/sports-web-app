@@ -14,19 +14,9 @@ const CourtMotion = () => (
     </svg>
 );
 
-export function AuctionLotBreak({
-    done,
-    upcoming,
-    sold,
-    total,
-}: {
-    done?: string;
-    upcoming?: string;
-    sold: number;
-    total: number;
-}) {
+export function AuctionLotBreak({ done, upcoming, sold, total }: { done?: string; upcoming?: string; sold: number; total: number }) {
     return (
-        <section className="auction-intermission" aria-live="polite">
+        <section className="auction-intermission auction-lot-break" aria-live="polite">
             <CourtMotion />
             <div className="auction-intermission-content">
                 <img src={courtCollectiveLogo} alt="The Court Collective" width={250} height={88} />
@@ -36,14 +26,15 @@ export function AuctionLotBreak({
                         <>
                             {upcoming.toUpperCase()}
                             <br />
-                            <span style={{ color: 'var(--primary)' }}>IS NEXT.</span>
+                            <span className="text-primary">IS NEXT.</span>
                         </>
                     ) : (
                         'THAT’S A WRAP.'
                     )}
                 </h2>
                 <span className="auction-waiting-status">
-                    <i /> {upcoming ? 'Short break' : 'Auction complete'}
+                    <i />
+                    {upcoming ? 'Short break' : 'Auction complete'}
                 </span>
             </div>
             <div className="auction-intermission-bottom">
@@ -55,15 +46,7 @@ export function AuctionLotBreak({
     );
 }
 
-export function AuctionWaiting({
-    sold,
-    total,
-    label,
-}: {
-    sold: number;
-    total: number;
-    label?: string;
-}) {
+export function AuctionWaiting({ sold, total, label }: { sold: number; total: number; label?: string }) {
     const complete = sold === total && total > 0;
     return (
         <section className="auction-intermission" aria-live="polite">
@@ -73,7 +56,8 @@ export function AuctionWaiting({
                 <p className="section-kicker">{label ? label.toUpperCase() : 'PLAYER AUCTION · 2026'}</p>
                 <h2>{complete ? 'THAT’S A WRAP.' : 'THE NEXT CHAPTER AWAITS.'}</h2>
                 <span className="auction-waiting-status">
-                    <i /> {complete ? 'Auction complete' : 'Between players'}
+                    <i />
+                    {complete ? 'Auction complete' : 'Between players'}
                 </span>
             </div>
             <div className="auction-intermission-bottom">
@@ -87,7 +71,12 @@ export function AuctionWaiting({
 
 export function AuctionSold({ lot, teamName, teamLogoUrl }: { lot: ApiAuctionLot; teamName?: string; teamLogoUrl?: string | null }) {
     return (
-        <section className="auction-sold-moment" aria-live="polite" role="status">
+        <section className="auction-sold-moment" key={`${lot.id}-${lot.soldAt}`} aria-live="polite" role="status">
+            <div className="auction-sold-streaks" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+            </div>
             <div className="auction-sold-content">
                 <p className="section-kicker">A NEW TEAM. A NEW CHAPTER.</p>
                 <h2>
@@ -100,7 +89,9 @@ export function AuctionSold({ lot, teamName, teamLogoUrl }: { lot: ApiAuctionLot
                 </div>
                 <strong className="auction-sold-price">{rupees(lot.priceInr ?? 0)}</strong>
             </div>
-            <span className="auction-sold-code">THE COURT COLLECTIVE 2026</span>
+            <span className="auction-sold-code">
+                #{String(lot.number ?? 0).padStart(3, '0')} · THE COURT COLLECTIVE 2026
+            </span>
         </section>
     );
 }

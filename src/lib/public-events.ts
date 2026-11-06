@@ -53,6 +53,8 @@ export interface MexicanoRound {
 }
 
 export interface TournamentEvent {
+    /** 'team' = fixed-pair team tournament (own pages); anything else is an individual event. */
+    eventType?: 'individual' | 'team';
     id: string;
     slug: string;
     title: string;

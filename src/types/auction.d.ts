@@ -24,26 +24,22 @@ declare global {
         createdAt: string;
     }
 
+    /** What a team user or the public screen may see of a player: no levels, achievements, photo or contact details. */
     interface ApiAuctionLot {
         id: string;
-        entrantId: string;
+        /** Draw number. */
+        number: number | null;
         name: string;
-        photoUrl: string | null;
-        gender: string | null;
-        sports: string[];
-        padelLevel: string | null;
-        pickleballLevel: string | null;
-        achievements: string | null;
+        gender?: string | null;
         categoryId: string | null;
         status: AuctionLotStatus;
         teamId: string | null;
         priceInr: number | null;
-        basePriceOverrideInr: number | null;
         effectiveBasePriceInr: number;
         soldAt: string | null;
-        queueOrder: number;
         reauctioned: boolean;
         retained: boolean;
+        corrected: boolean;
     }
 
     interface ApiAuctionState {
@@ -85,6 +81,36 @@ declare global {
             sold: number;
             byCategory: { categoryId: string; total: number; waiting: number }[];
         };
+    }
+
+    /** The light public view: numbers, names, categories and money only. */
+    interface ApiAuctionPublicTeam {
+        id: string;
+        name: string;
+        logo: string | null;
+        purse: number;
+        spent: number;
+        players: number;
+        women: number;
+    }
+    interface ApiAuctionPublicLot {
+        id: string;
+        number: number | null;
+        name: string;
+        category: string | null;
+        status: AuctionLotStatus;
+        team: string | null;
+        price: number | null;
+        retained: boolean;
+        soldAt: string | null;
+        corrected: boolean;
+        woman: boolean;
+    }
+    interface ApiAuctionPublicView {
+        version: string;
+        onBlock: string | null;
+        teams: ApiAuctionPublicTeam[];
+        lots: ApiAuctionPublicLot[];
     }
 
     interface ApiAuctionTransaction {

@@ -8,6 +8,11 @@ export const getAuctionLive = async (slug: string): Promise<ApiResponse<ApiAucti
     return apiClient({ url: endpoints.auctionLive(slug), method: 'GET' });
 };
 
+/** Public: the light public view (teams, purses, squads, who is on the block). */
+export const getAuctionPublicView = async (slug: string): Promise<ApiResponse<ApiAuctionPublicView>> => {
+    return apiClient({ url: endpoints.auctionPublic(slug), method: 'GET' });
+};
+
 /** Team users (added by the host in the organizer console) log in with
  *  phone + OTP; the token is scoped to their team's event. */
 export const auctionTeamLogin = async (slug: string, phone: string): Promise<ApiResponse<null>> => {

@@ -122,7 +122,7 @@ export default function EventLandingIdentical({
                             <Gavel />
                             <div>
                                 <label>Player auction</label>
-                                <strong>TBA</strong>
+                                <strong>24 Nov 2026</strong>
                                 <small>Find your team.</small>
                             </div>
                         </div>

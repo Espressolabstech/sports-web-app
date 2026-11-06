@@ -4,23 +4,25 @@ import { initials } from '../../../lib/auction';
 import playpassLogo from '../../../assets/logo-white-v2-cropped.png';
 import courtCollectiveLogo from '../../../assets/court-collective-logo.png';
 import '../registration-identical.css';
-import './auction.css';
+import '../../../components/pp-ui';
 
-// Public pages only — the organizer console lives in the organizer app and
+// The public pages. The organizer console lives in the organizer app and the
 // auction admin in the admin dashboard.
 const tabsFor = (slug: string): { href: string; label: string }[] => [
     { href: `/events/${slug}/auction/live`, label: 'Live' },
-    { href: `/events/${slug}/auction/team`, label: 'Team View' },
+    { href: `/events/${slug}/auction/team`, label: 'Team Hub' },
+    { href: `/events/${slug}/auction/public`, label: 'Public View' },
 ];
 
 export function TeamLogo({ name, logoUrl, size = 28 }: { name: string; logoUrl: string | null; size?: number }) {
-    const style = { width: size, height: size, fontSize: size * 0.36 };
-    if (logoUrl) return <img src={logoUrl} alt="" className="rounded-full object-cover shrink-0" style={style} />;
+    if (logoUrl) {
+        return <img src={logoUrl} alt="" width={size} height={size} className="rounded-full object-cover bg-secondary shrink-0" style={{ width: size, height: size }} />;
+    }
     return (
         <span
             aria-hidden="true"
-            className="rounded-full shrink-0 grid place-items-center font-semibold"
-            style={{ ...style, background: 'var(--secondary)', color: 'var(--muted-foreground)' }}
+            className="rounded-full bg-secondary text-muted-foreground grid place-items-center font-semibold shrink-0"
+            style={{ width: size, height: size, fontSize: size * 0.36 }}
         >
             {initials(name).slice(0, 2)}
         </span>
@@ -32,22 +34,29 @@ export default function AuctionShell({
     kicker = 'THE COURT COLLECTIVE 2026 · PLAYER AUCTION',
     title,
     right,
+    isLive = false,
+    className = '',
     children,
 }: {
     slug: string;
     kicker?: string;
     title: string;
     right?: ReactNode;
+    /** A player is on the block: the Live link gets the pulsing dot. */
+    isLive?: boolean;
+    className?: string;
     children: ReactNode;
 }) {
     const location = useLocation();
 
-    // Matches the page's own dark background behind any unfilled viewport
-    // space, same as the prototype's `pp-console-page` body class.
+    // Matches the page's own dark background behind any unfilled viewport space.
     useEffect(() => {
         document.body.classList.add('pp-console-page');
         return () => document.body.classList.remove('pp-console-page');
     }, []);
+
+    const here = location.pathname.replace(/\/$/, '');
+    const active = (href: string) => here.endsWith(href.slice(href.indexOf('/auction/')));
 
     return (
         <div className="ccreg pp-console">
@@ -63,10 +72,11 @@ export default function AuctionShell({
                 </div>
             </header>
 
-            <main className="auction-main">
-                <nav className="auction-shell-nav" aria-label="Auction pages">
+            <main className={`auction-main ${className}`}>
+                <nav className="auction-nav" aria-label="Auction pages">
                     {tabsFor(slug).map((t) => (
-                        <Link key={t.href} to={t.href} className={location.pathname.endsWith(t.href.slice(t.href.indexOf('/auction/'))) ? 'active' : ''}>
+                        <Link key={t.href} to={t.href} className={active(t.href) ? 'active' : ''}>
+                            {isLive && t.label === 'Live' && <span className="pp-live-dot" aria-label="Auction live" />}
                             {t.label}
                         </Link>
                     ))}

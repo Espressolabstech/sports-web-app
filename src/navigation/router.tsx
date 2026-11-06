@@ -25,6 +25,7 @@ import EventHosts from '../screens/events/EventHosts';
 import EventSubPage from '../screens/events/EventSubPage';
 import AuctionLive from '../screens/events/auction/AuctionLive';
 import AuctionResults from '../screens/events/auction/AuctionResults';
+import AuctionPublic from '../screens/events/auction/AuctionPublic';
 import ExternalRedirect from '../components/ExternalRedirect';
 import { TeamEventRoute } from '../screens/events/team/TeamRoute';
 import config from '../config/config';
@@ -159,10 +160,12 @@ export const router = createBrowserRouter([
     // Public auction pages: live screen (anyone) and team view (team users).
     { path: '/events/:slug/auction/live', element: <AuctionLive /> },
     { path: '/events/:slug/auction/team', element: <AuctionResults /> },
+    { path: '/events/:slug/auction/public', element: <AuctionPublic /> },
     // Vanity links for The Court Collective 2026.
     { path: '/auction', element: <Navigate to="/auction/live" replace /> },
     { path: '/auction/live', element: <AuctionLive slugOverride={COURT_COLLECTIVE_SLUG} /> },
     { path: '/auction/team', element: <AuctionResults slugOverride={COURT_COLLECTIVE_SLUG} /> },
+    { path: '/auction/public', element: <AuctionPublic slugOverride={COURT_COLLECTIVE_SLUG} /> },
     { path: '/auction/results', element: <Navigate to="/auction/team" replace /> },
     {
         path: '/auction/control',
