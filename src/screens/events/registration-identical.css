@@ -44,10 +44,11 @@
 .ccreg textarea {
     outline-color: var(--primary);
 }
-.ccreg h1,
-.ccreg h2,
-.ccreg h3,
-.ccreg p {
+/* Zero specificity: the prototype's base-layer reset must lose to utility classes (e.g. mt-3 on a <p>). */
+:where(.ccreg) h1,
+:where(.ccreg) h2,
+:where(.ccreg) h3,
+:where(.ccreg) p {
     margin: 0;
 }
 .ccreg h1,

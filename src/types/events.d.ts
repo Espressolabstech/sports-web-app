@@ -95,6 +95,10 @@ declare global {
         eventEndDate: string | null;
         /** Opt-in: this event collects a full player profile (photo, level, city, consent, etc.) at registration. */
         registrationProfile: boolean;
+        /** TEAM = fixed-pair team tournament (own pages); INDIVIDUAL / missing = original events. */
+        eventType?: 'INDIVIDUAL' | 'TEAM';
+        /** Registered teams (team tournaments). */
+        _count?: { teams: number };
         createdAt: string;
         updatedAt: string;
         /** Event detail: empty until the event is live (no public player list before play). */

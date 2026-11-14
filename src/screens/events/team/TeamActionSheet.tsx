@@ -1,0 +1,10 @@
+import type { ReactNode } from "react";
+import { Button } from "../../../components/ui/button";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetTitle } from "../../../components/ui/sheet";
+import { muted, surface } from "./team-ui";
+export function TeamActionSheet({ open, onOpenChange, title, description, children, actions }: { open: boolean; onOpenChange: (open: boolean) => void; title: string; description?: string; children: ReactNode; actions?: ReactNode }) {
+  return <Sheet open={open} onOpenChange={onOpenChange}><SheetContent side="bottom" className={`mx-auto max-h-[90dvh] max-w-lg overflow-y-auto rounded-t-[28px] border-[hsl(var(--event-on-ink)/0.12)] px-4 pt-0 pb-[calc(1.25rem+env(safe-area-inset-bottom))] [&>button.absolute]:hidden ${surface} bg-[hsl(var(--event-ink-soft))]`}><div className="flex justify-center py-3.5" aria-hidden="true"><div className="h-1.5 w-12 rounded-full bg-[hsl(var(--event-on-ink)/0.22)]" /></div><div className="flex items-center justify-between gap-3 px-2 pb-4"><div className="min-w-0"><SheetTitle className="text-base text-inherit">{title}</SheetTitle><SheetDescription className={`mt-1 text-xs ${muted}`}>{description ?? title}</SheetDescription></div>{actions}</div><div className="space-y-2">{children}</div><SheetClose asChild><Button variant="eventGhost" className={`mt-4 h-12 w-full border border-[hsl(var(--event-on-ink)/0.1)] ${muted}`}>Close</Button></SheetClose></SheetContent></Sheet>;
+}
+export function TeamMenuAction({ icon, label, detail, onClick, disabled = false }: { icon: ReactNode; label: string; detail?: string; onClick: () => void; disabled?: boolean }) {
+  return <Button variant="event" disabled={disabled} className="h-auto min-h-[68px] w-full justify-start gap-3 rounded-lg px-3 py-3 text-left" onClick={onClick}><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-[hsl(var(--event-on-ink)/0.08)]">{icon}</span><span className="min-w-0 whitespace-normal"><span className="block text-sm font-semibold">{label}</span>{detail && <span className={`mt-1 block text-xs font-normal ${muted}`}>{detail}</span>}</span></Button>;
+}

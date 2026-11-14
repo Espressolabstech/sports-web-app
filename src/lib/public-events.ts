@@ -53,6 +53,8 @@ export interface MexicanoRound {
 }
 
 export interface TournamentEvent {
+    /** 'team' = fixed-pair team tournament (own pages); anything else is an individual event. */
+    eventType?: 'individual' | 'team';
     id: string;
     slug: string;
     title: string;
@@ -191,6 +193,7 @@ const mapEvent = (e: ApiEvent): TournamentEvent => {
         scheduleMode: e.scheduleMode,
         endDate: e.eventEndDate ? new Date(String(e.eventEndDate).slice(0, 10)) : null,
         registrationProfile: Boolean(e.registrationProfile),
+        eventType: e.eventType === 'TEAM' ? 'team' : 'individual',
         roster: e.entrants.map((p) => ({
             id: p.id,
             name: p.name,

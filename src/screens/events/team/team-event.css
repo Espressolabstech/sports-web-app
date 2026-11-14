@@ -1,0 +1,46 @@
+/* Team tournament design tokens, scoped to the team screens (.team-event).
+   The player app's own --event-* values differ, so nothing else is affected. */
+.team-event {
+  --event-ink: 210 62% 9%;
+  --event-ink-soft: 205 48% 15%;
+  --event-teal: 194 59% 36%;
+  --event-lime: 197 37% 37%;
+  --event-lime-foreground: 210 62% 9%;
+  --event-accent: 74 92% 55%;
+  --event-accent-foreground: 210 62% 9%;
+  --event-on-ink: 0 0% 100%;
+  --event-on-ink-muted: 205 25% 72%;
+  --event-tab: 205 40% 26%;
+  --event-open: 74 92% 55%;
+  --event-filling: 38 92% 50%;
+  --event-full: 0 72% 51%;
+  --event-fill-open: 194 70% 48%;
+  --event-fill-full: 74 92% 55%;
+  --event-success: 152 52% 44%;
+  --event-success-text: 152 55% 63%;
+  --event-qualifier-gradient: linear-gradient(110deg, hsl(var(--event-success) / 0.26), hsl(var(--event-success) / 0.1) 60%, hsl(var(--event-success) / 0.03));
+  --event-surface-done: 205 16% 13%;
+  --event-info: 205 78% 56%;
+  --event-quiet: 205 18% 58%;
+  --event-court-1: 178 62% 45%;
+  --event-court-2: 8 78% 62%;
+  --event-court-3: 205 78% 56%;
+  --event-court-4: 38 92% 50%;
+}
+
+.team-event .team-standing-row {
+  background: hsl(var(--event-ink-soft) / 0.65);
+}
+.team-event .team-standing-row[data-qualifying="true"] {
+  background: var(--event-qualifier-gradient);
+}
+.team-event .team-standing-row td:first-child {
+  border-radius: 6px 0 0 6px;
+  border-left: 2px solid transparent;
+}
+.team-event .team-standing-row[data-qualifying="true"] td:first-child {
+  border-left-color: hsl(var(--event-success));
+}
+.team-event .team-standing-row td:last-child {
+  border-radius: 0 6px 6px 0;
+}
