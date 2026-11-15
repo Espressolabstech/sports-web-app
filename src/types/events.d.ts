@@ -76,6 +76,8 @@ declare global {
         roundMinutes: number;
         pointsPerRound: number;
         registrationClosesHours: number;
+        registrationOpen?: boolean;
+        registrationClosesAt?: string;
         /** One tournament is hosted for exactly one skill level. */
         skillLevel: ApiEventEntrant['skill'];
         /** When on, a match can't be tied — the winning pair earns +2 bonus points. */

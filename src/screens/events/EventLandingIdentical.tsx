@@ -20,7 +20,14 @@ import courtCollectiveLogo from '../../assets/court-collective-logo.png';
 import courtHero from '../../assets/court-hero.jpg';
 import './registration-identical.css';
 
-function RegisterButton({ href, full = false }: { href: string; full?: boolean }) {
+function RegisterButton({ href, full = false, closed = false }: { href: string; full?: boolean; closed?: boolean }) {
+    if (closed) {
+        return (
+            <button type="button" disabled className={full ? 'continue-btn full-cta' : 'continue-btn'} style={{ opacity: 0.55, cursor: 'not-allowed' }}>
+                Registration closed
+            </button>
+        );
+    }
     return (
         <Link to={href} className={full ? 'continue-btn full-cta' : 'continue-btn'}>
             Register as a player <ArrowRight size={16} />
@@ -40,6 +47,10 @@ export default function EventLandingIdentical({
     const dates = multiDay
         ? `${format(event.start, 'd MMM').toUpperCase()} — ${format(event.endDate!, 'd MMM, yyyy').toUpperCase()}`
         : format(event.start, 'd MMM, yyyy').toUpperCase();
+    // The last day registration is open: registration closes `registrationClosesHours` before the start.
+    const closesAt = event.registrationClosesAt ?? new Date(event.start.getTime() - event.registrationClosesHours * 3_600_000 - 60_000);
+    const registerBy = format(closesAt, 'd MMMM, yyyy');
+    const closed = event.registrationOpen === false;
 
     return (
         <div className="ccreg">
@@ -96,7 +107,7 @@ export default function EventLandingIdentical({
                                 </span>
                             </div>
                             <div className="hero-cta">
-                                <RegisterButton href={href} />
+                                <RegisterButton href={href} closed={closed} />
                                 <small>
                                     All skill levels welcome.
                                     <br />
@@ -130,7 +141,7 @@ export default function EventLandingIdentical({
                             <Clock3 />
                             <div>
                                 <label>Register by</label>
-                                <strong>20 November, 2026</strong>
+                                <strong>{registerBy}</strong>
                                 <small>Don't miss your spot.</small>
                             </div>
                         </div>
@@ -201,8 +212,8 @@ export default function EventLandingIdentical({
                                     the tournament ends.
                                 </span>
                             </div>
-                            <RegisterButton href={href} full />
-                            <p className="fee-footer">Registration closes 20 November 2026</p>
+                            <RegisterButton href={href} full closed={closed} />
+                            <p className="fee-footer">{closed ? 'Registration is closed' : `Registration closes ${registerBy}`}</p>
                         </aside>
                     </div>
 
