@@ -70,6 +70,8 @@ export interface TournamentEvent {
     roundMinutes: number;
     pointsPerRound: number;
     registrationClosesHours: number;
+    registrationOpen?: boolean;
+    registrationClosesAt?: Date;
     skillLevel: EventSkill;
     goldenPoint: boolean;
     posterUrl: string;
@@ -181,6 +183,8 @@ const mapEvent = (e: ApiEvent): TournamentEvent => {
         roundMinutes: e.roundMinutes,
         pointsPerRound: e.pointsPerRound,
         registrationClosesHours: e.registrationClosesHours,
+        registrationOpen: e.registrationOpen,
+        registrationClosesAt: e.registrationClosesAt ? new Date(e.registrationClosesAt) : undefined,
         skillLevel: SKILL_TO_CLIENT[e.skillLevel] ?? 'Intermediate',
         goldenPoint: Boolean(e.goldenPoint),
         posterUrl: e.posterUrl ?? '',

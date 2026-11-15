@@ -289,6 +289,18 @@ export default function EventRegister({
         );
     }
 
+    if (event.registrationOpen === false) {
+        return (
+            <div className="ccreg flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
+                <p className="text-base font-semibold">Registration is closed</p>
+                <p className="text-sm">Registration for this event has closed.</p>
+                <Link to={`/events/${slug}`} className="text-sm font-medium" style={{ color: 'var(--primary)' }}>
+                    Back to event
+                </Link>
+            </div>
+        );
+    }
+
     const entrants = friendOpen ? 2 : 1;
     const waitlist = spotsLeft(event) < entrants;
     const totalInr = event.priceInr * entrants;
