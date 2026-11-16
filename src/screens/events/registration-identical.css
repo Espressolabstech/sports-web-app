@@ -723,6 +723,9 @@
     height: 46px;
     width: auto;
 }
+.ccreg .brand-logo-lockup {
+    height: 56px;
+}
 .ccreg .header-right {
     display: flex;
     gap: 28px;
@@ -1261,6 +1264,9 @@
     }
     .ccreg .brand-logo {
         height: 32px;
+    }
+    .ccreg .brand-logo-lockup {
+        height: 40px;
     }
     .ccreg .header-caption {
         display: none;
