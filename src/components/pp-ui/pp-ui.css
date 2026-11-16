@@ -111,3 +111,11 @@
 /* Switching between auction pages must not shift the layout: always reserve the scrollbar's space, and give every page the same content width. */
 html:has(body.pp-console-page) { scrollbar-gutter: stable; }
 .pp-console .auction-main.pv-page { max-width: 1240px; }
+
+/* Sheet: a right-hand panel (full width on a phone). */
+.pp-ui-sheet{
+    position: fixed; top: 0; right: 0; bottom: 0; z-index: 50; width: 100%; max-width: 28rem; padding: 24px; gap: 16px;
+    border-left: 1px solid var(--border); background: var(--background); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1);
+    font-family: var(--font-sans, 'Manrope', sans-serif); animation: pp-ui-slide .25s ease;
+}
+@keyframes pp-ui-slide{ from { transform: translateX(100%); } to { transform: translateX(0); } }

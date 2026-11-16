@@ -81,6 +81,23 @@ export const DialogDescription = React.forwardRef<
     <DialogPrimitive.Description ref={ref} className={cx('pp-ui-dialog-description', className)} {...props} />
 ));
 DialogDescription.displayName = 'DialogDescription';
+// ── Sheet (side panel built on the same dialog primitive) ──
+export const SheetContent = React.forwardRef<
+    React.ElementRef<typeof DialogPrimitive.Content>,
+    React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+    <DialogPrimitive.Portal>
+        <DialogPrimitive.Overlay className="pp-ui-overlay" />
+        <DialogPrimitive.Content ref={ref} className={cx('pp-console pp-ui-sheet', className)} {...props}>
+            {children}
+            <DialogPrimitive.Close className="pp-ui-dialog-close">
+                <X size={16} />
+                <span className="sr-only">Close</span>
+            </DialogPrimitive.Close>
+        </DialogPrimitive.Content>
+    </DialogPrimitive.Portal>
+));
+SheetContent.displayName = 'SheetContent';
 
 // ── Select ──
 export const Select = SelectPrimitive.Root;

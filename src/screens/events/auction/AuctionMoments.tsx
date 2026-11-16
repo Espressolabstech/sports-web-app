@@ -72,6 +72,11 @@ export function AuctionWaiting({ sold, total, label }: { sold: number; total: nu
 export function AuctionSold({ lot, teamName, teamLogoUrl }: { lot: ApiAuctionLot; teamName?: string; teamLogoUrl?: string | null }) {
     return (
         <section className="auction-sold-moment" key={`${lot.id}-${lot.soldAt}`} aria-live="polite" role="status">
+            <div className="auction-sold-confetti" aria-hidden="true">
+                {Array.from({ length: 48 }, (_, i) => (
+                    <i key={i} />
+                ))}
+            </div>
             <div className="auction-sold-streaks" aria-hidden="true">
                 <i />
                 <i />

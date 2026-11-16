@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search } from 'lucide-react';
+import { MonitorPlay, Search } from 'lucide-react';
 import { getAuctionTeamBoard } from '../../../api/adapters/auction';
 import AuctionTeamLoginGate from '../../../components/events/AuctionTeamLoginGate';
 import { useAuctionTeamSession, type AuctionTeamSession } from '../../../lib/auction-team-session';
@@ -10,20 +10,22 @@ import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, Select
 import { AnimatedLoader } from '../../../components/AnimatedLoader';
 import { filterAuctionLots, rupees } from '../../../lib/auction';
 import AuctionShell from './AuctionShell';
-import { AuctionTeamCards } from './AuctionTeamCards';
-import { AuctionTeamInsights } from './AuctionTeamInsights';
+import { HubStats, HubTiles, HubTop } from './AuctionTeamHub';
+import { toHubData } from './hub-data';
+import { AuctionPresent } from './AuctionPresent';
 import { statuses, statusKey } from './auction-statuses';
 
-type Tab = 'teams' | 'players' | 'insights';
+type Tab = 'teams' | 'players';
 const TABS: { value: Tab; label: string }[] = [
     { value: 'teams', label: 'Teams' },
     { value: 'players', label: 'Players' },
-    { value: 'insights', label: 'Insights' },
 ];
 
 function AuctionResultsInner({ slug, session, logout }: { slug: string; session: AuctionTeamSession; logout: () => void }) {
     const queryClient = useQueryClient();
     const [tab, setTab] = useState<Tab>('teams');
+    const [present, setPresent] = useState(false);
+    const exitPresent = useCallback(() => setPresent(false), []);
     const [status, setStatus] = useState('sold');
     const [q, setQ] = useState('');
     const [category, setCategory] = useState('all');
@@ -59,7 +61,18 @@ function AuctionResultsInner({ slug, session, logout }: { slug: string; session:
         .filter((r) => !q.trim() || `${r.l.name} ${r.l.number ?? ''} ${r.t?.name ?? ''}`.toLowerCase().includes(q.trim().toLowerCase()));
 
     return (
-        <AuctionShell slug={slug} isLive={!!board.state.currentLotId} kicker="THE COURT COLLECTIVE 2026 · PLAYER AUCTION" title="TEAM HUB">
+        <AuctionShell
+            slug={slug}
+            isLive={!!board.state.currentLotId}
+            kicker="THE COURT COLLECTIVE 2026 · PLAYER AUCTION"
+            title="TEAM HUB"
+            right={
+                <Button variant="outline" onClick={() => setPresent(true)}>
+                    <MonitorPlay size={16} /> Present
+                </Button>
+            }
+        >
+            {present && <AuctionPresent a={toHubData(board)} onExit={exitPresent} />}
             <div className="auction-tabs" role="tablist" aria-label="Results view">
                 {TABS.map((t) => (
                     <Button variant="ghost" key={t.value} role="tab" aria-selected={tab === t.value} onClick={() => setTab(t.value)}>
@@ -67,10 +80,12 @@ function AuctionResultsInner({ slug, session, logout }: { slug: string; session:
                     </Button>
                 ))}
             </div>
-            {tab === 'insights' ? (
-                <AuctionTeamInsights teams={teams} categories={categories} lots={lots} />
-            ) : tab === 'teams' ? (
-                <AuctionTeamCards teams={teams} lots={lots} />
+            {tab === 'teams' ? (
+                <div className="hub">
+                    <HubTop a={toHubData(board)} />
+                    <HubTiles a={toHubData(board)} />
+                    <HubStats a={toHubData(board)} />
+                </div>
             ) : (
                 <>
                     <div className="auction-lot-tabs" aria-label="Player categories">

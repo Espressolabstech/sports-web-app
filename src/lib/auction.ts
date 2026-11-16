@@ -132,6 +132,14 @@ export type SkillLevel = (typeof SKILL_LEVELS)[number];
 
 type LevelLot = { padelLevel: string | null; pickleballLevel: string | null; levelsConfirmed: boolean };
 
+/** Self-rated until a host confirms or edits the levels; the most recent host wins. */
+export const isSelfRated = (lot: { levelsConfirmedAt?: string | null }) => !lot.levelsConfirmedAt;
+/** What the player registered with, shown next to the host's confirmed levels. */
+export const registeredLevels = (lot: { registeredPadelLevel?: string | null; registeredPickleballLevel?: string | null }) => ({
+    padel: lot.registeredPadelLevel ?? null,
+    pickleball: lot.registeredPickleballLevel ?? null,
+});
+
 /** The player's levels: the organizer's saved levels win over the registration answers; a sport not played reads as Beginner. */
 export function levelsOf(lot: LevelLot) {
     return { padel: lot.padelLevel ?? undefined, pickleball: lot.pickleballLevel ?? undefined, confirmed: lot.levelsConfirmed };
@@ -216,6 +224,7 @@ type GridLot = LotLike & {
     reauctioned: boolean;
     padelLevel?: string | null;
     pickleballLevel?: string | null;
+    levelsConfirmedAt?: string | null;
 };
 
 export function filterAuctionLots<T extends GridLot>(lots: T[], f: GridFilters): T[] {
@@ -226,8 +235,10 @@ export function filterAuctionLots<T extends GridLot>(lots: T[], f: GridFilters):
                 (f.category === 'all' || (f.category === 'none' ? !l.categoryId : l.categoryId === f.category)) &&
                 (f.status === 'all' ||
                     (f.status === 'auto'
-                        ? l.padelLevel == null || l.pickleballLevel == null
-                        : f.status === 'retained'
+                        ? !l.levelsConfirmedAt
+                        : f.status === 'host'
+                          ? !!l.levelsConfirmedAt
+                          : f.status === 'retained'
                           ? l.retained
                           : l.status === f.status.toUpperCase() && !l.retained)) &&
                 (f.gender === 'all' || l.gender === f.gender) &&
