@@ -40,6 +40,9 @@ declare global {
         reauctioned: boolean;
         retained: boolean;
         corrected: boolean;
+        /** Only the player on the block carries gender and levels on the public live board. */
+        padelLevel?: AuctionSkillLevel | null;
+        pickleballLevel?: AuctionSkillLevel | null;
     }
 
     interface ApiAuctionState {
