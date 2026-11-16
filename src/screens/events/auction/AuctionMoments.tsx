@@ -1,3 +1,4 @@
+import { PlayerPhoto } from '../../../components/PlayerPhoto';
 import { rupees } from '../../../lib/auction';
 import courtCollectiveLogo from '../../../assets/court-collective-logo.png';
 import { TeamLogo } from './AuctionShell';
@@ -87,6 +88,11 @@ export function AuctionSold({ lot, teamName, teamLogoUrl }: { lot: ApiAuctionLot
                 <h2>
                     SOLD<span>.</span>
                 </h2>
+                {lot.photoUrl && (
+                    <span className="auction-sold-photo">
+                        <PlayerPhoto src={lot.photoUrl} name={lot.name} fallback={null} />
+                    </span>
+                )}
                 <h3>{lot.name}</h3>
                 <div className="auction-sold-team">
                     <TeamLogo name={teamName ?? ''} logoUrl={teamLogoUrl ?? null} size={46} />
