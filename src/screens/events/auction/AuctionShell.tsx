@@ -2,7 +2,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useEffect, type ReactNode } from 'react';
 import { initials } from '../../../lib/auction';
 import playpassLogo from '../../../assets/logo-white-v2-cropped.png';
-import courtCollectiveLogo from '../../../assets/court-collective-logo.png';
+import courtCollectiveLogo from '../../../assets/court-collective-lockup-white.png';
 import '../registration-identical.css';
 import '../../../components/pp-ui';
 
@@ -62,11 +62,11 @@ export default function AuctionShell({
         <div className="ccreg pp-console">
             <header className="site-header-like">
                 <Link to="/the-court-collective" className="wordmark" aria-label="The Court Collective — home">
-                    <img src={courtCollectiveLogo} alt="The Court Collective" className="brand-logo" />
+                    <img src={courtCollectiveLogo} alt="The Court Collective" className="brand-logo brand-logo-lockup" width={159} height={64} />
                 </Link>
                 <div className="header-right">
                     <span className="powered-by">
-                        <span className="powered-by-label">Powered by</span>
+                        <span className="powered-by-label">Tech Partner</span>
                         <img src={playpassLogo} alt="PlayPass" className="playpass-logo" />
                     </span>
                 </div>

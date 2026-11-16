@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import type { TournamentEvent } from '../../lib/public-events';
 import playpassLogo from '../../assets/logo-white-v2-cropped.png';
-import courtCollectiveLogo from '../../assets/court-collective-logo.png';
+import courtCollectiveLogo from '../../assets/court-collective-lockup-white.png';
 import courtHero from '../../assets/court-hero.jpg';
 import './registration-identical.css';
 
@@ -56,11 +56,11 @@ export default function EventLandingIdentical({
         <div className="ccreg">
             <header className="site-header-like">
                 <Link to={`/events/${event.slug}`} className="wordmark" aria-label="The Court Collective — home">
-                    <img src={courtCollectiveLogo} alt="The Court Collective" className="brand-logo" />
+                    <img src={courtCollectiveLogo} alt="The Court Collective" className="brand-logo brand-logo-lockup" width={159} height={64} />
                 </Link>
                 <div className="header-right">
                     <span className="powered-by">
-                        <span className="powered-by-label">Powered by</span>
+                        <span className="powered-by-label">Tech Partner</span>
                         <img src={playpassLogo} alt="PlayPass" className="playpass-logo" />
                     </span>
                 </div>

@@ -36,3 +36,36 @@ export function useEventLive(slug: string | null, onChange: () => void) {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [slug]);
 }
+
+/**
+ * The public live auction screen. The server pushes the whole new live board over the socket the moment
+ * something changes, so the screen updates without a request. `at` orders pushes; an older one never
+ * overwrites a newer one. `onResync` fires after a dropped connection comes back (changes may have been missed).
+ */
+export function useAuctionLivePush(slug: string | null, onBoard: (board: unknown) => void, onResync: () => void) {
+    useEffect(() => {
+        if (!slug) return;
+        const s = getSocket();
+        let latest = 0;
+        let connectedBefore = s.connected;
+        const watch = () => {
+            s.emit('event:watch', slug);
+            if (connectedBefore) onResync();
+            connectedBefore = true;
+        };
+        const handler = (msg: { slug?: string; at?: number; board?: unknown }) => {
+            if (msg?.slug !== slug || !msg.board || typeof msg.at !== 'number' || msg.at < latest) return;
+            latest = msg.at;
+            onBoard(msg.board);
+        };
+        s.emit('event:watch', slug);
+        s.on('connect', watch);
+        s.on('auction:live', handler);
+        return () => {
+            s.emit('event:unwatch', slug);
+            s.off('connect', watch);
+            s.off('auction:live', handler);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [slug]);
+}
