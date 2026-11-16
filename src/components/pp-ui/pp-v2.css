@@ -896,3 +896,8 @@ body.pp-console-page{background:var(--background)}
 :where(.pp-console) .hub-present .hub-card{padding:14px 16px}:where(.pp-console) .hub-present .hub-tiles{gap:12px}:where(.pp-console) .hub-present .hub-tile{gap:8px}
 :where(.pp-console) .hub-present .hub-pool dl{grid-template-columns:repeat(4,1fr);margin-top:8px}:where(.pp-console) .hub-present .hub-pool dd{font-size:26px}
 :where(.pp-console) .hub-present .hub-squad{padding-top:8px;gap:6px}:where(.pp-console) .hub-present .hub-big{font-size:28px}:where(.pp-console) .hub-present .hub-purse{margin-top:4px}
+
+/* Player photos in the auction */
+:where(.pp-console) .pp-player-photo{width:100%;height:100%;object-fit:cover;display:block;border-radius:inherit}
+:where(.pp-console) .auction-stage-avatar,:where(.pp-console) .pp-player-monogram,:where(.pp-console) .pp-pm-avatar{overflow:hidden}
+:where(.pp-console) .auction-sold-photo{display:block;width:96px;height:96px;margin:0 auto 12px;border-radius:50%;overflow:hidden;border:3px solid var(--primary)}

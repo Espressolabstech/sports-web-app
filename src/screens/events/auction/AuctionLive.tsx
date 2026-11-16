@@ -5,6 +5,7 @@ import { getAuctionLive } from '../../../api/adapters/auction';
 import { useAuctionLivePush, useEventLive } from '../../../lib/auction-live';
 import { rupees, initials, nextUp, nextCategory, reauctionPool, SKILL_LEVELS, skillPoints } from '../../../lib/auction';
 import { AnimatedLoader } from '../../../components/AnimatedLoader';
+import { PlayerPhoto } from '../../../components/PlayerPhoto';
 import AuctionShell, { TeamLogo } from './AuctionShell';
 import { AuctionLotBreak, AuctionWaiting, AuctionSold } from './AuctionMoments';
 
@@ -101,7 +102,9 @@ export default function AuctionLive({ slugOverride }: { slugOverride?: string })
                 <AuctionSold lot={last} teamName={lastTeam?.name} teamLogoUrl={lastTeam?.logoUrl} />
             ) : current ? (
                 <section className="auction-stage auction-player-enter" key={current.id} aria-live="polite">
-                    <div className="auction-stage-avatar">{initials(current.name)}</div>
+                    <div className="auction-stage-avatar">
+                        <PlayerPhoto src={current.photoUrl} name={current.name} fallback={initials(current.name)} />
+                    </div>
                     <div className="auction-stage-info">
                         <span className="auction-stage-id">
                             #{String(current.number ?? 0).padStart(3, '0')}

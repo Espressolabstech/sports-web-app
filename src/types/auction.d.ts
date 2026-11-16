@@ -31,6 +31,8 @@ declare global {
         number: number | null;
         name: string;
         gender?: string | null;
+        /** Only the player on the block and the last one sold carry a photo on the public live board. */
+        photoUrl?: string | null;
         categoryId: string | null;
         status: AuctionLotStatus;
         teamId: string | null;
