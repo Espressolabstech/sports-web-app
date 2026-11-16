@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getAuctionLive } from '../../../api/adapters/auction';
@@ -20,23 +20,16 @@ export default function AuctionLive({ slugOverride }: { slugOverride?: string })
         retry: false,
     });
     // The server pushes the new board over the socket the moment anything changes — no refetch round trip.
-    const pushedAt = useRef(0);
     useAuctionLivePush(
         slug,
         (board) => {
-            pushedAt.current = Date.now();
             queryClient.setQueryData(['auction-live', slug], (old: typeof data) => (old ? { ...old, data: board as ApiAuctionLiveData } : old));
         },
         () => void queryClient.invalidateQueries({ queryKey: ['auction-live', slug] }),
     );
-    // Safety net only: if no push followed the "changed" ping (an older API, a dropped message), reload the board.
-    // Normally the push wins and this never fires, so viewers don't all hit the database as well.
-    useEventLive(slug, () => {
-        const signalAt = Date.now();
-        window.setTimeout(() => {
-            if (pushedAt.current < signalAt - 1000) void queryClient.invalidateQueries({ queryKey: ['auction-live', slug] });
-        }, 1500);
-    });
+    // The "changed" ping reloads the board straight away too (exactly as before the push existed), so the screen can never be
+    // slower than that. The server shares one database read between the push and this reload, so it costs nothing extra.
+    useEventLive(slug, () => void queryClient.invalidateQueries({ queryKey: ['auction-live', slug] }));
 
     // A once-a-second clock, read at render time instead of calling Date.now() directly.
     const [now, setNow] = useState(() => Date.now());
