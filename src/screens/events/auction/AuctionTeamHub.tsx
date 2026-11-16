@@ -8,7 +8,7 @@ import { TeamLogo } from './AuctionShell';
 import type { HubData, HubTeam } from './hub-data';
 type Budget = ReturnType<typeof bidBudget>;
 
-const genderLabel = (l: { gender: string | null } | undefined) => (isFemale(l) ? 'Female' : 'Male');
+const genderLabel = (l: { gender?: string | null } | undefined) => (isFemale(l) ? 'Female' : 'Male');
 
 export function HubTop({ a }: { a: HubData }) {
     const live = a.lots.find((l) => l.id === a.currentId);
