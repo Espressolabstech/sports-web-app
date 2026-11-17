@@ -1,8 +1,6 @@
 import { useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { Search } from 'lucide-react';
-import AuctionTeamLoginGate from '../../../components/events/AuctionTeamLoginGate';
-import { useAuctionTeamSession, type AuctionTeamSession } from '../../../lib/auction-team-session';
 import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/pp-ui';
 import { AnimatedLoader } from '../../../components/AnimatedLoader';
 import { filterAuctionLots, rupees } from '../../../lib/auction';
@@ -10,13 +8,13 @@ import { useIncremental } from '../../../lib/use-incremental';
 import AuctionShell from './AuctionShell';
 import { HubSquadBoard } from './AuctionTeamHub';
 import { toHubData } from './hub-data';
-import { useTeamBoard } from '../../../lib/auction-team-board';
+import { usePublicBoard } from '../../../lib/auction-team-board';
 import { statuses, statusKey } from './auction-statuses';
 
 type Tab = 'teams' | 'players';
 const STATUSES = ['all', 'live', 'retained', 'unsold', 'waiting', 'sold'] as const;
 
-function SquadsInner({ slug, session, logout }: { slug: string; session: AuctionTeamSession; logout: () => void }) {
+function SquadsInner({ slug }: { slug: string }) {
     // Tab and status live in the URL (?tab=teams&status=sold), so a shared link opens the same view.
     const [params, setParams] = useSearchParams();
     const tab: Tab = params.get('tab') === 'teams' ? 'teams' : 'players';
@@ -34,8 +32,7 @@ function SquadsInner({ slug, session, logout }: { slug: string; session: Auction
     const [category, setCategory] = useState('all');
     const [gender, setGender] = useState('all');
 
-    const { data, isLoading } = useTeamBoard(slug, session, logout);
-    const board = data?.data;
+    const { data: board } = usePublicBoard(slug);
     const lots = board?.lots ?? [];
     const teams = board?.teams ?? [];
     const rows = filterAuctionLots(lots, { category, gender, status, search: '' })
@@ -64,7 +61,7 @@ function SquadsInner({ slug, session, logout }: { slug: string; session: Auction
     );
     const title = tab === 'teams' ? 'TEAMS' : 'PLAYERS';
 
-    if (isLoading || !board) {
+    if (!board) {
         return (
             <AuctionShell slug={slug} title={title} right={right}>
                 <div className="flex justify-center py-16">
@@ -164,14 +161,8 @@ function SquadsInner({ slug, session, logout }: { slug: string; session: Auction
     );
 }
 
-/** Squads: every team's 12 slots, or every auction player by category, status and gender. Team users only. */
+/** Squads: every team's 12 slots, or every auction player by category, status and gender. Public, no login. */
 export default function AuctionSquads({ slugOverride }: { slugOverride?: string }) {
     const params = useParams();
-    const slug = slugOverride ?? params.slug!;
-    const { session, login, logout } = useAuctionTeamSession(slug);
-    return (
-        <AuctionTeamLoginGate slug={slug} session={session} onLogin={login} title="Squads login">
-            {session && <SquadsInner slug={slug} session={session} logout={logout} />}
-        </AuctionTeamLoginGate>
-    );
+    return <SquadsInner slug={slugOverride ?? params.slug!} />;
 }
