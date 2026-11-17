@@ -103,6 +103,19 @@ export function bidBudget(team: BudgetTeam, context: BidContext) {
     };
 }
 
+export type SquadSlot<L> = { n: number; lot?: L; need?: boolean; optional?: boolean };
+
+/** Twelve fixed slots: purchases first, then female-need slots, then open, with the 12th optional. */
+export function squadSlots<L>(squad: L[], femaleNeeded: number): SquadSlot<L>[] {
+    const filled = squad.length;
+    return Array.from({ length: SQUAD_MAX }, (_, i) => i + 1).map<SquadSlot<L>>((n) => {
+        const lot = squad[n - 1];
+        if (lot) return { n, lot };
+        if (n <= MIN_SQUAD && n - filled <= femaleNeeded) return { n, need: true };
+        return { n, optional: n === SQUAD_MAX };
+    });
+}
+
 /** Squad dots: filled male/female, then open slots that must go to women, then open. */
 export function squadDots(maleOwned: number, femaleOwned: number) {
     const total = maleOwned + femaleOwned;

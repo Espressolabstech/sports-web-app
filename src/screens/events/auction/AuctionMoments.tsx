@@ -101,7 +101,7 @@ export function AuctionSold({ lot, teamName, teamLogoUrl }: { lot: ApiAuctionLot
                 <strong className="auction-sold-price">{rupees(lot.priceInr ?? 0)}</strong>
             </div>
             <span className="auction-sold-code">
-                #{String(lot.number ?? 0).padStart(3, '0')} · THE COURT COLLECTIVE 2026
+                {String(lot.number ?? 0).padStart(3, '0')} · THE COURT COLLECTIVE 2026
             </span>
         </section>
     );

@@ -3,11 +3,11 @@ import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getAuctionLive } from '../../../api/adapters/auction';
 import { useAuctionLivePush, useEventLive } from '../../../lib/auction-live';
-import { rupees, initials, nextUp, nextCategory, reauctionPool, SKILL_LEVELS, skillPoints } from '../../../lib/auction';
+import { rupees, nextUp, nextCategory, reauctionPool } from '../../../lib/auction';
 import { AnimatedLoader } from '../../../components/AnimatedLoader';
-import { PlayerPhoto } from '../../../components/PlayerPhoto';
 import AuctionShell, { TeamLogo } from './AuctionShell';
 import { AuctionLotBreak, AuctionWaiting, AuctionSold } from './AuctionMoments';
+import { AuctionLivePlayer } from './AuctionLivePlayer';
 
 const SOLD_MOMENT_MS = 6500;
 
@@ -101,55 +101,7 @@ export default function AuctionLive({ slugOverride }: { slugOverride?: string })
             {celebrating && last ? (
                 <AuctionSold lot={last} teamName={lastTeam?.name} teamLogoUrl={lastTeam?.logoUrl} />
             ) : current ? (
-                <section className="auction-stage auction-player-enter" key={current.id} aria-live="polite">
-                    <div className="auction-stage-avatar">
-                        <PlayerPhoto src={current.photoUrl} name={current.name} fallback={initials(current.name)} />
-                    </div>
-                    <div className="auction-stage-info">
-                        <span className="auction-stage-id">
-                            #{String(current.number ?? 0).padStart(3, '0')}
-                            {state.phase === 'REAUCTION' ? ' · Re-auction round' : ''}
-                        </span>
-                        <h2>{current.name}</h2>
-                        <div className="auction-base">
-                            <span>Base price</span>
-                            <strong>{rupees(current.effectiveBasePriceInr)}</strong>
-                        </div>
-                        <div className="auction-live-skills">
-                            <dl style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
-                                <div>
-                                    <dt>Gender</dt>
-                                    <dd>{current.gender === 'Female' ? 'Female' : current.gender === 'Male' ? 'Male' : '—'}</dd>
-                                </div>
-                                {(
-                                    [
-                                        ['Padel', current.padelLevel],
-                                        ['Pickleball', current.pickleballLevel],
-                                    ] as const
-                                ).map(([sport, level]) => {
-                                    const pts = skillPoints(level ?? undefined, undefined).points - 1;
-                                    return (
-                                        <div key={sport}>
-                                            <dt>{sport}</dt>
-                                            <dd>
-                                                {level ?? SKILL_LEVELS[0]}
-                                                <span>
-                                                    {pts} {pts === 1 ? 'pt' : 'pts'}
-                                                </span>
-                                            </dd>
-                                        </div>
-                                    );
-                                })}
-                            </dl>
-                            <div className="auction-live-category">
-                                <strong>{category?.name ?? 'Unassigned'}</strong>
-                                <span>
-                                    {skillPoints(current.padelLevel ?? undefined, current.pickleballLevel ?? undefined).points} total pts
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+                <AuctionLivePlayer key={current.id} lot={current} categoryName={category?.name} reauction={state.phase === 'REAUCTION'} />
             ) : next ? (
                 <AuctionWaiting sold={sold} total={total} label={stage} />
             ) : (

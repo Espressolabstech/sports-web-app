@@ -35,7 +35,7 @@ export function AuctionPresent({ a, onExit }: { a: HubData; onExit: () => void }
     return (
         <div ref={ref} className="pp-console hub-present" role="dialog" aria-label="Present mode">
             <nav className="hub-present-nav">
-                <span>THE COURT COLLECTIVE 2026 · TEAM HUB</span>
+                <span>THE COURT COLLECTIVE 2026 · LIVE AUCTION</span>
                 <div>
                     <Button variant="ghost" aria-pressed={screen === 'teams'} onClick={() => setScreen('teams')}>
                         Teams

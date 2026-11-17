@@ -1,71 +1,72 @@
-import { useState } from 'react';
-import { Dialog, DialogDescription, DialogHeader, DialogTitle, SheetContent } from '../../../components/pp-ui';
-import { MIN_SQUAD, rupees, spentBy, waitingQueue } from '../../../lib/auction';
-import { bidBudget, FEMALE_MIN, isFemale, squadDots, type BudgetTeam } from '../../../lib/auction-bid-budget';
-import { auctionPool, auctionStats, formatTimes, teamStats } from '../../../lib/auction-hub-stats';
+import { useEffect, useState } from 'react';
+import { Button, Dialog, DialogDescription, DialogHeader, DialogTitle, SheetContent } from '../../../components/pp-ui';
+import { MIN_SQUAD, nextCategory, nextUp, reauctionPool, rupees, spentBy } from '../../../lib/auction';
+import { bidBudget, FEMALE_MIN, isFemale, squadDots, squadSlots, SQUAD_MAX, type BudgetTeam } from '../../../lib/auction-bid-budget';
+import { auctionFacts, formatTimes, teamStats } from '../../../lib/auction-hub-stats';
+import { AuctionLivePlayer } from './AuctionLivePlayer';
+import { AuctionLotBreak, AuctionSold, AuctionWaiting } from './AuctionMoments';
 import { TeamLogo } from './AuctionShell';
 
 import type { HubData, HubTeam } from './hub-data';
 type Budget = ReturnType<typeof bidBudget>;
 
-const genderLabel = (l: { gender?: string | null } | undefined) => (isFemale(l) ? 'Female' : 'Male');
+const SOLD_MOMENT_MS = 6500;
+
+/** The latest auction sale, and whether its ~6.5s "sold" moment is still running. */
+function useSaleMoment(a: HubData) {
+    const last = [...(a.lots as ApiAuctionLot[])]
+        .filter((l) => l.status === 'SOLD' && !l.retained && !l.corrected && l.soldAt)
+        .sort((x, y) => (y.soldAt ?? '').localeCompare(x.soldAt ?? ''))[0];
+    // The clock only moves when the moment should end, so a fresh sale shows straight away and clears on time.
+    const [now, setNow] = useState(() => Date.now());
+    const lastKey = last ? `${last.id}-${last.soldAt}` : null;
+    const soldTime = last?.soldAt ? new Date(last.soldAt).getTime() : 0;
+    useEffect(() => {
+        if (!lastKey) return;
+        const remaining = SOLD_MOMENT_MS - (Date.now() - soldTime);
+        if (remaining <= 0) return;
+        const timer = setTimeout(() => setNow(Date.now()), remaining);
+        return () => clearTimeout(timer);
+    }, [lastKey, soldTime]);
+    return { last, lastKey, active: !!lastKey && now - soldTime < SOLD_MOMENT_MS };
+}
 
 export function HubTop({ a }: { a: HubData }) {
-    const live = a.lots.find((l) => l.id === a.currentId);
-    const g = a.groups.find((x) => x.id === live?.categoryId);
-    const nextG =
-        a.groups.find((x) => x.id === a.currentGroupId) ??
-        a.groups
-            .slice()
-            .sort((x, y) => x.sort - y.sort)
-            .find((x) => waitingQueue(a.lots, x.id).length);
-    const pool = auctionPool(a.teams, a.lots);
-    const short = pool.femaleNeeded - pool.femaleLeft;
-    const queued = nextG ? waitingQueue(a.lots, nextG.id).length : 0;
+    const live = (a.lots as ApiAuctionLot[]).find((l) => l.id === a.currentId);
+    const { last, active } = useSaleMoment(a);
+    const sold = a.lots.filter((l) => l.status === 'SOLD').length;
+    const state = { currentLotId: a.currentId, currentCategoryId: a.currentGroupId, phase: a.phase };
+    const next = nextUp(a.lots, state);
+    const stage = a.phase === 'REAUCTION' ? 'Re-auction round' : a.groups.find((g) => g.id === a.currentGroupId)?.name;
+    const upcoming =
+        a.phase === 'CATEGORIES'
+            ? (nextCategory(a.groups, a.lots, a.currentGroupId)?.name ?? (reauctionPool(a.lots).length ? 'Re-auction round' : undefined))
+            : undefined;
+    const celebrating = !live && last && active;
+    const lastTeam = a.teams.find((t) => t.id === last?.teamId);
     return (
-        <div className="hub-top">
-            <section className="hub-card hub-block" aria-label="On the block">
+        <section className="hub-block" aria-label="On the block">
+            <header className="hub-block-heading">
                 <span className="hub-label">On the block</span>
-                {live ? (
-                    <>
-                        <strong className="hub-block-name">{live.name}</strong>
-                        <div className="hub-chips">
-                            <span className={`hub-chip ${isFemale(live) ? 'is-female' : ''}`}>{genderLabel(live)}</span>
-                            <span className="hub-chip">{g?.name ?? 'Unassigned'}</span>
-                            <span className="hub-chip">Base {rupees(live.effectiveBasePriceInr)}</span>
-                        </div>
-                    </>
-                ) : (
-                    <strong className="hub-block-next">
-                        {nextG ? `Up next: ${nextG.name} · ${queued} player${queued === 1 ? '' : 's'}` : a.phase === 'REAUCTION' ? 'Final round' : 'Waiting for the next draw'}
-                    </strong>
-                )}
-            </section>
-            <section className="hub-card hub-pool" aria-label="Auction pool">
-                <span className="hub-label">Auction pool</span>
-                <dl>
-                    <div>
-                        <dt>Players left</dt>
-                        <dd>{pool.playersLeft}</dd>
-                    </div>
-                    <div>
-                        <dt>Slots to fill</dt>
-                        <dd>{pool.slotsToFill}</dd>
-                    </div>
-                    <div>
-                        <dt>Female left</dt>
-                        <dd>{pool.femaleLeft}</dd>
-                    </div>
-                    <div>
-                        <dt>Female needed</dt>
-                        <dd>
-                            {pool.femaleNeeded}
-                            {short > 0 && <small className="text-warning"> {short} short</small>}
-                        </dd>
-                    </div>
-                </dl>
-            </section>
-        </div>
+                <span className={`pp-status pp-status-${live ? 'warning' : celebrating ? 'success' : 'neutral'}`}>
+                    {live ? 'On the block' : celebrating ? 'Sold' : 'Between players'}
+                </span>
+            </header>
+            {live ? (
+                <AuctionLivePlayer
+                    key={live.id}
+                    lot={live}
+                    categoryName={a.groups.find((g) => g.id === live.categoryId)?.name}
+                    reauction={a.phase === 'REAUCTION'}
+                />
+            ) : celebrating ? (
+                <AuctionSold lot={last} teamName={lastTeam?.name} teamLogoUrl={lastTeam?.logoUrl} />
+            ) : next ? (
+                <AuctionWaiting sold={sold} total={a.lots.length} label={stage} />
+            ) : (
+                <AuctionLotBreak done={stage} upcoming={upcoming} sold={sold} total={a.lots.length} />
+            )}
+        </section>
     );
 }
 
@@ -97,12 +98,17 @@ function Dots({ b }: { b: Budget }) {
     );
 }
 
-function Tile({ team, a, onOpen }: { team: HubTeam; a: HubData; onOpen: () => void }) {
+function Tile({ team, a, onOpen, celebrating = false }: { team: HubTeam; a: HubData; onOpen: () => void; celebrating?: boolean }) {
     const b = bidBudget(team, a);
     const live = !!a.currentId;
     const out = live && (b.outReason || b.maxBid === null);
     return (
-        <button type="button" className={`hub-card hub-tile${out ? ' is-out' : ''}`} onClick={onOpen} aria-label={`${team.name} details`}>
+        <Button
+            variant="outline"
+            className={`hub-card hub-tile${out ? ' is-out' : ''}${celebrating ? ' hub-team-celebrating' : ''}`}
+            onClick={onOpen}
+            aria-label={`${team.name} details`}
+        >
             <header>
                 <TeamLogo name={team.name} logoUrl={team.logoUrl} size={32} />
                 <h3>{team.name}</h3>
@@ -130,7 +136,7 @@ function Tile({ team, a, onOpen }: { team: HubTeam; a: HubData; onOpen: () => vo
                 </div>
                 <Dots b={b} />
             </div>
-        </button>
+        </Button>
     );
 }
 
@@ -172,13 +178,20 @@ export function HubLegend() {
 
 export function HubTiles({ a }: { a: HubData }) {
     const [open, setOpen] = useState<string | null>(null);
+    const { last, lastKey, active } = useSaleMoment(a);
     const teams = a.teams.slice().sort((x, y) => x.sort - y.sort);
     const team = teams.find((t) => t.id === open);
     return (
         <>
             <div className="hub-tiles">
                 {teams.map((t) => (
-                    <Tile key={t.id} team={t} a={a} onOpen={() => setOpen(t.id)} />
+                    <Tile
+                        key={`${t.id}-${last?.teamId === t.id ? lastKey : ''}`}
+                        team={t}
+                        a={a}
+                        celebrating={active && last?.teamId === t.id}
+                        onOpen={() => setOpen(t.id)}
+                    />
                 ))}
             </div>
             <HubLegend />
@@ -186,6 +199,116 @@ export function HubTiles({ a }: { a: HubData }) {
                 <SheetContent className="hub-sheet">{team && <TeamDetail team={team} a={a} />}</SheetContent>
             </Dialog>
         </>
+    );
+}
+
+/** Category badge letter: the trailing letter of the category name ("Category D" -> D). */
+const catLetter = (name: string) => {
+    const t = name.replace(/[^A-Za-z]/g, '');
+    return t ? t.slice(-1).toUpperCase() : '—';
+};
+
+function SquadColumn({ team, a, latestId, onOpen }: { team: HubTeam; a: HubData; latestId: string | null; onOpen: () => void }) {
+    const b = bidBudget(team, a);
+    const squad = a.lots
+        .filter((l) => l.status === 'SOLD' && l.teamId === team.id)
+        .sort((x, y) => Number(!!y.retained) - Number(!!x.retained) || (x.soldAt ?? '').localeCompare(y.soldAt ?? ''));
+    const slots = squadSlots(squad, Math.max(0, FEMALE_MIN - b.femaleOwned));
+    const full = squad.length >= MIN_SQUAD;
+    const count =
+        squad.length >= SQUAD_MAX ? (
+            <span className="is-full">Full · {squad.length}</span>
+        ) : full ? (
+            <span className="is-full">
+                {squad.length}/{MIN_SQUAD}
+            </span>
+        ) : (
+            <span>
+                {squad.length}/{MIN_SQUAD}
+            </span>
+        );
+    return (
+        <article className="hub-squad-col">
+            <Button variant="ghost" className="hub-board-team" onClick={onOpen} aria-label={`${team.name} details`}>
+                <TeamLogo name={team.name} logoUrl={team.logoUrl} size={34} />
+                <div>
+                    <h3>{team.name}</h3>
+                    <span className="hub-board-meta">
+                        <strong>{rupees(b.remaining)}</strong> left · {count}
+                    </span>
+                </div>
+            </Button>
+            <ul className="hub-squad-slots" aria-label={`${team.name} squad slots`}>
+                {slots.map((s) => {
+                    const opt = s.optional ? ' is-optional' : '';
+                    if (!s.lot)
+                        return (
+                            <li key={s.n} className={`hub-slot${s.need ? ' is-need' : ''}${opt}`}>
+                                <span className="hub-slot-num">{s.n}</span>
+                                {s.need ? <span className="hub-slot-need">Female needed</span> : s.optional ? <span className="hub-slot-opt">Optional</span> : null}
+                            </li>
+                        );
+                    const g = a.groups.find((x) => x.id === s.lot?.categoryId);
+                    const female = isFemale(s.lot);
+                    const newest = s.lot.id === latestId;
+                    return (
+                        <li key={s.lot.id} className={`hub-slot is-filled${female ? ' is-female' : ''}${newest ? ' is-latest' : ''}${opt}`}>
+                            <span className="hub-slot-cat">{catLetter(g?.name ?? '')}</span>
+                            <span className="hub-slot-name">{s.lot.name}</span>
+                            {s.lot.retained ? <span className="hub-slot-tag is-retained">RET</span> : newest ? <span className="hub-slot-tag is-new">NEW</span> : null}
+                            <span className="hub-slot-price">{rupees(s.lot.priceInr ?? 0)}</span>
+                        </li>
+                    );
+                })}
+            </ul>
+        </article>
+    );
+}
+
+export function SquadLegend() {
+    return (
+        <div className="hub-squad-legend" aria-label="Squad slot key">
+            <span>
+                <b>A–D</b>Category
+            </span>
+            <span>
+                <i className="ls-female" />
+                Female
+            </span>
+            <span>
+                <i className="ls-need">Female needed</i>Slot reserved for a female player
+            </span>
+            <span>
+                <i className="ls-retained">RET</i>Retained before the auction
+            </span>
+            <span>
+                <i className="ls-new">NEW</i>Latest buy
+            </span>
+            <span>Slot 12 is optional (squad maximum)</span>
+        </div>
+    );
+}
+
+/** Teams as eight fixed squad columns; no charts, no scrolling inside a column. */
+export function HubSquadBoard({ a }: { a: HubData }) {
+    const [open, setOpen] = useState<string | null>(null);
+    const teams = a.teams.slice().sort((x, y) => x.sort - y.sort);
+    const latest = [...a.lots]
+        .filter((l) => l.status === 'SOLD' && !l.retained && l.soldAt)
+        .sort((x, y) => (y.soldAt ?? '').localeCompare(x.soldAt ?? ''))[0];
+    const team = teams.find((t) => t.id === open);
+    return (
+        <div className="hub-squad-wrap">
+            <div className="hub-squad-board">
+                {teams.map((t) => (
+                    <SquadColumn key={t.id} team={t} a={a} latestId={latest?.id ?? null} onOpen={() => setOpen(t.id)} />
+                ))}
+            </div>
+            <SquadLegend />
+            <Dialog open={!!team} onOpenChange={(o) => !o && setOpen(null)}>
+                <SheetContent className="hub-sheet">{team && <TeamDetail team={team} a={a} />}</SheetContent>
+            </Dialog>
+        </div>
     );
 }
 
@@ -252,136 +375,112 @@ function TeamDetail({ team, a }: { team: HubTeam; a: HubData }) {
     );
 }
 
+/** Compact fact sheet: six numbers on the left, one row per category on the right. */
 export function HubStats({ a }: { a: HubData }) {
-    const s = auctionStats(a.groups, a.lots, a.teams);
-    const prices = s.categories.flatMap((c) => c.sales.map((l) => l.priceInr ?? 0)).concat(s.categories.map((c) => c.group.basePriceInr));
-    const min = Math.min(...prices) === Infinity ? 0 : Math.min(...prices) * 0.9;
-    const max = Math.max(...prices, 1) * 1.05;
-    const x = (v: number) => `${((v - min) / (max - min || 1)) * 100}%`;
-    const cur = a.groups.find((g) => g.id === a.currentGroupId);
+    const f = auctionFacts(a.groups, a.lots, a.teams, a.currentGroupId, a.phase);
+    const short = (left: number, need: number) => left < need && <small className="hub-short">{need - left} short</small>;
+    const money = (n: number | null) => (n === null ? '—' : rupees(n));
     return (
-        <section className="hub-stats" aria-label="Auction statistics">
-            <div className="hub-headline">
-                <div className="hub-card">
-                    <span className="hub-label">Players sold</span>
-                    <strong>{s.sold}</strong>
+        <section className="hub-facts" aria-label="Auction statistics">
+            <dl className="hub-facts-nums">
+                <div>
+                    <dt>Sold</dt>
+                    <dd>
+                        {f.sold}
+                        <small> / {f.lots}</small>
+                    </dd>
                 </div>
-                <div className="hub-card">
-                    <span className="hub-label">Spent at auction</span>
-                    <strong>{rupees(s.spent)}</strong>
+                <div>
+                    <dt>Unsold</dt>
+                    <dd>{f.unsold}</dd>
                 </div>
-                <div className="hub-card">
-                    <span className="hub-label">Average price</span>
-                    <strong>{s.sold ? rupees(s.average) : '—'}</strong>
+                <div>
+                    <dt>Spent</dt>
+                    <dd>{rupees(f.spent)}</dd>
                 </div>
-                <div className="hub-card">
-                    <span className="hub-label">Unsold</span>
-                    <strong>{s.unsold}</strong>
-                    <small className="hub-muted">back in final round</small>
+                <div>
+                    <dt>Avg price</dt>
+                    <dd>{money(f.average)}</dd>
                 </div>
-            </div>
-            <div className="hub-stats-grid">
-                <div className="hub-card hub-price">
-                    <h3>Price by category</h3>
-                    {s.categories.map((c) => {
-                        const stacks = new Map<number, number>();
+                <div>
+                    <dt>Players left / needed</dt>
+                    <dd>
+                        {f.playersLeft}
+                        <small> / {f.needed}</small>
+                        {short(f.playersLeft, f.needed)}
+                    </dd>
+                </div>
+                <div>
+                    <dt>Female left / needed</dt>
+                    <dd>
+                        {f.femaleLeft}
+                        <small> / {f.femaleNeeded}</small>
+                        {short(f.femaleLeft, f.femaleNeeded)}
+                    </dd>
+                </div>
+            </dl>
+            <table className="hub-facts-table">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th className="hf-wide">Base</th>
+                        <th>Sold</th>
+                        <th>Avg price</th>
+                        <th className="hf-wide">Females/Avg price</th>
+                        <th className="hf-wide">Top buy</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {f.categories.map((c) => {
+                        const female = money(c.femaleAvg);
+                        const top = c.top ? (
+                            <>
+                                {c.top.name} <b>{rupees(c.top.price)}</b>
+                            </>
+                        ) : (
+                            '—'
+                        );
                         return (
-                            <div key={c.group.id} className="hub-price-row">
-                                <div className="hub-price-label">
-                                    <strong>{c.group.name}</strong>
-                                    <span className="hub-muted">{rupees(c.group.basePriceInr)}</span>
-                                </div>
-                                {c.sales.length ? (
-                                    <div className="hub-axis">
-                                        <i className="hub-base-line" style={{ left: x(c.group.basePriceInr) }} />
-                                        {c.avg !== null && (
-                                            <i className="hub-avg-line" style={{ left: x(c.avg) }}>
-                                                <span>avg {rupees(c.avg)}</span>
-                                            </i>
-                                        )}
-                                        {c.sales.map((l) => {
-                                            const v = l.priceInr ?? 0;
-                                            const n = stacks.get(v) ?? 0;
-                                            stacks.set(v, n + 1);
-                                            return <i key={l.id} className={`hub-dot ${isFemale(l) ? 'd-female' : 'd-male'}`} style={{ left: x(v), bottom: 6 + n * 9 }} title={`${l.name} · ${rupees(v)}`} />;
-                                        })}
-                                    </div>
-                                ) : (
-                                    <div className="hub-axis hub-axis-empty">
-                                        {c.group.id === cur?.id || (!cur && c.waiting) ? `Up next · ${c.waiting} player${c.waiting === 1 ? '' : 's'}` : 'Not started'}
-                                    </div>
-                                )}
-                                <div className="hub-price-meta">
-                                    {c.times !== null ? (
-                                        <>
-                                            <strong>{c.times.toFixed(2)}× over base</strong>
-                                            <span className="hub-muted">
-                                                {c.sales.length} sold · {c.unsold} unsold
+                            <tr key={c.group.id} className={c.started ? '' : 'is-muted'}>
+                                <td>
+                                    <span className="hf-cat">
+                                        {c.group.name}
+                                        {c.live && (
+                                            <span className="hf-live">
+                                                <i />
+                                                LIVE
                                             </span>
-                                        </>
+                                        )}
+                                    </span>
+                                    <span className="hf-sub">
+                                        Females {c.femaleTotal} · Avg {female} · Top {top}
+                                    </span>
+                                </td>
+                                <td className="hf-wide">{rupees(c.group.basePriceInr)}</td>
+                                <td>
+                                    {c.sold}
+                                    <small> / {c.total}</small>
+                                </td>
+                                <td>
+                                    {c.avg === null ? (
+                                        '—'
                                     ) : (
-                                        <span className="hub-muted">—</span>
+                                        <>
+                                            {rupees(c.avg)} <small>{formatTimes(c.times ?? 1)}</small>
+                                        </>
                                     )}
-                                </div>
-                            </div>
+                                </td>
+                                <td className="hf-wide">
+                                    {c.femaleTotal}
+                                    <small> / </small>
+                                    {female}
+                                </td>
+                                <td className="hf-wide hf-top">{top}</td>
+                            </tr>
                         );
                     })}
-                </div>
-                <div className="hub-side">
-                    {s.female.count > 0 && s.male.count > 0 && (
-                        <div className="hub-card hub-gender">
-                            <h3>Female vs male</h3>
-                            {(
-                                [
-                                    ['Female', s.female, 'd-female'],
-                                    ['Male', s.male, 'd-male'],
-                                ] as const
-                            ).map(([label, g, cls]) => (
-                                <div key={label} className="hub-gender-row">
-                                    <div className="hub-gender-top">
-                                        <span>{label}</span>
-                                        <span className="hub-muted">
-                                            {g.count} sold · {g.times.toFixed(2)}× base
-                                        </span>
-                                    </div>
-                                    <div className="hub-gbar">
-                                        <span className={cls} style={{ width: `${(g.avg / Math.max(s.female.avg, s.male.avg)) * 100}%` }} />
-                                    </div>
-                                    <strong>{rupees(g.avg)} avg</strong>
-                                </div>
-                            ))}
-                            <p className="hub-muted">Compare × base, not raw price — the category mix differs.</p>
-                        </div>
-                    )}
-                    {s.highlights && (
-                        <div className="hub-card hub-highlights">
-                            <h3>Highlights</h3>
-                            {(
-                                [
-                                    ['Top buy', s.highlights.top],
-                                    ['Top female buy', s.highlights.topFemale],
-                                    ['Steal', s.highlights.steal],
-                                ] as const
-                            ).map(
-                                ([label, h]) =>
-                                    h && (
-                                        <div key={label} className="hub-hl">
-                                            <span className="hub-label">{label}</span>
-                                            <div className="hub-hl-main">
-                                                <i className={isFemale(h.lot) ? 'd-female' : 'd-male'} />
-                                                <strong>{h.lot.name}</strong>
-                                                <span>{rupees(h.lot.priceInr ?? 0)}</span>
-                                            </div>
-                                            <span className="hub-muted">
-                                                {h.team?.name} · {h.group?.name} · {formatTimes(h.times)}
-                                            </span>
-                                        </div>
-                                    ),
-                            )}
-                        </div>
-                    )}
-                </div>
-            </div>
+                </tbody>
+            </table>
         </section>
     );
 }

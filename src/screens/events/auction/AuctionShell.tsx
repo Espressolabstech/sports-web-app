@@ -9,8 +9,8 @@ import '../../../components/pp-ui';
 // The public pages. The organizer console lives in the organizer app and the
 // auction admin in the admin dashboard.
 const tabsFor = (slug: string): { href: string; label: string }[] => [
-    { href: `/events/${slug}/auction/live`, label: 'Live' },
-    { href: `/events/${slug}/auction/team`, label: 'Team Hub' },
+    { href: `/events/${slug}/auction/team`, label: 'Live Auction' },
+    { href: `/events/${slug}/auction/squads`, label: 'Squads' },
     { href: `/events/${slug}/auction/public`, label: 'Public View' },
 ];
 
@@ -31,7 +31,6 @@ export function TeamLogo({ name, logoUrl, size = 28 }: { name: string; logoUrl: 
 
 export default function AuctionShell({
     slug,
-    kicker = 'THE COURT COLLECTIVE 2026 · PLAYER AUCTION',
     title,
     right,
     isLive = false,
@@ -39,6 +38,7 @@ export default function AuctionShell({
     children,
 }: {
     slug: string;
+    /** Kept for callers; the page title now sits in the brand header under "THE COURT COLLECTIVE 2026". */
     kicker?: string;
     title: string;
     right?: ReactNode;
@@ -60,35 +60,34 @@ export default function AuctionShell({
 
     return (
         <div className="ccreg pp-console">
-            <header className="site-header-like">
-                <Link to="/the-court-collective" className="wordmark" aria-label="The Court Collective — home">
-                    <img src={courtCollectiveLogo} alt="The Court Collective" className="brand-logo brand-logo-lockup" width={159} height={64} />
-                </Link>
-                <div className="header-right">
-                    <span className="powered-by">
-                        <span className="powered-by-label">Tech Partner</span>
-                        <img src={playpassLogo} alt="PlayPass" className="playpass-logo" />
-                    </span>
-                </div>
-            </header>
-
             <main className={`auction-main ${className}`}>
                 <nav className="auction-nav" aria-label="Auction pages">
                     {tabsFor(slug).map((t) => (
                         <Link key={t.href} to={t.href} className={active(t.href) ? 'active' : ''}>
-                            {isLive && t.label === 'Live' && <span className="pp-live-dot" aria-label="Auction live" />}
+                            {isLive && t.label === 'Live Auction' && <span className="pp-live-dot" aria-label="Auction live" />}
                             {t.label}
                         </Link>
                     ))}
                 </nav>
 
-                <div className="auction-heading">
-                    <div>
-                        <p className="section-kicker">{kicker}</p>
-                        <h1>{title}</h1>
+                <header className="site-header-like auction-brand-header">
+                    <div className="auction-brand-identity">
+                        <Link to="/the-court-collective" className="wordmark" aria-label="The Court Collective — home">
+                            <img src={courtCollectiveLogo} alt="The Court Collective" className="brand-logo brand-logo-lockup" width={159} height={64} />
+                        </Link>
+                        <div className="auction-brand-title">
+                            <p className="section-kicker">THE COURT COLLECTIVE 2026</p>
+                            <h1>{title}</h1>
+                        </div>
                     </div>
-                    {right}
-                </div>
+                    <div className="header-right">
+                        {right}
+                        <span className="powered-by">
+                            <span className="powered-by-label">Tech Partner</span>
+                            <img src={playpassLogo} alt="PlayPass" className="playpass-logo" />
+                        </span>
+                    </div>
+                </header>
 
                 {children}
 
