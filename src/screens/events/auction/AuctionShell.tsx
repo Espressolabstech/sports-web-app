@@ -33,6 +33,7 @@ export default function AuctionShell({
     title,
     right,
     isLive = false,
+    nav = true,
     className = '',
     children,
 }: {
@@ -43,6 +44,8 @@ export default function AuctionShell({
     right?: ReactNode;
     /** A player is on the block: the Live link gets the pulsing dot. */
     isLive?: boolean;
+    /** The Live Auction / Squads tabs. Off for the standalone Squads link. */
+    nav?: boolean;
     className?: string;
     children: ReactNode;
 }) {
@@ -60,14 +63,16 @@ export default function AuctionShell({
     return (
         <div className="ccreg pp-console">
             <main className={`auction-main ${className}`}>
-                <nav className="auction-nav" aria-label="Auction pages">
-                    {tabsFor(slug).map((t) => (
-                        <Link key={t.href} to={t.href} className={active(t.href) ? 'active' : ''}>
-                            {isLive && t.label === 'Live Auction' && <span className="pp-live-dot" aria-label="Auction live" />}
-                            {t.label}
-                        </Link>
-                    ))}
-                </nav>
+                {nav && (
+                    <nav className="auction-nav" aria-label="Auction pages">
+                        {tabsFor(slug).map((t) => (
+                            <Link key={t.href} to={t.href} className={active(t.href) ? 'active' : ''}>
+                                {isLive && t.label === 'Live Auction' && <span className="pp-live-dot" aria-label="Auction live" />}
+                                {t.label}
+                            </Link>
+                        ))}
+                    </nav>
+                )}
 
                 <header className="site-header-like auction-brand-header">
                     <div className="auction-brand-identity">

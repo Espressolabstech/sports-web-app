@@ -10,11 +10,13 @@ import { HubSquadBoard } from './AuctionTeamHub';
 import { toHubData } from './hub-data';
 import { usePublicBoard } from '../../../lib/auction-team-board';
 import { statuses, statusKey } from './auction-statuses';
+import { AuctionPlayerCard } from './AuctionPlayerCard';
+import { usePlayerCards } from '../../../lib/auction-player-cards';
 
 type Tab = 'teams' | 'players';
 const STATUSES = ['all', 'live', 'retained', 'unsold', 'waiting', 'sold'] as const;
 
-function SquadsInner({ slug }: { slug: string }) {
+function SquadsInner({ slug, standalone = false }: { slug: string; standalone?: boolean }) {
     // Tab and status live in the URL (?tab=teams&status=sold), so a shared link opens the same view.
     const [params, setParams] = useSearchParams();
     const tab: Tab = params.get('tab') === 'teams' ? 'teams' : 'players';
@@ -33,6 +35,9 @@ function SquadsInner({ slug }: { slug: string }) {
     const [gender, setGender] = useState('all');
 
     const { data: board } = usePublicBoard(slug);
+    // Player photos and levels are only read on the standalone link, where tapping a player opens them.
+    const cards = usePlayerCards(standalone ? slug : null);
+    const [openLot, setOpenLot] = useState<string | null>(null);
     const lots = board?.lots ?? [];
     const teams = board?.teams ?? [];
     const rows = filterAuctionLots(lots, { category, gender, status, search: '' })
@@ -71,7 +76,7 @@ function SquadsInner({ slug }: { slug: string }) {
 
     if (!board) {
         return (
-            <AuctionShell slug={slug} title={title} right={right}>
+            <AuctionShell slug={slug} title={title} right={right} nav={!standalone}>
                 <div className="flex justify-center py-16">
                     <AnimatedLoader />
                 </div>
@@ -80,9 +85,10 @@ function SquadsInner({ slug }: { slug: string }) {
     }
 
     return (
-        <AuctionShell slug={slug} isLive={!!board.state.currentLotId} title={title} right={right}>
+        <AuctionShell slug={slug} isLive={!!board.state.currentLotId} title={title} right={right} nav={!standalone}>
+            {standalone && <AuctionPlayerCard board={board} lotId={openLot} card={openLot ? cards?.get(openLot) : undefined} onClose={() => setOpenLot(null)} />}
             {tab === 'teams' ? (
-                <HubSquadBoard a={toHubData(board)} />
+                <HubSquadBoard a={toHubData(board)} onPlayer={standalone ? setOpenLot : undefined} />
             ) : (
                 <>
                     <div className="auction-lot-tabs" aria-label="Player categories">
@@ -160,8 +166,15 @@ function SquadsInner({ slug }: { slug: string }) {
                         {visible.map(({ l, t }) => {
                             const s = statuses[statusKey(l)];
                             const no = String(l.number ?? 0).padStart(3, '0');
+                            // On the standalone Squads link a tile is a button that opens the player's card.
+                            const Tile = standalone ? 'button' : 'div';
                             return (
-                                <div key={l.id} className="pp-number-tile rounded-lg border" aria-label={`Player ${no}, ${l.name}, ${s.text}`}>
+                                <Tile
+                                    key={l.id}
+                                    {...(standalone && { type: 'button' as const, onClick: () => setOpenLot(l.id) })}
+                                    className="pp-number-tile rounded-lg border"
+                                    aria-label={`Player ${no}, ${l.name}, ${s.text}`}
+                                >
                                     <div className="pp-number-top">
                                         <strong>{no}</strong>
                                         <span className={`pp-status pp-status-${s.tone}`}>
@@ -178,7 +191,7 @@ function SquadsInner({ slug }: { slug: string }) {
                                         {l.status === 'SOLD' ? rupees(l.priceInr ?? 0) : rupees(l.effectiveBasePriceInr)}
                                         {l.status === 'SOLD' && <small>{t?.name}</small>}
                                     </span>
-                                </div>
+                                </Tile>
                             );
                         })}
                     </div>
@@ -190,8 +203,11 @@ function SquadsInner({ slug }: { slug: string }) {
     );
 }
 
-/** Squads: every team's 12 slots, or every auction player by category, status and gender. Public, no login. */
-export default function AuctionSquads({ slugOverride }: { slugOverride?: string }) {
+/**
+ * Squads: every team's 12 slots, or every auction player by category, status and gender. Public, no login.
+ * `standalone` is the Squads-only link: no Live Auction tab, and tapping a player opens their photo and levels.
+ */
+export default function AuctionSquads({ slugOverride, standalone = false }: { slugOverride?: string; standalone?: boolean }) {
     const params = useParams();
-    return <SquadsInner slug={slugOverride ?? params.slug!} />;
+    return <SquadsInner slug={slugOverride ?? params.slug!} standalone={standalone} />;
 }

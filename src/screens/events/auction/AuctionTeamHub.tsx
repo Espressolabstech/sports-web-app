@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type KeyboardEvent } from 'react';
 import { Button, Dialog, DialogDescription, DialogHeader, DialogTitle, SheetContent } from '../../../components/pp-ui';
 import { MIN_SQUAD, nextCategory, nextUp, reauctionPool, rupees, spentBy } from '../../../lib/auction';
 import { bidBudget, FEMALE_MIN, isFemale, squadDots, squadSlots, SQUAD_MAX, type BudgetTeam } from '../../../lib/auction-bid-budget';
@@ -208,7 +208,19 @@ const catLetter = (name: string) => {
     return t ? t.slice(-1).toUpperCase() : '—';
 };
 
-function SquadColumn({ team, a, latestId, onOpen }: { team: HubTeam; a: HubData; latestId: string | null; onOpen: () => void }) {
+function SquadColumn({
+    team,
+    a,
+    latestId,
+    onOpen,
+    onPlayer,
+}: {
+    team: HubTeam;
+    a: HubData;
+    latestId: string | null;
+    onOpen: () => void;
+    onPlayer?: (lotId: string) => void;
+}) {
     const b = bidBudget(team, a);
     const squad = a.lots
         .filter((l) => l.status === 'SOLD' && l.teamId === team.id)
@@ -251,8 +263,26 @@ function SquadColumn({ team, a, latestId, onOpen }: { team: HubTeam; a: HubData;
                     const g = a.groups.find((x) => x.id === s.lot?.categoryId);
                     const female = isFemale(s.lot);
                     const newest = s.lot.id === latestId;
+                    const lotId = s.lot.id;
+                    // On the standalone Squads link a filled slot opens that player's card.
+                    const open = onPlayer && {
+                        role: 'button',
+                        tabIndex: 0,
+                        'aria-label': `${s.lot.name} details`,
+                        onClick: () => onPlayer(lotId),
+                        onKeyDown: (e: KeyboardEvent) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                                e.preventDefault();
+                                onPlayer(lotId);
+                            }
+                        },
+                    };
                     return (
-                        <li key={s.lot.id} className={`hub-slot is-filled${female ? ' is-female' : ''}${newest ? ' is-latest' : ''}${opt}`}>
+                        <li
+                            key={s.lot.id}
+                            className={`hub-slot is-filled${female ? ' is-female' : ''}${newest ? ' is-latest' : ''}${opt}${open ? ' is-tappable' : ''}`}
+                            {...open}
+                        >
                             <span className="hub-slot-cat">{catLetter(g?.name ?? '')}</span>
                             <span className="hub-slot-name">{s.lot.name}</span>
                             {s.lot.retained ? <span className="hub-slot-tag is-retained">RET</span> : newest ? <span className="hub-slot-tag is-new">NEW</span> : null}
@@ -290,7 +320,7 @@ export function SquadLegend() {
 }
 
 /** Teams as eight fixed squad columns; no charts, no scrolling inside a column. */
-export function HubSquadBoard({ a }: { a: HubData }) {
+export function HubSquadBoard({ a, onPlayer }: { a: HubData; onPlayer?: (lotId: string) => void }) {
     const [open, setOpen] = useState<string | null>(null);
     const teams = a.teams.slice().sort((x, y) => x.sort - y.sort);
     const latest = [...a.lots]
@@ -301,7 +331,7 @@ export function HubSquadBoard({ a }: { a: HubData }) {
         <div className="hub-squad-wrap">
             <div className="hub-squad-board">
                 {teams.map((t) => (
-                    <SquadColumn key={t.id} team={t} a={a} latestId={latest?.id ?? null} onOpen={() => setOpen(t.id)} />
+                    <SquadColumn key={t.id} team={t} a={a} latestId={latest?.id ?? null} onOpen={() => setOpen(t.id)} onPlayer={onPlayer} />
                 ))}
             </div>
             <SquadLegend />
