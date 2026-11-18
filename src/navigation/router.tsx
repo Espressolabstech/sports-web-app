@@ -163,6 +163,8 @@ export const router = createBrowserRouter([
     { path: '/events/:slug/auction/team', element: <AuctionResults /> },
     { path: '/events/:slug/auction/squads', element: <AuctionSquads /> },
     { path: '/events/:slug/auction/public', element: <AuctionPublic /> },
+    // Squads only (no Live Auction tab); tap a player for their photo and levels.
+    { path: '/events/:slug/squads', element: <AuctionSquads standalone /> },
     // Vanity links for The Court Collective 2026.
     { path: '/auction', element: <Navigate to="/auction/live" replace /> },
     { path: '/auction/live', element: <AuctionLive slugOverride={COURT_COLLECTIVE_SLUG} /> },
@@ -170,6 +172,7 @@ export const router = createBrowserRouter([
     { path: '/auction/squads', element: <AuctionSquads slugOverride={COURT_COLLECTIVE_SLUG} /> },
     { path: '/auction/players', element: <Navigate to="/auction/squads" replace /> },
     { path: '/auction/public', element: <AuctionPublic slugOverride={COURT_COLLECTIVE_SLUG} /> },
+    { path: '/squads', element: <AuctionSquads slugOverride={COURT_COLLECTIVE_SLUG} standalone /> },
     { path: '/auction/results', element: <Navigate to="/auction/team" replace /> },
     {
         path: '/auction/control',

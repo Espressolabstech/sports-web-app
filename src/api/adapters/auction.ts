@@ -14,6 +14,11 @@ export const getAuctionPublicView = async (slug: string): Promise<ApiResponse<Ap
     return apiClient({ url: endpoints.auctionPublic(slug), method: 'GET' });
 };
 
+/** Public: every player's photo and levels (the Squads view's player cards). */
+export const getAuctionPlayerCards = async (slug: string): Promise<ApiResponse<{ players: ApiAuctionPlayerCard[] }>> => {
+    return apiClient({ url: endpoints.auctionPlayerCards(slug), method: 'GET' });
+};
+
 /** Team users (added by the host in the organizer console) log in with
  *  phone + OTP; the token is scoped to their team's event. */
 export const auctionTeamLogin = async (slug: string, phone: string): Promise<ApiResponse<null>> => {

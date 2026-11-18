@@ -111,6 +111,16 @@ declare global {
         corrected: boolean;
         woman: boolean;
     }
+    /** The public Squads view's player card: photo, levels and what the player wrote for the auction. */
+    interface ApiAuctionPlayerCard {
+        id: string;
+        photoUrl: string | null;
+        gender: string | null;
+        sports: string[];
+        padelLevel: AuctionSkillLevel | null;
+        pickleballLevel: AuctionSkillLevel | null;
+        achievements: string | null;
+    }
     interface ApiAuctionPublicView {
         version: string;
         onBlock: string | null;

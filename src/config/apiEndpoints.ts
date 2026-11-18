@@ -63,6 +63,7 @@ export const endpoints = {
     teamConfirmPayment: (slug: string) => `/public/events/${slug}/team/confirm-payment`,
     auctionLive: (slug: string) => `/public/events/${slug}/auction/live`,
     auctionPublic: (slug: string) => `/public/events/${slug}/auction/public`,
+    auctionPlayerCards: (slug: string) => `/public/events/${slug}/auction/players`,
     auctionTeamLogin: (slug: string) => `/public/events/${slug}/auction/team-login`,
     auctionTeamVerify: (slug: string) => `/public/events/${slug}/auction/team-verify`,
     auctionTeamBoard: (slug: string) => `/public/events/${slug}/auction/board`,
