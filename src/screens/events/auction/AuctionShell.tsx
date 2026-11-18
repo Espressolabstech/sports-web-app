@@ -11,7 +11,6 @@ import '../../../components/pp-ui';
 const tabsFor = (slug: string): { href: string; label: string }[] => [
     { href: `/events/${slug}/auction/team`, label: 'Live Auction' },
     { href: `/events/${slug}/auction/squads`, label: 'Squads' },
-    { href: `/events/${slug}/auction/public`, label: 'Public View' },
 ];
 
 export function TeamLogo({ name, logoUrl, size = 28 }: { name: string; logoUrl: string | null; size?: number }) {

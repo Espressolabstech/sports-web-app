@@ -1,5 +1,6 @@
 import axios from 'axios';
 import config from '../../config/config';
+import { formatPlayerNames } from '../../lib/player-name';
 import { endpoints } from '../../config/apiEndpoints';
 import apiClient from '../client/apiClient';
 
@@ -35,7 +36,7 @@ export const getAuctionTeamBoard = async (slug: string, token: string): Promise<
             baseURL: config.apiUrl,
             headers: { Authorization: `Bearer ${token}` },
         });
-        return response.data;
+        return formatPlayerNames(response.data);
     } catch (error) {
         throw {
             status: axios.isAxiosError(error) ? error.response?.status : undefined,
