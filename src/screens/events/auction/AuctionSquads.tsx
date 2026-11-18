@@ -12,6 +12,7 @@ import { usePublicBoard } from '../../../lib/auction-team-board';
 import { statuses, statusKey } from './auction-statuses';
 import { AuctionPlayerCard } from './AuctionPlayerCard';
 import { usePlayerCards } from '../../../lib/auction-player-cards';
+import { AuctionSquadsGate } from './AuctionSquadsGate';
 
 type Tab = 'teams' | 'players';
 const STATUSES = ['all', 'live', 'retained', 'unsold', 'waiting', 'sold'] as const;
@@ -212,5 +213,11 @@ function SquadsInner({ slug, standalone = false }: { slug: string; standalone?: 
  */
 export default function AuctionSquads({ slugOverride, standalone = false }: { slugOverride?: string; standalone?: boolean }) {
     const params = useParams();
-    return <SquadsInner slug={slugOverride ?? params.slug!} standalone={standalone} />;
+    const slug = slugOverride ?? params.slug!;
+    if (!standalone) return <SquadsInner slug={slug} />;
+    return (
+        <AuctionSquadsGate slug={slug}>
+            <SquadsInner slug={slug} standalone />
+        </AuctionSquadsGate>
+    );
 }
