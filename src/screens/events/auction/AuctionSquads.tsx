@@ -181,10 +181,13 @@ function SquadsInner({ slug, standalone = false }: { slug: string; standalone?: 
                                 >
                                     <div className="pp-number-top">
                                         <strong>{no}</strong>
-                                        <span className={`pp-status pp-status-${s.tone}`}>
-                                            <s.Icon size={12} />
-                                            {s.text}
-                                        </span>
+                                        {/* The Squads link shows no "Waiting" label; sold, retained, unsold and on the block still show. */}
+                                        {!(standalone && l.status === 'WAITING') && (
+                                            <span className={`pp-status pp-status-${s.tone}`}>
+                                                <s.Icon size={12} />
+                                                {s.text}
+                                            </span>
+                                        )}
                                     </div>
                                     <span className="pp-number-name">{l.name}</span>
                                     <span className="pp-number-detail">
