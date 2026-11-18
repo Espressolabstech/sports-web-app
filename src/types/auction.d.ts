@@ -119,6 +119,8 @@ declare global {
         sports: string[];
         padelLevel: AuctionSkillLevel | null;
         pickleballLevel: AuctionSkillLevel | null;
+        /** True when the organizer confirmed the levels (host rated); false = what the player picked at registration. */
+        levelsConfirmed: boolean;
         achievements: string | null;
     }
     interface ApiAuctionPublicView {

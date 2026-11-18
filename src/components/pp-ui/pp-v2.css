@@ -866,7 +866,15 @@ body.pp-console-page{background:var(--background)}
 :where(.pp-console) .hub-player-tags{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:4px}
 :where(.pp-console) .hub-player-team{display:flex;align-items:center;gap:8px;margin-top:8px;font-weight:600}
 :where(.pp-console) .hub-player-about{margin-top:4px;white-space:pre-line;overflow-wrap:anywhere;line-height:1.5}
-:where(.pp-console) .hub-mini dd{overflow-wrap:anywhere}
+:where(.pp-console) .hub-player-levels-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+:where(.pp-console) .hub-player-levels{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+:where(.pp-console) .hub-player-levels div{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 12px;min-width:0}
+:where(.pp-console) .hub-player-levels dt{font-size:12px;color:var(--ink-muted)}
+:where(.pp-console) .hub-player-levels dd{font-size:15px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+:where(.pp-console) .pp-squads-gate{max-width:420px;margin:48px auto;display:flex;flex-direction:column;gap:10px}
+:where(.pp-console) .pp-squads-gate-row{display:flex;gap:8px}
+:where(.pp-console) .pp-squads-gate-row input{flex:1;min-width:0}
+:where(.pp-console) .pp-squads-gate-error{color:var(--danger);font-size:13px}
 :where(.pp-console) .hub-slot.is-tappable,:where(.pp-console) button.pp-number-tile{cursor:pointer}
 :where(.pp-console) .hub-slot.is-tappable:hover{background:var(--surface-hover)}
 :where(.pp-console) .hub-slot.is-tappable:focus-visible,:where(.pp-console) button.pp-number-tile:focus-visible{outline:2px solid var(--ink);outline-offset:2px}

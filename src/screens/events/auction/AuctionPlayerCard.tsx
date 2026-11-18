@@ -49,10 +49,12 @@ function PlayerDetail({ board, lot, card }: { board: ApiAuctionBoardData; lot: A
                 <DialogTitle>{lot.name}</DialogTitle>
                 <DialogDescription asChild>
                     <div className="hub-player-tags">
-                        <span className={`pp-status pp-status-${s.tone}`}>
-                            <s.Icon size={12} aria-hidden />
-                            {s.text}
-                        </span>
+                        {lot.status !== 'WAITING' && (
+                            <span className={`pp-status pp-status-${s.tone}`}>
+                                <s.Icon size={12} aria-hidden />
+                                {s.text}
+                            </span>
+                        )}
                         <span className="hub-muted">
                             {category} · {female ? <span className="pp-female-text">Female</span> : 'Male'}
                         </span>
@@ -72,8 +74,15 @@ function PlayerDetail({ board, lot, card }: { board: ApiAuctionBoardData; lot: A
             </div>
 
             <div>
-                <span className="hub-label">Levels</span>
-                <dl className="hub-mini mt-2">
+                <div className="hub-player-levels-head">
+                    <span className="hub-label">Levels{total !== null && ` · ${pts(total)}`}</span>
+                    {card && (padel || pickleball) && (
+                        <span className={`pp-status pp-status-${card.levelsConfirmed ? 'success' : 'neutral'}`}>
+                            {card.levelsConfirmed ? 'Host rated' : 'Self-rated'}
+                        </span>
+                    )}
+                </div>
+                <dl className="hub-player-levels">
                     <div>
                         <dt>Padel</dt>
                         <dd>{padel ?? 'Not played'}</dd>
@@ -84,12 +93,6 @@ function PlayerDetail({ board, lot, card }: { board: ApiAuctionBoardData; lot: A
                         <dd>{pickleball ?? 'Not played'}</dd>
                         {pickleballPts !== null && <small className="hub-muted">{pts(pickleballPts)}</small>}
                     </div>
-                    {total !== null && (
-                        <div>
-                            <dt>Total</dt>
-                            <dd>{pts(total)}</dd>
-                        </div>
-                    )}
                 </dl>
             </div>
 
