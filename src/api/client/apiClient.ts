@@ -1,6 +1,7 @@
 import axios from 'axios';
 import type { AxiosRequestConfig, AxiosResponse } from 'axios';
 import config from '../../config/config';
+import { formatPlayerNames } from '../../lib/player-name';
 import { getToken, removeToken } from '../../utils/cookies.helpers';
 
 const apiClient = async <T = unknown>(
@@ -19,7 +20,7 @@ const apiClient = async <T = unknown>(
 
         if (!response.data) throw new Error('API Request Was Not Successful');
 
-        return response.data;
+        return formatPlayerNames(response.data);
     } catch (error: unknown) {
         // Only redirect to login on 401 if the request had a token
         // (i.e., the user's session expired). Guest browsing should NOT redirect.
