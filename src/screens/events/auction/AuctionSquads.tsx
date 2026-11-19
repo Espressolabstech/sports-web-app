@@ -3,7 +3,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
 import { Button, Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/pp-ui';
 import { AnimatedLoader } from '../../../components/AnimatedLoader';
-import { filterAuctionLots, rupees } from '../../../lib/auction';
+import { filterAuctionLots, roundLabel, rupees } from '../../../lib/auction';
 import { useIncremental } from '../../../lib/use-incremental';
 import AuctionShell from './AuctionShell';
 import { HubSquadBoard } from './AuctionTeamHub';
@@ -55,7 +55,8 @@ function SquadsInner({ slug, standalone = false }: { slug: string; standalone?: 
         { key: 'search', active: !!q.trim(), label: `“${q.trim()}”`, clear: () => setQ(''), Icon: null },
     ].filter((f) => f.active);
 
-    const liveGroup = board?.categories.find((g) => g.id === board.state.currentCategoryId)?.name;
+    // The open round (rounds mode), or the open category.
+    const liveGroup = (board && roundLabel(board.state.round)) ?? board?.categories.find((g) => g.id === board.state.currentCategoryId)?.name;
     const right = (
         <div className="flex items-center gap-3">
             {board?.state.currentLotId && liveGroup ? (

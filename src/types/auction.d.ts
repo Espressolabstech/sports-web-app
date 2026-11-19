@@ -1,6 +1,8 @@
 declare global {
     type AuctionLotStatus = 'WAITING' | 'LIVE' | 'SOLD' | 'UNSOLD';
     type AuctionPhase = 'CATEGORIES' | 'REAUCTION';
+    /** Manual auction rounds (any order). */
+    type AuctionRound = 'ab' | 'female' | 'c' | 'd';
 
     interface ApiAuctionTeam {
         id: string;
@@ -51,6 +53,8 @@ declare global {
         currentLotId: string | null;
         currentCategoryId: string | null;
         phase: AuctionPhase;
+        /** The open round; null = not started; 'complete' = auction closed. */
+        round?: AuctionRound | 'complete' | null;
     }
 
     interface ApiAuctionTeamMember {

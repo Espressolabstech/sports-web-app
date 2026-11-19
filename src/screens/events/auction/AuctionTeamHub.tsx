@@ -1,6 +1,6 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import { Button, Dialog, DialogDescription, DialogHeader, DialogTitle, SheetContent } from '../../../components/pp-ui';
-import { MIN_SQUAD, nextCategory, nextUp, reauctionPool, rupees, spentBy } from '../../../lib/auction';
+import { MIN_SQUAD, nextCategory, nextUp, reauctionPool, roundLabel, rupees, spentBy } from '../../../lib/auction';
 import { bidBudget, FEMALE_MIN, isFemale, squadDots, squadSlots, SQUAD_MAX, type BudgetTeam } from '../../../lib/auction-bid-budget';
 import { auctionFacts, formatTimes, teamStats } from '../../../lib/auction-hub-stats';
 import { AuctionLivePlayer } from './AuctionLivePlayer';
@@ -35,11 +35,12 @@ export function HubTop({ a }: { a: HubData }) {
     const live = (a.lots as ApiAuctionLot[]).find((l) => l.id === a.currentId);
     const { last, active } = useSaleMoment(a);
     const sold = a.lots.filter((l) => l.status === 'SOLD').length;
-    const state = { currentLotId: a.currentId, currentCategoryId: a.currentGroupId, phase: a.phase };
-    const next = nextUp(a.lots, state);
-    const stage = a.phase === 'REAUCTION' ? 'Re-auction round' : a.groups.find((g) => g.id === a.currentGroupId)?.name;
+    const state = { currentLotId: a.currentId, currentCategoryId: a.currentGroupId, phase: a.phase, round: a.round as ApiAuctionState['round'] };
+    const next = nextUp(a.lots, state, a.groups);
+    const stage = roundLabel(state.round) ?? (a.phase === 'REAUCTION' ? 'Re-auction round' : a.groups.find((g) => g.id === a.currentGroupId)?.name);
+    // Rounds are opened by the organizer in any order, so there's no fixed "up next" round to announce.
     const upcoming =
-        a.phase === 'CATEGORIES'
+        !state.round && a.phase === 'CATEGORIES'
             ? (nextCategory(a.groups, a.lots, a.currentGroupId)?.name ?? (reauctionPool(a.lots).length ? 'Re-auction round' : undefined))
             : undefined;
     const celebrating = !live && last && active;
@@ -57,7 +58,7 @@ export function HubTop({ a }: { a: HubData }) {
                     key={live.id}
                     lot={live}
                     categoryName={a.groups.find((g) => g.id === live.categoryId)?.name}
-                    reauction={a.phase === 'REAUCTION'}
+                    reauction={a.phase === 'REAUCTION' || !!live.reauctioned}
                 />
             ) : celebrating ? (
                 <AuctionSold lot={last} teamName={lastTeam?.name} teamLogoUrl={lastTeam?.logoUrl} />
@@ -245,10 +246,11 @@ function SquadColumn({
                 <TeamLogo name={team.name} logoUrl={team.logoUrl} size={34} />
                 <div>
                     <h3>{team.name}</h3>
-                    <span className="hub-board-meta">
-                        <strong>{rupees(b.remaining)}</strong> left · {count}
-                    </span>
                 </div>
+                <span className="hub-board-left">
+                    <strong>{rupees(b.remaining)}</strong>
+                    <small>left</small>
+                </span>
             </Button>
             <ul className="hub-squad-slots" aria-label={`${team.name} squad slots`}>
                 {slots.map((s) => {
@@ -291,6 +293,13 @@ function SquadColumn({
                     );
                 })}
             </ul>
+            <div className="hub-board-spent">
+                <span className="hub-board-meta">{count}</span>
+                <span className="hub-board-spending">
+                    <span>Total spent</span>
+                    <strong>{rupees(spentBy(team.id, a.lots))}</strong>
+                </span>
+            </div>
         </article>
     );
 }

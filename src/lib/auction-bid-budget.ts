@@ -5,6 +5,10 @@ export const FEMALE_MIN = 2;
 export const FEMALE_MAX = 2;
 export const MALE_MAX = 9;
 export const SQUAD_MAX = 12;
+/** At most 3 players from the top categories (A ₹6,000 and B ₹5,000) combined, retained players included. */
+export const TOP_CATEGORY_MAX = 3;
+export const TOP_CATEGORY_MIN_BASE = 5000;
+export const isTopCategory = (l: { effectiveBasePriceInr: number } | undefined) => (l?.effectiveBasePriceInr ?? 0) >= TOP_CATEGORY_MIN_BASE;
 
 export type BudgetLot = {
     id: string;
@@ -28,19 +32,22 @@ export type BidContext = {
     phase: 'CATEGORIES' | 'REAUCTION';
     currentGroupId: string | null;
     currentId: string | null;
+    /** Manual rounds (any order): every waiting or unsold player can still be bought. 'complete' = closed. */
+    round?: string | null;
 };
-export type OutReason = 'Squad full' | 'Has 9 male' | 'Has 2 female' | "Can't cover base";
+export type OutReason = 'Squad full' | 'Has 9 male' | 'Has 2 female' | 'Has 3 from A/B' | "Can't cover base";
 
 export const isFemale = (l: { gender?: string | null } | undefined) => l?.gender === 'Female';
 
 /** Players still purchasable in the current phase, cheapest first. */
-export function availableLots({ lots, groups, phase, currentGroupId, currentId }: BidContext) {
+export function availableLots({ lots, groups, phase, currentGroupId, currentId, round }: BidContext) {
     const currentGroup = groups.find((g) => g.id === currentGroupId);
     return lots
         .filter((l) => {
             const group = groups.find((g) => g.id === l.categoryId);
             if (!group || l.retained || l.status === 'SOLD') return false;
             if (l.id === currentId && l.status === 'LIVE') return true;
+            if (round) return l.status === 'WAITING' || l.status === 'UNSOLD';
             if (l.status === 'UNSOLD') return !l.reauctioned;
             return phase === 'CATEGORIES' && l.status === 'WAITING' && (!currentGroup || group.sort >= currentGroup.sort);
         })
@@ -55,8 +62,10 @@ export function bidBudget(team: BudgetTeam, context: BidContext) {
     const squad = owned.length;
     const femaleOwned = owned.filter(isFemale).length;
     const maleOwned = squad - femaleOwned;
+    const topOwned = owned.filter(isTopCategory).length;
     const eligible = availableLots(context);
-    const canTake = (l: BudgetLot) => squad < SQUAD_MAX && (isFemale(l) ? femaleOwned < FEMALE_MAX : maleOwned < MALE_MAX);
+    const canTake = (l: BudgetLot) =>
+        squad < SQUAD_MAX && (isFemale(l) ? femaleOwned < FEMALE_MAX : maleOwned < MALE_MAX) && (!isTopCategory(l) || topOwned < TOP_CATEGORY_MAX);
     // Between draws use the cheapest player this team could legally buy.
     const candidate = currentId ? eligible.find((l) => l.id === currentId) : eligible.find(canTake);
     const candFemale = isFemale(candidate);
@@ -64,6 +73,7 @@ export function bidBudget(team: BudgetTeam, context: BidContext) {
     if (squad >= SQUAD_MAX) outReason = 'Squad full';
     else if (candidate && !candFemale && maleOwned >= MALE_MAX) outReason = 'Has 9 male';
     else if (candidate && candFemale && femaleOwned >= FEMALE_MAX) outReason = 'Has 2 female';
+    else if (candidate && isTopCategory(candidate) && topOwned >= TOP_CATEGORY_MAX) outReason = 'Has 3 from A/B';
     const f = femaleOwned + (candidate && candFemale ? 1 : 0);
     const m = squad + (candidate ? 1 : 0) - f;
     const spotsAfterBid = Math.max(0, MIN_SQUAD - squad - (candidate ? 1 : 0));
@@ -73,17 +83,25 @@ export function bidBudget(team: BudgetTeam, context: BidContext) {
     const reservePlayers: BudgetLot[] = [];
     let fcap = FEMALE_MAX - f;
     let mcap = MALE_MAX - m;
-    for (const l of pool.filter(isFemale).slice(0, Math.min(spotsAfterBid, femaleNeededAfterBid))) {
+    // Category A/B places left after this bid; the reserve can't count on more A/B players than that.
+    let tcap = TOP_CATEGORY_MAX - topOwned - (candidate && isTopCategory(candidate) ? 1 : 0);
+    const fits = (l: BudgetLot) => !isTopCategory(l) || tcap > 0;
+    const femaleReserve = Math.min(spotsAfterBid, femaleNeededAfterBid);
+    for (const l of pool) {
+        if (reservePlayers.length >= femaleReserve) break;
+        if (!isFemale(l) || !fits(l)) continue;
         reservePlayers.push(l);
         fcap--;
+        if (isTopCategory(l)) tcap--;
     }
     for (const l of pool) {
         if (reservePlayers.length >= spotsAfterBid) break;
         if (reservePlayers.includes(l)) continue;
-        if (isFemale(l) ? fcap > 0 : mcap > 0) {
+        if ((isFemale(l) ? fcap > 0 : mcap > 0) && fits(l)) {
             reservePlayers.push(l);
             if (isFemale(l)) fcap--;
             else mcap--;
+            if (isTopCategory(l)) tcap--;
         }
     }
     const reserve = reservePlayers.reduce((sum, l) => sum + l.effectiveBasePriceInr, 0);
