@@ -1,7 +1,7 @@
 import { useEffect, useState, type KeyboardEvent } from 'react';
 import { Button, Dialog, DialogDescription, DialogHeader, DialogTitle, SheetContent } from '../../../components/pp-ui';
 import { MIN_SQUAD, nextCategory, nextUp, reauctionPool, roundLabel, rupees, spentBy } from '../../../lib/auction';
-import { bidBudget, FEMALE_MIN, isFemale, squadDots, squadSlots, SQUAD_MAX, type BudgetTeam } from '../../../lib/auction-bid-budget';
+import { bidBudget, compositionCounts, FEMALE_MIN, isFemale, squadDots, squadSlots, SQUAD_MAX, type BudgetTeam } from '../../../lib/auction-bid-budget';
 import { auctionFacts, formatTimes, teamStats } from '../../../lib/auction-hub-stats';
 import { AuctionLivePlayer } from './AuctionLivePlayer';
 import { AuctionLotBreak, AuctionSold, AuctionWaiting } from './AuctionMoments';
@@ -99,6 +99,32 @@ function Dots({ b }: { b: Budget }) {
     );
 }
 
+/** Male players per category (A–D) and women counted once, each against its minimum — on the team tiles and squad cards. */
+function CompositionChips({ team, a }: { team: HubTeam; a: HubData }) {
+    const squad = a.lots.filter((l) => l.status === 'SOLD' && l.teamId === team.id);
+    return (
+        <div className="hub-board-cats" role="group" aria-label={`${team.name} players owned / minimum required`}>
+            <span className="hub-cats-male">Male · A–D</span>
+            {compositionCounts(squad, a.groups).map((c) => {
+                const female = c.letter === 'Female';
+                return (
+                    <span
+                        key={c.letter}
+                        aria-label={`${female ? 'Female' : `Male category ${c.letter}`}: ${c.owned} owned, minimum ${c.min}`}
+                        className={`hub-cat-cell${female ? ' is-female' : ''}${c.owned < c.min ? ' is-short' : c.owned > c.max ? ' is-over' : ''}`}
+                    >
+                        <b>{c.letter}</b>
+                        <i>
+                            {c.owned}
+                            <small>/{c.min}</small>
+                        </i>
+                    </span>
+                );
+            })}
+        </div>
+    );
+}
+
 function Tile({ team, a, onOpen, celebrating = false }: { team: HubTeam; a: HubData; onOpen: () => void; celebrating?: boolean }) {
     const b = bidBudget(team, a);
     const live = !!a.currentId;
@@ -137,6 +163,7 @@ function Tile({ team, a, onOpen, celebrating = false }: { team: HubTeam; a: HubD
                 </div>
                 <Dots b={b} />
             </div>
+            <CompositionChips team={team} a={a} />
         </Button>
     );
 }
@@ -300,6 +327,7 @@ function SquadColumn({
                     <strong>{rupees(spentBy(team.id, a.lots))}</strong>
                 </span>
             </div>
+            <CompositionChips team={team} a={a} />
         </article>
     );
 }
@@ -322,6 +350,9 @@ export function SquadLegend() {
             </span>
             <span>
                 <i className="ls-new">NEW</i>Latest buy
+            </span>
+            <span>
+                <b>1/2</b>Players owned / minimum required · A–D male only; Female counted separately
             </span>
         </div>
     );

@@ -5,7 +5,7 @@ export const FEMALE_MIN = 2;
 export const FEMALE_MAX = 2;
 export const MALE_MAX = 9;
 export const SQUAD_MAX = 12;
-/** At most 3 players from the top categories (A ₹6,000 and B ₹5,000) combined, retained players included. */
+/** At most 3 male players from the top categories (A ₹6,000 and B ₹5,000) combined, retained players included. */
 export const TOP_CATEGORY_MAX = 3;
 export const TOP_CATEGORY_MIN_BASE = 5000;
 export const isTopCategory = (l: { effectiveBasePriceInr: number } | undefined) => (l?.effectiveBasePriceInr ?? 0) >= TOP_CATEGORY_MIN_BASE;
@@ -54,7 +54,8 @@ export function availableLots({ lots, groups, phase, currentGroupId, currentId, 
         .sort((a, b) => a.effectiveBasePriceInr - b.effectiveBasePriceInr || (a.number ?? 0) - (b.number ?? 0));
 }
 
-/** Category C and Category D: every team needs 2–5 players from each, retained players included (sports-api auction.budget.ts). */
+/** Category C and Category D: every team needs 2–5 male players from each, retained players included (sports-api auction.budget.ts).
+ *  Women don't count toward any category limit. */
 export const CATEGORY_MIN = 2;
 export const CATEGORY_MAX = 5;
 type LimitedCategory = 'C' | 'D';
@@ -76,29 +77,29 @@ export function bidBudget(team: BudgetTeam, context: BidContext) {
     const squad = owned.length;
     const femaleOwned = owned.filter(isFemale).length;
     const maleOwned = squad - femaleOwned;
-    const topOwned = owned.filter(isTopCategory).length;
-    const ownedIn = (c: LimitedCategory) => owned.filter((l) => limitedCategory(l) === c).length;
+    // Category limits count men only.
+    const ownedMen = owned.filter((l) => !isFemale(l));
+    const topOwned = ownedMen.filter(isTopCategory).length;
+    const ownedIn = (c: LimitedCategory) => ownedMen.filter((l) => limitedCategory(l) === c).length;
     const ownedC = ownedIn('C');
     const ownedD = ownedIn('D');
     const eligible = availableLots(context);
     const canTake = (l: BudgetLot) => {
+        if (squad >= SQUAD_MAX) return false;
+        if (isFemale(l)) return femaleOwned < FEMALE_MAX;
         const c = limitedCategory(l);
-        return (
-            squad < SQUAD_MAX &&
-            (isFemale(l) ? femaleOwned < FEMALE_MAX : maleOwned < MALE_MAX) &&
-            (!isTopCategory(l) || topOwned < TOP_CATEGORY_MAX) &&
-            (!c || ownedIn(c) < CATEGORY_MAX)
-        );
+        return maleOwned < MALE_MAX && (!isTopCategory(l) || topOwned < TOP_CATEGORY_MAX) && (!c || ownedIn(c) < CATEGORY_MAX);
     };
     // Between draws use the cheapest player this team could legally buy.
     const candidate = currentId ? eligible.find((l) => l.id === currentId) : eligible.find(canTake);
     const candFemale = isFemale(candidate);
-    const candCat = limitedCategory(candidate);
+    const candTop = !!candidate && !candFemale && isTopCategory(candidate);
+    const candCat = candFemale ? null : limitedCategory(candidate);
     let outReason: OutReason | null = null;
     if (squad >= SQUAD_MAX) outReason = 'Squad full';
     else if (candidate && !candFemale && maleOwned >= MALE_MAX) outReason = 'Has 9 male';
     else if (candidate && candFemale && femaleOwned >= FEMALE_MAX) outReason = 'Has 2 female';
-    else if (candidate && isTopCategory(candidate) && topOwned >= TOP_CATEGORY_MAX) outReason = 'Has 3 from A/B';
+    else if (candTop && topOwned >= TOP_CATEGORY_MAX) outReason = 'Has 3 from A/B';
     else if (candCat && ownedIn(candCat) >= CATEGORY_MAX) outReason = candCat === 'C' ? 'Has 5 from C' : 'Has 5 from D';
     const f = femaleOwned + (candidate && candFemale ? 1 : 0);
     const m = squad + (candidate ? 1 : 0) - f;
@@ -117,7 +118,7 @@ export function bidBudget(team: BudgetTeam, context: BidContext) {
     const room = {
         female: FEMALE_MAX - f,
         male: MALE_MAX - m,
-        top: TOP_CATEGORY_MAX - topOwned - (candidate && isTopCategory(candidate) ? 1 : 0),
+        top: TOP_CATEGORY_MAX - topOwned - (candTop ? 1 : 0),
         C: CATEGORY_MAX - after.C,
         D: CATEGORY_MAX - after.D,
     };
@@ -217,6 +218,7 @@ export type FillLimits = {
  * Tries every split of the spots across women/men × (A+B, C, D, other) — a few thousand combinations at most —
  * so it never misses a legal squad the way "cheapest first" can (e.g. cheap Category D women using up the D places
  * when the only A/B players left are women). The female minimum is advisory when too few women exist at all.
+ * Category limits (A+B, C, D) count men only; women are limited only by the female minimum/maximum.
  */
 export function cheapestFill<T>(pool: FillItem<T>[], lim: FillLimits): T[] | null {
     if (lim.spots <= 0) return [];
@@ -239,15 +241,15 @@ export function cheapestFill<T>(pool: FillItem<T>[], lim: FillLimits): T[] | nul
             for (const wD of range(Math.min(wMax - wAB - wC, women.get('D')!.length)))
                 for (const wX of range(Math.min(wMax - wAB - wC - wD, women.get('X')!.length))) {
                     const w = wAB + wC + wD + wX;
-                    if (w < wMin || wAB > lim.abMax || wC > lim.cMax || wD > lim.dMax) continue;
+                    if (w < wMin) continue;
                     const m = lim.spots - w;
                     if (m < 0 || m > lim.maleMax) continue;
-                    for (const mC of range(Math.min(m, men.get('C')!.length, lim.cMax - wC)))
-                        for (const mD of range(Math.min(m - mC, men.get('D')!.length, lim.dMax - wD)))
-                            for (const mAB of range(Math.min(m - mC - mD, men.get('AB')!.length, lim.abMax - wAB))) {
+                    for (const mC of range(Math.min(m, men.get('C')!.length, lim.cMax)))
+                        for (const mD of range(Math.min(m - mC, men.get('D')!.length, lim.dMax)))
+                            for (const mAB of range(Math.min(m - mC - mD, men.get('AB')!.length, lim.abMax))) {
                                 const mX = m - mC - mD - mAB;
                                 if (mX > men.get('X')!.length) continue;
-                                if (wC + mC < lim.cMin || wD + mD < lim.dMin) continue;
+                                if (mC < lim.cMin || mD < lim.dMin) continue;
                                 const cost =
                                     wCost.get('AB')![wAB] + wCost.get('C')![wC] + wCost.get('D')![wD] + wCost.get('X')![wX] +
                                     mCost.get('AB')![mAB] + mCost.get('C')![mC] + mCost.get('D')![mD] + mCost.get('X')![mX];
@@ -259,4 +261,22 @@ export function cheapestFill<T>(pool: FillItem<T>[], lim: FillLimits): T[] | nul
     if (!best) return null;
     const chosen = best;
     return GROUPS.flatMap((g) => [...women.get(g)!.slice(0, chosen.w[g]), ...men.get(g)!.slice(0, chosen.m[g])].map((p) => p.item));
+}
+
+/** Male players owned per category vs the minimum and maximum (A 0–3, B 0–3, C 2–5, D 2–5); shown on the squad cards. Women are separate. */
+export const CAT_MIN: Record<string, number> = { A: 0, B: 0, C: CATEGORY_MIN, D: CATEGORY_MIN };
+export const CAT_MAX: Record<string, number> = { A: TOP_CATEGORY_MAX, B: TOP_CATEGORY_MAX, C: CATEGORY_MAX, D: CATEGORY_MAX };
+export type CatCount = { letter: string; owned: number; min: number; max: number };
+export function categoryCounts(squad: BudgetLot[], groups: BudgetGroup[]): CatCount[] {
+    return ['A', 'B', 'C', 'D'].map((letter) => ({
+        letter,
+        owned: squad.filter((l) => !isFemale(l) && letterOf(groups.find((g) => g.id === l.categoryId)?.name) === letter).length,
+        min: CAT_MIN[letter] ?? 0,
+        max: CAT_MAX[letter] ?? 0,
+    }));
+}
+
+/** Male A–D counts, then women once across every category (separate from the category counts): the squad cards' composition row. */
+export function compositionCounts(squad: BudgetLot[], groups: BudgetGroup[]): CatCount[] {
+    return [...categoryCounts(squad, groups), { letter: 'Female', owned: squad.filter(isFemale).length, min: FEMALE_MIN, max: FEMALE_MAX }];
 }
