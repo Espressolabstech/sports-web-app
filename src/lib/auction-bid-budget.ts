@@ -2,7 +2,7 @@ import { MIN_SQUAD, rupees, spentBy } from './auction';
 
 /** Squad limits. The server enforces the same values on every sale and correction (sports-api auction.budget.ts). */
 export const FEMALE_MIN = 2;
-export const FEMALE_MAX = 3;
+export const FEMALE_MAX = 2;
 export const MALE_MAX = 9;
 export const SQUAD_MAX = 12;
 
@@ -29,7 +29,7 @@ export type BidContext = {
     currentGroupId: string | null;
     currentId: string | null;
 };
-export type OutReason = 'Squad full' | 'Has 9 male' | 'Has 3 female' | "Can't cover base";
+export type OutReason = 'Squad full' | 'Has 9 male' | 'Has 2 female' | "Can't cover base";
 
 export const isFemale = (l: { gender?: string | null } | undefined) => l?.gender === 'Female';
 
@@ -63,7 +63,7 @@ export function bidBudget(team: BudgetTeam, context: BidContext) {
     let outReason: OutReason | null = null;
     if (squad >= SQUAD_MAX) outReason = 'Squad full';
     else if (candidate && !candFemale && maleOwned >= MALE_MAX) outReason = 'Has 9 male';
-    else if (candidate && candFemale && femaleOwned >= FEMALE_MAX) outReason = 'Has 3 female';
+    else if (candidate && candFemale && femaleOwned >= FEMALE_MAX) outReason = 'Has 2 female';
     const f = femaleOwned + (candidate && candFemale ? 1 : 0);
     const m = squad + (candidate ? 1 : 0) - f;
     const spotsAfterBid = Math.max(0, MIN_SQUAD - squad - (candidate ? 1 : 0));
@@ -105,14 +105,18 @@ export function bidBudget(team: BudgetTeam, context: BidContext) {
 
 export type SquadSlot<L> = { n: number; lot?: L; need?: boolean; optional?: boolean };
 
-/** Twelve fixed slots: purchases first, then female-need slots, then open, with the 12th optional. */
+/**
+ * Eleven fixed slots (the squad size): purchases first, then female-need slots, then open.
+ * No empty "optional" 12th slot is shown; a team that does buy a 12th player (the maximum) still shows them.
+ */
 export function squadSlots<L>(squad: L[], femaleNeeded: number): SquadSlot<L>[] {
     const filled = squad.length;
-    return Array.from({ length: SQUAD_MAX }, (_, i) => i + 1).map<SquadSlot<L>>((n) => {
+    const size = Math.min(SQUAD_MAX, Math.max(MIN_SQUAD, filled));
+    return Array.from({ length: size }, (_, i) => i + 1).map<SquadSlot<L>>((n) => {
         const lot = squad[n - 1];
         if (lot) return { n, lot };
-        if (n <= MIN_SQUAD && n - filled <= femaleNeeded) return { n, need: true };
-        return { n, optional: n === SQUAD_MAX };
+        if (n - filled <= femaleNeeded) return { n, need: true };
+        return { n };
     });
 }
 
