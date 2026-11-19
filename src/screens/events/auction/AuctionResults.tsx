@@ -4,11 +4,20 @@ import { AnimatedLoader } from '../../../components/AnimatedLoader';
 import AuctionShell from './AuctionShell';
 import { HubStats, HubTiles, HubTop } from './AuctionTeamHub';
 import { toHubData } from './hub-data';
+import { AuctionSquadsGate } from './AuctionSquadsGate';
 
-/** Live Auction: the player on the block, every team's purse and max bid, and the auction's numbers. Public, no login. */
+/** Live Auction: the player on the block, every team's purse and max bid, and the auction's numbers. No login; behind the auction code. */
 export default function AuctionResults({ slugOverride }: { slugOverride?: string }) {
     const params = useParams();
     const slug = slugOverride ?? params.slug!;
+    return (
+        <AuctionSquadsGate slug={slug} title="LIVE AUCTION" nav>
+            <LiveAuction slug={slug} />
+        </AuctionSquadsGate>
+    );
+}
+
+function LiveAuction({ slug }: { slug: string }) {
     const { data: board } = usePublicBoard(slug);
     if (!board) {
         return (

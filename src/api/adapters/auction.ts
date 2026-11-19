@@ -9,14 +9,14 @@ export const getAuctionLive = async (slug: string): Promise<ApiResponse<ApiAucti
     return apiClient({ url: endpoints.auctionLive(slug), method: 'GET' });
 };
 
-/** Public: the light public view (teams, purses, squads, who is on the block). */
-export const getAuctionPublicView = async (slug: string): Promise<ApiResponse<ApiAuctionPublicView>> => {
-    return apiClient({ url: endpoints.auctionPublic(slug), method: 'GET' });
+/** The light public view (teams, purses, squads, who is on the block); needs the auction code, a wrong one is a 403. */
+export const getAuctionPublicView = async (slug: string, code: string): Promise<ApiResponse<ApiAuctionPublicView>> => {
+    return apiClient({ url: endpoints.auctionPublic(slug), method: 'GET', params: { code } });
 };
 
-/** Public: every player's photo and levels (the Squads link's player cards). */
-export const getAuctionPlayerCards = async (slug: string): Promise<ApiResponse<{ players: ApiAuctionPlayerCard[] }>> => {
-    return apiClient({ url: endpoints.auctionPlayerCards(slug), method: 'GET' });
+/** Every player's photo and levels (the Squads link's player cards); needs the auction code. */
+export const getAuctionPlayerCards = async (slug: string, code: string): Promise<ApiResponse<{ players: ApiAuctionPlayerCard[] }>> => {
+    return apiClient({ url: endpoints.auctionPlayerCards(slug), method: 'GET', params: { code } });
 };
 
 /** Team users (added by the host in the organizer console) log in with

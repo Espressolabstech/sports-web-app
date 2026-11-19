@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getAuctionLive, getAuctionPublicView } from '../api/adapters/auction';
 import { useEventLive } from './auction-live';
+import { isWrongCode, useAuctionCode } from './auction-code';
 
 /**
  * The public board, merged from the two public endpoints (no login):
@@ -53,14 +55,21 @@ export function toPublicBoard(view: ApiAuctionPublicView, live: ApiAuctionLiveDa
 
 /** The public board for Live Auction and Squads, refreshed the moment anything changes (socket signal, no polling). */
 export function usePublicBoard(slug: string) {
+    const { code, forget } = useAuctionCode();
     const queryClient = useQueryClient();
     const query = useQuery({
-        queryKey: ['auction-public-board', slug],
+        queryKey: ['auction-public-board', slug, code],
         queryFn: async () => {
-            const [view, live] = await Promise.all([getAuctionPublicView(slug), getAuctionLive(slug)]);
+            const [view, live] = await Promise.all([getAuctionPublicView(slug, code), getAuctionLive(slug)]);
             return toPublicBoard(view.data, live.data);
         },
+        retry: (count, error) => !isWrongCode(error) && count < 2,
     });
+    // The code was changed on the server since this device saved it: ask again.
+    const wrong = isWrongCode(query.error);
+    useEffect(() => {
+        if (wrong) forget();
+    }, [wrong, forget]);
     useEventLive(slug, () => queryClient.invalidateQueries({ queryKey: ['auction-public-board', slug] }));
     return query;
 }

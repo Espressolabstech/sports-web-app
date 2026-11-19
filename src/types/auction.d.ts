@@ -121,6 +121,8 @@ declare global {
         pickleballLevel: AuctionSkillLevel | null;
         /** True when the organizer confirmed the levels (host rated); false = what the player picked at registration. */
         levelsConfirmed: boolean;
+        /** Who rated them (host rated only), e.g. "Amar". */
+        levelsConfirmedBy?: string | null;
         achievements: string | null;
     }
     interface ApiAuctionPublicView {

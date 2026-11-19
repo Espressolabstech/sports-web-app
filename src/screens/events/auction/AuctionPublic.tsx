@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getAuctionPublicView } from '../../../api/adapters/auction';
+import { useAuctionCode } from '../../../lib/auction-code';
+import { AuctionSquadsGate } from './AuctionSquadsGate';
 import { useEventLive } from '../../../lib/auction-live';
 import { justSold, squadSlots } from '../../../lib/auction-public';
 import { AnimatedLoader } from '../../../components/AnimatedLoader';
@@ -33,10 +35,19 @@ function Logo({ t }: { t: ApiAuctionPublicTeam }) {
 export default function AuctionPublic({ slugOverride }: { slugOverride?: string }) {
     const params = useParams();
     const slug = slugOverride ?? params.slug!;
+    return (
+        <AuctionSquadsGate slug={slug} title="AUCTION">
+            <PublicView slug={slug} />
+        </AuctionSquadsGate>
+    );
+}
+
+function PublicView({ slug }: { slug: string }) {
+    const { code } = useAuctionCode();
     const queryClient = useQueryClient();
     const { data, isLoading, error } = useQuery({
-        queryKey: ['auction-public', slug],
-        queryFn: () => getAuctionPublicView(slug),
+        queryKey: ['auction-public', slug, code],
+        queryFn: () => getAuctionPublicView(slug, code),
         retry: false,
     });
     useEventLive(slug, () => queryClient.invalidateQueries({ queryKey: ['auction-public', slug] }));
