@@ -1,10 +1,11 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useEffect, type ReactNode } from 'react';
 import { initials } from '../../../lib/auction';
 import playpassLogo from '../../../assets/logo-white-v2-cropped.png';
 import courtCollectiveLogo from '../../../assets/court-collective-lockup-white.png';
 import '../registration-identical.css';
 import '../../../components/pp-ui';
+import { AuctionScreenFit } from './AuctionScreenFit';
 
 // The public pages. The organizer console lives in the organizer app and the
 // auction admin in the admin dashboard.
@@ -50,6 +51,9 @@ export default function AuctionShell({
     children: ReactNode;
 }) {
     const location = useLocation();
+    // Big-screen mode for the LED wall / projector: add ?screen=1 to the link.
+    const [params] = useSearchParams();
+    const screen = params.get('screen') === '1';
 
     // Matches the page's own dark background behind any unfilled viewport space.
     useEffect(() => {
@@ -59,6 +63,41 @@ export default function AuctionShell({
 
     const here = location.pathname.replace(/\/$/, '');
     const active = (href: string) => here.endsWith(href.slice(href.indexOf('/auction/')));
+
+    const brandHeader = (
+        <header className="site-header-like auction-brand-header">
+            <div className="auction-brand-identity">
+                <Link to="/the-court-collective" className="wordmark" aria-label="The Court Collective — home">
+                    <img src={courtCollectiveLogo} alt="The Court Collective" className="brand-logo brand-logo-lockup" width={159} height={64} />
+                </Link>
+                <div className="auction-brand-title">
+                    <p className="section-kicker">THE COURT COLLECTIVE 2026</p>
+                    <h1>{title}</h1>
+                </div>
+            </div>
+            <div className="header-right">
+                {right}
+                <span className="powered-by">
+                    <span className="powered-by-label">Tech Partner</span>
+                    <img src={playpassLogo} alt="PlayPass" className="playpass-logo" />
+                </span>
+            </div>
+        </header>
+    );
+
+    // Big screen: no page tabs or footer, and the whole page scaled to fill the screen.
+    if (screen) {
+        return (
+            <div className="ccreg pp-console is-screen">
+                <AuctionScreenFit>
+                    <main className={`auction-main ${className}`}>
+                        {brandHeader}
+                        {children}
+                    </main>
+                </AuctionScreenFit>
+            </div>
+        );
+    }
 
     return (
         <div className="ccreg pp-console">
@@ -74,24 +113,7 @@ export default function AuctionShell({
                     </nav>
                 )}
 
-                <header className="site-header-like auction-brand-header">
-                    <div className="auction-brand-identity">
-                        <Link to="/the-court-collective" className="wordmark" aria-label="The Court Collective — home">
-                            <img src={courtCollectiveLogo} alt="The Court Collective" className="brand-logo brand-logo-lockup" width={159} height={64} />
-                        </Link>
-                        <div className="auction-brand-title">
-                            <p className="section-kicker">THE COURT COLLECTIVE 2026</p>
-                            <h1>{title}</h1>
-                        </div>
-                    </div>
-                    <div className="header-right">
-                        {right}
-                        <span className="powered-by">
-                            <span className="powered-by-label">Tech Partner</span>
-                            <img src={playpassLogo} alt="PlayPass" className="playpass-logo" />
-                        </span>
-                    </div>
-                </header>
+                {brandHeader}
 
                 {children}
 

@@ -1151,3 +1151,9 @@ body.pp-console-page{background:var(--background)}
 .pp-console .hub-board-cats>.hub-cat-cell{grid-row:2}
 @container (max-width:220px){.pp-console .hub-board-cats>.hub-cat-cell.is-female{grid-row:3}}
 .pp-console .hub-slot-tag.is-retained,.pp-console .hub-squad-legend .ls-retained{color:var(--info);background:color-mix(in srgb,var(--info) 15%,transparent)}
+
+/* Big-screen mode (?screen=1): the page fills the screen; AuctionScreenFit scales it. */
+.pp-console.is-screen .pp-screen-fit{position:fixed;inset:0;overflow:hidden;background:var(--background)}
+.pp-console.is-screen .pp-screen-fit-inner{position:absolute;left:50%;top:50%;transform-origin:center center}
+.pp-console.is-screen .auction-main{max-width:none;margin:0;padding:16px 24px}
+.pp-console.is-screen .auction-main .auction-brand-header{padding:12px 0;margin-bottom:14px}
