@@ -90,8 +90,20 @@ export function bidBudget(team: BudgetTeam, context: BidContext) {
         const c = limitedCategory(l);
         return maleOwned < MALE_MAX && (!isTopCategory(l) || topOwned < TOP_CATEGORY_MAX) && (!c || ownedIn(c) < CATEGORY_MAX);
     };
-    // Between draws use the cheapest player this team could legally buy.
-    const candidate = currentId ? eligible.find((l) => l.id === currentId) : eligible.find(canTake);
+    // Between draws: the cheapest player this team could legally buy from the open round (the next call comes from it —
+    // e.g. an A/B man in the A + B round, not a cheap D man); with no round open, or none left in it, the cheapest overall.
+    const round = context.round && context.round !== 'complete' ? context.round : null;
+    const inOpenRound = (l: BudgetLot) => {
+        if (!round || !l.categoryId) return false;
+        const female = isFemale(l);
+        if (round === 'female') return female;
+        if (female) return false;
+        const letter = letterOf(groups.find((g) => g.id === l.categoryId)?.name);
+        return round === 'ab' ? letter === 'A' || letter === 'B' : letter === round.toUpperCase();
+    };
+    const candidate = currentId
+        ? eligible.find((l) => l.id === currentId)
+        : (eligible.find((l) => inOpenRound(l) && canTake(l)) ?? eligible.find(canTake));
     const candFemale = isFemale(candidate);
     const candTop = !!candidate && !candFemale && isTopCategory(candidate);
     const candCat = candFemale ? null : limitedCategory(candidate);
