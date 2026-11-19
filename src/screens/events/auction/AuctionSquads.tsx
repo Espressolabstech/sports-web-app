@@ -20,8 +20,7 @@ const STATUSES = ['all', 'live', 'retained', 'unsold', 'waiting', 'sold'] as con
 function SquadsInner({ slug, standalone = false }: { slug: string; standalone?: boolean }) {
     // Tab and status live in the URL (?tab=teams&status=sold), so a shared link opens the same view.
     const [params, setParams] = useSearchParams();
-    // The standalone Squads link shows the players grid only.
-    const tab: Tab = !standalone && params.get('tab') === 'teams' ? 'teams' : 'players';
+    const tab: Tab = params.get('tab') === 'teams' ? 'teams' : 'players';
     const status = (STATUSES as readonly string[]).includes(params.get('status') ?? '') ? params.get('status')! : 'all';
     const set = (v: Partial<{ tab: Tab; status: string }>) =>
         setParams(
@@ -65,15 +64,13 @@ function SquadsInner({ slug, standalone = false }: { slug: string; standalone?: 
                     {liveGroup} · LIVE
                 </span>
             ) : null}
-            {!standalone && (
-                <div className="auction-tabs is-inline" role="tablist" aria-label="Auction view">
-                    {(['teams', 'players'] as const).map((t) => (
-                        <Button variant="ghost" key={t} role="tab" aria-selected={tab === t} onClick={() => set({ tab: t })}>
-                            {t === 'teams' ? 'Teams' : 'Players'}
-                        </Button>
-                    ))}
-                </div>
-            )}
+            <div className="auction-tabs is-inline" role="tablist" aria-label="Auction view">
+                {(['teams', 'players'] as const).map((t) => (
+                    <Button variant="ghost" key={t} role="tab" aria-selected={tab === t} onClick={() => set({ tab: t })}>
+                        {t === 'teams' ? 'Teams' : 'Players'}
+                    </Button>
+                ))}
+            </div>
         </div>
     );
     const title = tab === 'teams' ? 'TEAMS' : 'PLAYERS';
