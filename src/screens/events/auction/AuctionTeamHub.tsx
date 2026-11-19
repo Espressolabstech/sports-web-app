@@ -314,7 +314,6 @@ export function SquadLegend() {
             <span>
                 <i className="ls-new">NEW</i>Latest buy
             </span>
-            <span>Slot 12 is optional (squad maximum)</span>
         </div>
     );
 }
