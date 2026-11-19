@@ -217,7 +217,12 @@ function SquadsInner({ slug, standalone = false }: { slug: string; standalone?: 
 export default function AuctionSquads({ slugOverride, standalone = false }: { slugOverride?: string; standalone?: boolean }) {
     const params = useParams();
     const slug = slugOverride ?? params.slug!;
-    if (!standalone) return <SquadsInner slug={slug} />;
+    if (!standalone)
+        return (
+            <AuctionSquadsGate slug={slug} title="SQUADS" nav>
+                <SquadsInner slug={slug} />
+            </AuctionSquadsGate>
+        );
     return (
         <AuctionSquadsGate slug={slug}>
             <SquadsInner slug={slug} standalone />

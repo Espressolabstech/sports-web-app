@@ -78,7 +78,7 @@ function PlayerDetail({ board, lot, card }: { board: ApiAuctionBoardData; lot: A
                     <span className="hub-label">Levels{total !== null && ` · ${pts(total)}`}</span>
                     {card && (padel || pickleball) && (
                         <span className={`pp-status pp-status-${card.levelsConfirmed ? 'success' : 'neutral'}`}>
-                            {card.levelsConfirmed ? 'Host rated' : 'Self-rated'}
+                            {card.levelsConfirmed ? `Host rated${card.levelsConfirmedBy ? ` · by ${card.levelsConfirmedBy}` : ''}` : 'Self-rated'}
                         </span>
                     )}
                 </div>
