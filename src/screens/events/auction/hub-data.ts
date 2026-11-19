@@ -9,6 +9,7 @@ export const toHubData = (board: ApiAuctionBoardData): HubData => ({
     groups: board.categories,
     lots: board.lots,
     phase: board.state.phase,
+    round: board.state.round ?? null,
     currentGroupId: board.state.currentCategoryId,
     currentId: board.state.currentLotId,
 });

@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getAuctionLive } from '../../../api/adapters/auction';
 import { useAuctionLivePush, useEventLive } from '../../../lib/auction-live';
-import { rupees, nextUp, nextCategory, reauctionPool } from '../../../lib/auction';
+import { rupees, nextUp, nextCategory, reauctionPool, roundLabel } from '../../../lib/auction';
 import { AnimatedLoader } from '../../../components/AnimatedLoader';
 import AuctionShell, { TeamLogo } from './AuctionShell';
 import { AuctionLotBreak, AuctionWaiting, AuctionSold } from './AuctionMoments';
@@ -74,11 +74,12 @@ export default function AuctionLive({ slugOverride }: { slugOverride?: string })
 
     const { categories, state } = board;
     const current = lots.find((l) => l.id === state.currentLotId);
-    const next = nextUp(lots, state);
-    const category = categories.find((c) => c.id === state.currentCategoryId);
-    const stage = state.phase === 'REAUCTION' ? 'Re-auction round' : category?.name;
+    const next = nextUp(lots, state, categories);
+    // The player's own category (in rounds mode there's no single open category).
+    const category = categories.find((c) => c.id === (current?.categoryId ?? state.currentCategoryId));
+    const stage = roundLabel(state.round) ?? (state.phase === 'REAUCTION' ? 'Re-auction round' : categories.find((c) => c.id === state.currentCategoryId)?.name);
     const upcoming =
-        state.phase === 'CATEGORIES'
+        !state.round && state.phase === 'CATEGORIES'
             ? (nextCategory(categories, lots, state.currentCategoryId)?.name ?? (reauctionPool(lots).length ? 'Re-auction round' : undefined))
             : undefined;
     // The public board only carries the lots the screen needs, so totals come from counts.
@@ -101,7 +102,7 @@ export default function AuctionLive({ slugOverride }: { slugOverride?: string })
             {celebrating && last ? (
                 <AuctionSold lot={last} teamName={lastTeam?.name} teamLogoUrl={lastTeam?.logoUrl} />
             ) : current ? (
-                <AuctionLivePlayer key={current.id} lot={current} categoryName={category?.name} reauction={state.phase === 'REAUCTION'} />
+                <AuctionLivePlayer key={current.id} lot={current} categoryName={category?.name} reauction={state.phase === 'REAUCTION' || current.reauctioned} />
             ) : next ? (
                 <AuctionWaiting sold={sold} total={total} label={stage} />
             ) : (

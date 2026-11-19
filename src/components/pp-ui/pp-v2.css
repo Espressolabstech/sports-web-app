@@ -1119,3 +1119,35 @@ body.pp-console-page{background:var(--background)}
 }
 :where(.pp-console) .pp-female-text{color:var(--female,hsl(268.8 80% 78%));font-weight:600}
 .pp-list-more{height:1px}
+
+/* Team column (prototype): what's left beside the team name, total spent at the foot. */
+.pp-console .hub-board-team{display:grid;grid-template-columns:34px minmax(0,1fr) auto;align-items:center;justify-content:flex-start;gap:8px}
+.pp-console .hub-board-left{display:flex;flex-direction:column;align-items:flex-end;gap:2px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pp-console .hub-board-left strong{font-size:13px;font-weight:700;color:var(--ink)}
+.pp-console .hub-board-left small{font-size:11px;font-weight:400;color:var(--ink-muted)}
+.pp-console .hub-board-spent{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:30px;margin-top:3px;border-top:1px solid var(--border);font-size:12px;color:var(--ink-muted)}
+.pp-console .hub-board-spent strong{font-size:13px;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}
+.pp-console .hub-board-spending{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.pp-console .hub-board-spending strong{min-width:7ch;text-align:right}
+
+/* Squad cards (prototype): male players per category vs the minimum — A 0–3, B 0–3, C 2–5, D 2–5. */
+.pp-console .hub-board-cats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) minmax(52px,1.25fr);gap:4px;margin-top:7px;padding-top:8px;border-top:1px solid color-mix(in srgb,var(--border) 55%,transparent);font-variant-numeric:tabular-nums}
+.pp-console .hub-cats-male{grid-column:1/5;grid-row:1;font-size:10px;font-weight:500;line-height:1.2;color:var(--ink-muted);text-align:center}
+.pp-console .hub-tile>.hub-board-cats{margin-top:auto;width:100%}
+.pp-console .hub-tile{container-type:inline-size}
+@container (max-width:220px){.pp-console .hub-board-cats{grid-template-columns:repeat(4,minmax(0,1fr))}.pp-console .hub-cat-cell.is-female{grid-column:1/-1;grid-row:3;flex-direction:row;gap:8px}}
+.pp-console .hub-cat-cell{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:0;padding:6px 2px;border-radius:6px;background:color-mix(in srgb,var(--border) 22%,transparent)}
+.pp-console .hub-cat-cell b{font-size:11px;font-weight:700;color:var(--ink-muted)}
+.pp-console .hub-cat-cell i{font-style:normal;font-size:14px;font-weight:700;color:var(--ink);line-height:1;white-space:nowrap}
+.pp-console .hub-cat-cell small{font-size:10px;font-weight:500;color:var(--ink-muted)}
+.pp-console .hub-cat-cell.is-short{background:color-mix(in srgb,var(--warning) 12%,transparent)}
+.pp-console .hub-cat-cell.is-short b,.pp-console .hub-cat-cell.is-short i{color:var(--warning)}
+.pp-console .hub-cat-cell.is-short small{color:color-mix(in srgb,var(--warning) 70%,var(--ink-muted))}
+.pp-console .hub-cat-cell.is-over{background:color-mix(in srgb,var(--danger) 12%,transparent)}
+.pp-console .hub-cat-cell.is-over b,.pp-console .hub-cat-cell.is-over i{color:var(--danger)}
+.pp-console .hub-cat-cell.is-over small{color:color-mix(in srgb,var(--danger) 70%,var(--ink-muted))}
+
+/* Prototype (14): cells on one row under the "Male · A–D" heading; retained tag in the info colour. */
+.pp-console .hub-board-cats>.hub-cat-cell{grid-row:2}
+@container (max-width:220px){.pp-console .hub-board-cats>.hub-cat-cell.is-female{grid-row:3}}
+.pp-console .hub-slot-tag.is-retained,.pp-console .hub-squad-legend .ls-retained{color:var(--info);background:color-mix(in srgb,var(--info) 15%,transparent)}

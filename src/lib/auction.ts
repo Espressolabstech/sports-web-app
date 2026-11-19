@@ -27,7 +27,7 @@ type Phase = 'CATEGORIES' | 'REAUCTION';
 type Status = 'WAITING' | 'LIVE' | 'SOLD' | 'UNSOLD';
 type LotLike = { id: string; number?: number | null; status: Status; teamId: string | null; priceInr: number | null };
 type CategoryLike = { id: string; name: string; basePriceInr: number; retentionMultiplier: number; sort: number };
-type StateLike = { currentLotId: string | null; currentCategoryId: string | null; phase: Phase };
+type StateLike = { currentLotId: string | null; currentCategoryId: string | null; phase: Phase; round?: AuctionRound | 'complete' | null };
 type TeamLike = { id: string; name: string; purseInr: number; remainingInr: number };
 
 export function spentBy(teamId: string, lots: LotLike[]): number {
@@ -46,8 +46,47 @@ export function reauctionPool<T extends LotLike & { reauctioned: boolean }>(lots
     return lots.filter((l) => l.status === 'UNSOLD' && !l.reauctioned).sort(byNumber);
 }
 
+/**
+ * Manual rounds (mirrors sports-api auction.utils inRound): the organizer opens any round, in any order, and reopens one
+ * to re-auction its unsold players. Categories stay separate; a round only decides who "next" draws from.
+ */
+export const ROUNDS: { id: AuctionRound; label: string; detail: string }[] = [
+    { id: 'ab', label: 'Category A + B', detail: 'Male players' },
+    { id: 'female', label: 'Female round', detail: 'All categories' },
+    { id: 'c', label: 'Category C', detail: 'Male players' },
+    { id: 'd', label: 'Category D', detail: 'Male players' },
+];
+export const roundLabel = (round: StateLike['round']) => (round === 'complete' ? 'Auction complete' : ROUNDS.find((r) => r.id === round)?.label);
+const categoryLetter = (name: string | undefined) => {
+    const letters = (name ?? '').replace(/[^A-Za-z]/g, '');
+    return letters ? letters.slice(-1).toUpperCase() : '';
+};
+type RoundLot = LotLike & { categoryId: string | null; gender?: string | null; retained?: boolean };
+export function inRound(lot: RoundLot, round: AuctionRound, categories: { id: string; name: string }[]) {
+    if (!lot.categoryId) return false;
+    const female = lot.gender === 'Female';
+    if (round === 'female') return female;
+    if (female) return false;
+    const letter = categoryLetter(categories.find((c) => c.id === lot.categoryId)?.name);
+    return round === 'ab' ? letter === 'A' || letter === 'B' : letter === round.toUpperCase();
+}
+/** Who a round can call: waiting players first, then unsold ones (reopening a round re-auctions them); by category, then draw number. */
+export function roundPool<T extends RoundLot>(lots: T[], categories: { id: string; name: string; sort?: number }[], round: AuctionRound): T[] {
+    const sort = (l: T) => categories.find((c) => c.id === l.categoryId)?.sort ?? 0;
+    return lots
+        .filter((l) => !l.retained && (l.status === 'WAITING' || l.status === 'UNSOLD') && inRound(l, round, categories))
+        .sort((a, b) => Number(a.status === 'UNSOLD') - Number(b.status === 'UNSOLD') || sort(a) - sort(b) || byNumber(a, b));
+}
+const isRound = (round: StateLike['round']): round is AuctionRound => !!round && round !== 'complete';
+
 /** The next player who could be drawn in the current phase, or undefined if nobody can be called right now. */
-export function nextUp<T extends LotLike & { categoryId: string | null; reauctioned: boolean }>(lots: T[], state: StateLike): T | undefined {
+export function nextUp<T extends LotLike & { categoryId: string | null; reauctioned: boolean; gender?: string | null; retained?: boolean }>(
+    lots: T[],
+    state: StateLike,
+    categories: { id: string; name: string; sort?: number }[] = [],
+): T | undefined {
+    if (state.round === 'complete') return undefined;
+    if (isRound(state.round)) return roundPool(lots, categories, state.round)[0];
     if (state.phase === 'REAUCTION') return reauctionPool(lots)[0];
     if (!state.currentCategoryId) return undefined;
     return waitingQueue(lots, state.currentCategoryId)[0];
