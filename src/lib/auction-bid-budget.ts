@@ -121,44 +121,28 @@ export function bidBudget(team: BudgetTeam, context: BidContext) {
         C: CATEGORY_MAX - after.C,
         D: CATEGORY_MAX - after.D,
     };
-    const fits = (l: BudgetLot) => {
-        const c = limitedCategory(l);
-        return (isFemale(l) ? room.female > 0 : room.male > 0) && (!isTopCategory(l) || room.top > 0) && (!c || room[c] > 0);
-    };
-    const reservePlayers: BudgetLot[] = [];
-    const take = (l: BudgetLot) => {
-        reservePlayers.push(l);
-        if (isFemale(l)) room.female--;
-        else room.male--;
-        if (isTopCategory(l)) room.top--;
-        const c = limitedCategory(l);
-        if (c) {
-            room[c]--;
-            catNeed[c] = Math.max(0, catNeed[c] - 1);
-        }
-    };
-    const fill = (want: () => number, match: (l: BudgetLot) => boolean) => {
-        for (const l of pool) {
-            if (want() <= 0 || reservePlayers.length >= spotsAfterBid) break;
-            if (!reservePlayers.includes(l) && match(l) && fits(l)) take(l);
-        }
-    };
-    let femaleLeft = Math.min(spotsAfterBid, femaleNeededAfterBid);
-    // Women first — but never so many that the C and D minimums no longer fit.
-    fill(
-        () => Math.min(femaleLeft, spotsAfterBid - reservePlayers.length - Math.max(0, catNeed.C + catNeed.D - femaleLeft)),
-        (l) => {
-            const ok = isFemale(l);
-            if (ok) femaleLeft--;
-            return ok;
+    // The cheapest legal way to finish the squad, within every limit (see cheapestFill — same as the server).
+    const picks = cheapestFill(
+        pool.map((l) => {
+            const c = limitedCategory(l);
+            return { item: l, cost: l.effectiveBasePriceInr, female: isFemale(l), group: isTopCategory(l) ? ('AB' as const) : (c ?? ('X' as const)) };
+        }),
+        {
+            spots: spotsAfterBid,
+            femaleMin: femaleNeededAfterBid,
+            femaleMax: room.female,
+            maleMax: room.male,
+            abMax: room.top,
+            cMin: catNeed.C,
+            cMax: room.C,
+            dMin: catNeed.D,
+            dMax: room.D,
         },
     );
-    fill(() => catNeed.C, (l) => limitedCategory(l) === 'C');
-    fill(() => catNeed.D, (l) => limitedCategory(l) === 'D');
-    const categoryShort = catNeed.C + catNeed.D > 0;
-    if (!categoryShort) fill(() => spotsAfterBid - reservePlayers.length, () => true);
+    const reservePlayers: BudgetLot[] = picks ?? [];
+    const categoryShort = !picks && catNeed.C + catNeed.D > 0;
     const reserve = reservePlayers.reduce((sum, l) => sum + l.effectiveBasePriceInr, 0);
-    const enoughPlayers = !categoryShort && reservePlayers.length === spotsAfterBid;
+    const enoughPlayers = !!picks;
     const maxBid = candidate && enoughPlayers && !outReason ? Math.max(0, remaining - reserve) : null;
     const belowBase = maxBid !== null && !!candidate && maxBid < candidate.effectiveBasePriceInr;
     if (!outReason && belowBase) outReason = "Can't cover base";
@@ -212,4 +196,67 @@ export function bidLimitError(team: BudgetTeam, context: BidContext, price: numb
     if (b.outReason && b.outReason !== "Can't cover base") return `${team.name} is out for this player: ${b.outReason.toLowerCase()}`;
     if (b.maxBid === null) return `Not enough eligible players remain to reserve an ${MIN_SQUAD}-player squad`;
     return price > b.maxBid ? `Price exceeds the team’s maximum bid of ${rupees(b.maxBid)}` : null;
+}
+
+/** A player the reserve could count on: their base price, gender and limit group (A+B together, C, D, or none). */
+export type FillItem<T> = { item: T; cost: number; female: boolean; group: 'AB' | 'C' | 'D' | 'X' };
+export type FillLimits = {
+    spots: number;
+    femaleMin: number;
+    femaleMax: number;
+    maleMax: number;
+    abMax: number;
+    cMin: number;
+    cMax: number;
+    dMin: number;
+    dMax: number;
+};
+
+/**
+ * The cheapest set of exactly `spots` players that keeps every squad limit, or null when no set fits.
+ * Tries every split of the spots across women/men × (A+B, C, D, other) — a few thousand combinations at most —
+ * so it never misses a legal squad the way "cheapest first" can (e.g. cheap Category D women using up the D places
+ * when the only A/B players left are women). The female minimum is advisory when too few women exist at all.
+ */
+export function cheapestFill<T>(pool: FillItem<T>[], lim: FillLimits): T[] | null {
+    if (lim.spots <= 0) return [];
+    const GROUPS = ['AB', 'C', 'D', 'X'] as const;
+    type G = (typeof GROUPS)[number];
+    const bucket = (g: G, female: boolean) => pool.filter((p) => p.group === g && p.female === female).sort((a, b) => a.cost - b.cost);
+    const women = new Map(GROUPS.map((g) => [g, bucket(g, true)]));
+    const men = new Map(GROUPS.map((g) => [g, bucket(g, false)]));
+    const prefix = (list: FillItem<T>[]) => list.reduce<number[]>((acc, p) => [...acc, acc[acc.length - 1] + p.cost], [0]);
+    const wCost = new Map(GROUPS.map((g) => [g, prefix(women.get(g)!)]));
+    const mCost = new Map(GROUPS.map((g) => [g, prefix(men.get(g)!)]));
+    const womenAvailable = GROUPS.reduce((n, g) => n + women.get(g)!.length, 0);
+    const wMin = Math.min(lim.femaleMin, womenAvailable, lim.spots);
+    const wMax = Math.min(lim.femaleMax, lim.spots);
+    const range = (max: number) => Array.from({ length: Math.max(0, max) + 1 }, (_, i) => i);
+
+    let best: { cost: number; w: Record<G, number>; m: Record<G, number> } | null = null;
+    for (const wAB of range(Math.min(wMax, women.get('AB')!.length)))
+        for (const wC of range(Math.min(wMax - wAB, women.get('C')!.length)))
+            for (const wD of range(Math.min(wMax - wAB - wC, women.get('D')!.length)))
+                for (const wX of range(Math.min(wMax - wAB - wC - wD, women.get('X')!.length))) {
+                    const w = wAB + wC + wD + wX;
+                    if (w < wMin || wAB > lim.abMax || wC > lim.cMax || wD > lim.dMax) continue;
+                    const m = lim.spots - w;
+                    if (m < 0 || m > lim.maleMax) continue;
+                    for (const mC of range(Math.min(m, men.get('C')!.length, lim.cMax - wC)))
+                        for (const mD of range(Math.min(m - mC, men.get('D')!.length, lim.dMax - wD)))
+                            for (const mAB of range(Math.min(m - mC - mD, men.get('AB')!.length, lim.abMax - wAB))) {
+                                const mX = m - mC - mD - mAB;
+                                if (mX > men.get('X')!.length) continue;
+                                if (wC + mC < lim.cMin || wD + mD < lim.dMin) continue;
+                                const cost =
+                                    wCost.get('AB')![wAB] + wCost.get('C')![wC] + wCost.get('D')![wD] + wCost.get('X')![wX] +
+                                    mCost.get('AB')![mAB] + mCost.get('C')![mC] + mCost.get('D')![mD] + mCost.get('X')![mX];
+                                if (!best || cost < best.cost) {
+                                    best = { cost, w: { AB: wAB, C: wC, D: wD, X: wX }, m: { AB: mAB, C: mC, D: mD, X: mX } };
+                                }
+                            }
+                }
+    if (!best) return null;
+    const chosen = best;
+    return GROUPS.flatMap((g) => [...women.get(g)!.slice(0, chosen.w[g]), ...men.get(g)!.slice(0, chosen.m[g])].map((p) => p.item));
 }
