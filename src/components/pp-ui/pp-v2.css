@@ -1157,3 +1157,5 @@ body.pp-console-page{background:var(--background)}
 .pp-console.is-screen .pp-screen-fit-inner{position:absolute;left:50%;top:50%;transform-origin:center center}
 .pp-console.is-screen .auction-main{max-width:none;margin:0;padding:16px 24px}
 .pp-console.is-screen .auction-main .auction-brand-header{padding:12px 0;margin-bottom:14px}
+/* Big-screen fine-tuning hint (shown briefly after a key press). */
+.pp-console.is-screen .pp-screen-hint{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:50;padding:10px 16px;border-radius:999px;background:color-mix(in srgb,var(--background) 85%,transparent);border:1px solid var(--border);color:var(--ink);font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}
