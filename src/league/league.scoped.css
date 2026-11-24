@@ -2765,6 +2765,10 @@
 
 :where(.tn-scope, .tn-scope *).tn-management-nav {grid-template-columns:repeat(4,minmax(0,1fr))}
 
+/* This app's Tailwind 3 moves elements with `transform`; the reference's Tailwind 4 uses the separate translate/scale/
+   rotate properties. Both applied would move centred pop-ups twice (off to the left), so only the reference's applies. */
+
+:where(.tn-scope, .tn-scope *)[class*="translate-"], :where(.tn-scope, .tn-scope *)[class*="scale-"], :where(.tn-scope, .tn-scope *)[class*="rotate-"] {transform:none}
 
 @property --tw-animation-delay {
   syntax: "*";

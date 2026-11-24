@@ -47,7 +47,8 @@ export function PlayerPicker({ spot, squad, lineup, organiser, readOnly, onChang
   const [query, setQuery] = useState('');
   const selected = squad.find(p => p.id === lineup[spot.id]);
   const visible = squad.filter(p => `${p.name} ${p.no}`.toLowerCase().includes(query.toLowerCase()));
-  const only = spot.need === 'inter' ? { only: spot.sport } : {};
+  // Both sport levels on every card, also for Intermediate slots (organisers asked; eligibility still uses that sport's level).
+  const only = {};
   const slotLabel = spot.match === 'Open Mixed' ? spot.need === 'woman' ? 'Female player' : 'Male player' : spot.discipline === 'pb_singles' ? 'Player' : `Player ${spot.id.endsWith('.0') ? '1' : '2'}`;
   const requirement = replace ? 'Injury replacement · Beginner or lower level than the player replaced' : spot.need === 'inter' ? 'Beginners and intermediates only' : `${spot.need === 'woman' ? 'Female' : 'Male'} · all ${spot.sport} levels`;
   return <>
