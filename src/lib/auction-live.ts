@@ -69,3 +69,67 @@ export function useAuctionLivePush(slug: string | null, onBoard: (board: unknown
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [slug]);
 }
+
+/**
+ * A pushed socket event for this event's room (e.g. the league's 'league:score' / 'league:public'): the data comes
+ * with the message, so the screen updates without a request. Pass null to stop.
+ */
+export function useEventPush<T>(slug: string | null, event: string, onPush: (msg: T) => void) {
+    useEffect(() => {
+        if (!slug) return;
+        const s = getSocket();
+        const watch = () => s.emit('event:watch', slug);
+        const handler = (msg: T & { slug?: string }) => {
+            if (msg?.slug === slug) onPush(msg);
+        };
+        watch();
+        s.on('connect', watch);
+        s.on(event, handler);
+        return () => {
+            s.off('connect', watch);
+            s.off(event, handler);
+        };
+    }, [slug, event, onPush]);
+}
+
+/**
+ * Team hub / Squads: the server pushes the code-gated public view (to sockets that joined with the right code) and the
+ * live board the moment anything changes, so these pages update without a request. `at` orders pushes.
+ */
+export function useAuctionPublicPush(
+    slug: string | null,
+    code: string | null,
+    onView: (view: ApiAuctionPublicView) => void,
+    onLive: (live: ApiAuctionLiveData) => void,
+) {
+    useEffect(() => {
+        if (!slug || !code) return;
+        const s = getSocket();
+        let viewAt = 0;
+        let liveAt = 0;
+        const watch = () => {
+            s.emit('event:watch', slug);
+            s.emit('auction:watch-public', { slug, code });
+        };
+        const onPublic = (msg: { slug?: string; at?: number; view?: ApiAuctionPublicView }) => {
+            if (msg?.slug !== slug || !msg.view || typeof msg.at !== 'number' || msg.at < viewAt) return;
+            viewAt = msg.at;
+            onView(msg.view);
+        };
+        const onBoard = (msg: { slug?: string; at?: number; board?: ApiAuctionLiveData }) => {
+            if (msg?.slug !== slug || !msg.board || typeof msg.at !== 'number' || msg.at < liveAt) return;
+            liveAt = msg.at;
+            onLive(msg.board);
+        };
+        watch();
+        s.on('connect', watch);
+        s.on('auction:public', onPublic);
+        s.on('auction:live', onBoard);
+        return () => {
+            s.off('connect', watch);
+            s.off('auction:public', onPublic);
+            s.off('auction:live', onBoard);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [slug, code]);
+}

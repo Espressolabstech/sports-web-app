@@ -2,6 +2,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Instagram, UserRound } from 'lucide-react';
 import { fetchEvent } from '../../lib/public-events';
+import { VariantImg } from '../../components/VariantImg';
 
 export default function EventHosts() {
     const { slug } = useParams();
@@ -59,8 +60,9 @@ export default function EventHosts() {
                         style={{ backgroundColor: 'hsl(var(--event-ink-soft))' }}
                     >
                         {h.photoUrl ? (
-                            <img
+                            <VariantImg
                                 src={h.photoUrl}
+                                size="md"
                                 alt={h.name}
                                 loading="lazy"
                                 className="aspect-[4/3] w-full object-cover object-top"

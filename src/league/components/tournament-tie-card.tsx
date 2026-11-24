@@ -1,0 +1,20 @@
+import type { ReactNode } from 'react';
+import { ChevronRight } from 'lucide-react';
+import { Button } from '@league/ui/button';
+import { TeamLogo } from '@league/components/auction-ui';
+import type { Team } from '@league/lib/auction';
+
+/** Shared sports-scorecard hierarchy for public, team and organiser matchups. */
+export function TournamentTieCard({ label, a, b, pointsA, pointsB, winsA, winsB, status, note, disabled = false, expanded, onClick }: {
+  label: string; a: { name: string; team: Team | null; state?: ReactNode }; b: { name: string; team: Team | null; state?: ReactNode };
+  pointsA: number; pointsB: number; winsA: number; winsB: number; status?: ReactNode; note?: ReactNode;
+  disabled?: boolean; expanded?: boolean; onClick?: () => void;
+}) {
+  return <Button variant="ghost" className="tn-tie-card tn-scoring-tie tn-sport-card" disabled={disabled} aria-expanded={expanded} onClick={onClick}>
+    <span className="tn-sport-top"><span>{label}</span><span className="tn-sport-tally"><small>Matches</small><b>{winsA}–{winsB}</b><ChevronRight size={17} className={expanded ? 'is-expanded' : undefined} aria-hidden="true" /></span></span>
+    <span className="tn-sport-teams">{([a, b] as const).map((side, i) => <span className="tn-sport-side" key={i}>
+      <span className="tn-sport-logo"><TeamLogo team={side.team} size={32} />{side.state && <span className="tn-sport-state">{side.state}</span>}</span><strong>{side.name}</strong><span className="tn-sport-score"><span className="tn-sport-points"><b>{i === 0 ? pointsA : pointsB}</b><small>pts</small></span></span>
+    </span>)}</span>
+    {(status || note) && <span className="tn-sport-foot">{status}{note && <small>{note}</small>}</span>}
+  </Button>;
+}

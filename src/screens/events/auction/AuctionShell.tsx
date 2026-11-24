@@ -6,6 +6,7 @@ import courtCollectiveLogo from '../../../assets/court-collective-lockup-white.p
 import '../registration-identical.css';
 import '../../../components/pp-ui';
 import { AuctionScreenFit } from './AuctionScreenFit';
+import { VariantImg } from '../../../components/VariantImg';
 
 // The public pages. The organizer console lives in the organizer app and the
 // auction admin in the admin dashboard.
@@ -16,7 +17,7 @@ const tabsFor = (slug: string): { href: string; label: string }[] => [
 
 export function TeamLogo({ name, logoUrl, size = 28 }: { name: string; logoUrl: string | null; size?: number }) {
     if (logoUrl) {
-        return <img src={logoUrl} alt="" width={size} height={size} className="rounded-full object-cover bg-secondary shrink-0" style={{ width: size, height: size }} />;
+        return <VariantImg src={logoUrl} size="thumb" alt="" width={size} height={size} className="rounded-full object-cover bg-secondary shrink-0" style={{ width: size, height: size }} />;
     }
     return (
         <span
