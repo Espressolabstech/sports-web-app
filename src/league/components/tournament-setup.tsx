@@ -7,13 +7,15 @@ import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, A
 import type { TournamentData } from '@league/hooks/use-tournament';
 import { ALL_SLOTS, roundName, roundOf, slotLabel, teamCode } from '@league/lib/tournament';
 import { groupAssignmentSchema, stageStatus } from '@league/lib/league-management';
-import { saveDemoGroups, saveDemoPair } from '@league/lib/league-store';
+import { saveDemoGroups, saveDemoPair, saveLogins, unsavedLogins, useLeague } from '@league/lib/league-store';
 import { TeamLoginFields } from '@league/components/league-organiser';
 import { TeamLogo } from '@league/components/auction-ui';
 
 /** Front-end handoff: automatic progression is the default; edits are explicit, confirmed overrides. */
 export function TournamentSetup({ d, section }: { d: TournamentData; section: 'groups' | 'rounds' }) {
   const [teamSection, setTeamSection] = useState<'groups' | 'access'>('groups');
+  const [savingLogins, setSavingLogins] = useState(false);
+  useLeague(); // re-render as login fields change (the unsaved count)
   const [editingGroups, setEditingGroups] = useState(false);
   const [confirmGroups, setConfirmGroups] = useState(false);
   const [groups, setGroups] = useState<Record<string, number>>({});
@@ -45,6 +47,7 @@ export function TournamentSetup({ d, section }: { d: TournamentData; section: 'g
         <ul className="tn-group-allocation-list">{[...d.teams].sort((a, b) => (assigned[a.id] ?? 9) - (assigned[b.id] ?? 9)).map(t => <li key={t.id}><TeamLogo team={t} size={28} /><strong>{t.name}</strong><select disabled={hasGroups && !editingGroups} aria-label={`Group position for ${t.name}`} value={(editingGroups || !hasGroups ? groups[t.id] : assigned[t.id]) ?? ''} onChange={e => changeGroup(t.id, Number(e.target.value))}><option value="" disabled>Choose slot</option>{ALL_SLOTS.map(n => <option key={n} value={n}>Group {n <= 4 ? 1 : 2} · {teamCode(n)}</option>)}</select></li>)}</ul>
         {(editingGroups || !hasGroups) && <div className="tn-round-save tn-group-save"><Button variant="outline" onClick={() => setEditingGroups(false)}>Cancel</Button><Button disabled={saving || !groupAssignmentSchema.safeParse(groups).success || JSON.stringify(groups) === groupKey} onClick={() => hasGroups ? setConfirmGroups(true) : saveGroups()}>{saving ? 'Saving…' : 'Save groups'}</Button></div>}
       </> : <ul className="tn-slot-list tn-management-team-list">{d.teams.map(t => { const slot = assigned[t.id]; return <li key={t.id}><div className="tn-management-team-identity"><strong>{t.name}</strong></div>{slot != null ? <TeamLoginFields slot={slot} name={t.name} /> : <small>Assign a group position first</small>}</li>; })}</ul>}
+      {teamSection === 'access' && <div className="tn-round-save tn-group-save"><span className="text-sm text-muted-foreground">{unsavedLogins() ? `${unsavedLogins()} team${unsavedLogins() === 1 ? '' : 's'} changed — not saved yet` : 'All team logins saved'}</span><Button disabled={!unsavedLogins() || savingLogins} onClick={() => { setSavingLogins(true); void saveLogins().finally(() => setSavingLogins(false)); }}>{savingLogins ? 'Saving…' : 'Save team access'}</Button></div>}
       <AlertDialog open={confirmGroups} onOpenChange={setConfirmGroups}><AlertDialogContent className="pp-console tn-round-dialog"><AlertDialogHeader><AlertDialogTitle>{editingGroups ? 'Confirm group changes?' : 'Edit team groups?'}</AlertDialogTitle><AlertDialogDescription>If you change anything it will reset the flow, so please confirm you want to change: scores, standings, line-ups, lock-in times and later matchups will restart because the group positions determine the whole tournament. Team login details and auction squads stay unchanged.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><Button variant={editingGroups ? 'destructive' : 'outline'} disabled={saving} onClick={() => { if (editingGroups) saveGroups(); else { setEditingGroups(true); setConfirmGroups(false); } }}>{editingGroups ? 'Confirm changes and reset' : 'Continue editing'}</Button></AlertDialogFooter></AlertDialogContent></AlertDialog>
     </section> : <section className="tn-setup-section" aria-labelledby="tn-matchups-title">
       <header><GitBranch size={19} /><div><h3 id="tn-matchups-title">Manage Matchups</h3></div><span className="pp-status pp-status-neutral">Auto-fill</span></header>

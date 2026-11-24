@@ -40,8 +40,9 @@ export const configureLeague = (c: Config) => {
 
 let view: LeagueView | null = null;
 let state: LeagueState = derive(null);
-// Local edits to team login fields while typing (saved to the server once complete).
+// Local edits to team login fields (saved with the Save button), and just-saved ones until the refresh arrives.
 let loginDrafts: Record<number, TeamLogin> = {};
+let savedLogins: Record<number, TeamLogin> = {};
 const subs = new Set<() => void>();
 const emit = () => {
     for (const f of subs) f();
@@ -61,7 +62,7 @@ function derive(v: LeagueView | null): LeagueState {
     if (!v) return s;
     for (const r of v.rounds ?? []) if (r.lockAt) s.roundLocks[(r.key === 'SF' || r.key === 'F' ? r.key : Number(r.key)) as RoundKey] = r.lockAt;
     for (const t of v.teams ?? []) if (t.user) s.logins[t.slot] = { name: t.user.name, mobile: t.user.phone };
-    for (const [slot, d] of Object.entries(loginDrafts)) s.logins[Number(slot)] = d;
+    for (const [slot, d] of Object.entries({ ...savedLogins, ...loginDrafts })) s.logins[Number(slot)] = d;
     for (const t of v.ties ?? []) {
         s.ties[t.number] = { part1: t.part1 as 'Pickleball' | 'Padel', ...(t.lockedAt ? { lockedAt: t.lockedAt } : {}) };
         for (const [slot, rec] of [
@@ -152,24 +153,46 @@ export const logout = () => config?.signOut?.();
 export const loginOrganiser = (_mobile: string) => undefined;
 export const logoutOrganiser = () => config?.signOut?.();
 
-/** Team login fields save once a name and a 10-digit mobile are entered (debounced while typing). */
-const loginTimers: Record<number, ReturnType<typeof setTimeout>> = {};
+/** Team login fields: edited on screen, saved together with the Team access "Save" button. */
 export const setLogin = (slot: number, l: TeamLogin) => {
     loginDrafts = { ...loginDrafts, [slot]: l };
     state = derive(view);
     emit();
-    clearTimeout(loginTimers[slot]);
-    if (!/^\d{10}$/.test(l.mobile) || !l.name?.trim()) return;
-    loginTimers[slot] = setTimeout(() => {
-        void run('save the team login', () => req('PUT', host(`/teams/${slot}/user`), { name: l.name!.trim(), phone: l.mobile }), 'Team login saved').then(
-            () => {
-                const { [slot]: _done, ...rest } = loginDrafts;
-                loginDrafts = rest;
-            },
-            () => undefined,
-        );
-    }, 800);
 };
+/** Teams whose login was edited and not saved yet. */
+export const unsavedLogins = () => Object.keys(loginDrafts).length;
+/** Saves every edited team login at once. Each needs a name and a 10-digit mobile (or both cleared to remove it). */
+export async function saveLogins() {
+    const names = new Map((view?.teams ?? []).map((t) => [t.slot, t.name]));
+    const edits = Object.entries(loginDrafts).map(([slot, l]) => ({ slot: Number(slot), name: (l.name ?? '').trim(), mobile: l.mobile.trim() }));
+    const invalid = edits.filter((e) => !(e.name === '' && e.mobile === '') && (!e.name || !/^\d{10}$/.test(e.mobile)));
+    if (invalid.length) {
+        toast.error(`Enter a name and a 10-digit mobile for: ${invalid.map((e) => names.get(e.slot) ?? `Team ${e.slot}`).join(', ')}`);
+        return false;
+    }
+    if (!config) return false;
+    try {
+        // One request for every edited team (one write on the server).
+        await req('PUT', host('/teams/users'), { users: edits.map((e) => ({ slot: e.slot, name: e.name, phone: e.mobile })) });
+        // Saved: done at once. The typed values stay on screen until the refreshed league arrives (no flicker).
+        savedLogins = { ...savedLogins, ...loginDrafts };
+        loginDrafts = {};
+        void config.refetch().finally(() => {
+            savedLogins = {};
+            state = derive(view);
+            emit();
+        });
+        toast.success(edits.length === 1 ? 'Team login saved' : `${edits.length} team logins saved`);
+        return true;
+    } catch (e) {
+        toast.error((e as { message?: string }).message || 'Could not save the team logins');
+        await config.refetch().catch(() => undefined);
+        return false;
+    } finally {
+        state = derive(view);
+        emit();
+    }
+}
 
 /** Groups (draw slots) — first save sets the league up; later saves reset the flow (confirmed by the screen). */
 export function saveDemoGroups(groups: Record<string, number>, reset: boolean) {
