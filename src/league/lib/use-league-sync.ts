@@ -35,7 +35,11 @@ export function useLeagueSync(opts: {
     const refetch = () => qc.invalidateQueries({ queryKey: opts.key });
     const request: Request = (m, p, b) => opts.request(m, p.replace(':slug', encodeURIComponent(opts.slug)), b);
     setLeagueRequest(request);
-    configureLeague({ mode: opts.mode, request, refetch, signOut: opts.signOut });
+    const applyView = (v: LeagueView) => {
+        void qc.cancelQueries({ queryKey: opts.key });
+        qc.setQueryData<LeagueView>(opts.key, v);
+    };
+    configureLeague({ mode: opts.mode, request, refetch, applyView, signOut: opts.signOut });
 
     /** Applies a change to the cached view at once; an older in-flight fetch can't overwrite it. */
     const patch = useCallback(
