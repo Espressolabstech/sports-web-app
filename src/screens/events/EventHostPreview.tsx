@@ -18,6 +18,7 @@ import {
 import { getHostPreview, hostPreviewLogin } from '../../api/adapters/events';
 import { verifyOtp } from '../../api/adapters/auth';
 import './registration-identical.css';
+import { VariantImg } from '../../components/VariantImg';
 
 /** Parses a YYYY-MM-DD string as a local calendar date — never via
  *  `new Date(ymd)`, which parses date-only strings as UTC midnight and can
@@ -460,7 +461,7 @@ export default function EventHostPreview() {
                                             <td>
                                                 <div className="host-player">
                                                     {p.photoUrl ? (
-                                                        <img src={p.photoUrl} alt="" className="host-avatar-photo" />
+                                                        <VariantImg src={p.photoUrl} size="thumb" alt="" className="host-avatar-photo" />
                                                     ) : (
                                                         <span className="host-avatar" aria-hidden="true">
                                                             {p.name
@@ -590,7 +591,7 @@ export default function EventHostPreview() {
                         </button>
                         <div className="host-detail-head">
                             {selectedPlayer.photoUrl ? (
-                                <img src={selectedPlayer.photoUrl} alt="" className="host-avatar-photo" />
+                                <VariantImg src={selectedPlayer.photoUrl} size="md" alt="" className="host-avatar-photo" />
                             ) : (
                                 <span className="host-avatar" aria-hidden="true">
                                     {selectedPlayer.name

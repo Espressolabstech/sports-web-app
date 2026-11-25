@@ -6,6 +6,7 @@ import courtCollectiveLogo from '../../../assets/court-collective-lockup-white.p
 import '../registration-identical.css';
 import '../../../components/pp-ui';
 import { AuctionScreenFit } from './AuctionScreenFit';
+import { VariantImg } from '../../../components/VariantImg';
 
 // The public pages. The organizer console lives in the organizer app and the
 // auction admin in the admin dashboard.
@@ -16,7 +17,7 @@ const tabsFor = (slug: string): { href: string; label: string }[] => [
 
 export function TeamLogo({ name, logoUrl, size = 28 }: { name: string; logoUrl: string | null; size?: number }) {
     if (logoUrl) {
-        return <img src={logoUrl} alt="" width={size} height={size} className="rounded-full object-cover bg-secondary shrink-0" style={{ width: size, height: size }} />;
+        return <VariantImg src={logoUrl} size="thumb" alt="" width={size} height={size} className="rounded-full object-cover bg-secondary shrink-0" style={{ width: size, height: size }} />;
     }
     return (
         <span
@@ -35,6 +36,7 @@ export default function AuctionShell({
     right,
     isLive = false,
     nav = true,
+    footer = 'Auction · The Court Collective 2026',
     className = '',
     children,
 }: {
@@ -47,6 +49,8 @@ export default function AuctionShell({
     isLive?: boolean;
     /** The Live Auction / Squads tabs. Off for the standalone Squads link. */
     nav?: boolean;
+    /** Right side of the footer. */
+    footer?: string;
     className?: string;
     children: ReactNode;
 }) {
@@ -70,10 +74,12 @@ export default function AuctionShell({
                 <Link to="/the-court-collective" className="wordmark" aria-label="The Court Collective — home">
                     <img src={courtCollectiveLogo} alt="The Court Collective" className="brand-logo brand-logo-lockup" width={159} height={64} />
                 </Link>
-                <div className="auction-brand-title">
-                    <p className="section-kicker">THE COURT COLLECTIVE 2026</p>
-                    <h1>{title}</h1>
-                </div>
+                {title && (
+                    <div className="auction-brand-title">
+                        <p className="section-kicker">THE COURT COLLECTIVE 2026</p>
+                        <h1>{title}</h1>
+                    </div>
+                )}
             </div>
             <div className="header-right">
                 {right}
@@ -119,7 +125,7 @@ export default function AuctionShell({
 
                 <footer className="site-footer">
                     <span>Copyright PlayPass</span>
-                    <span>Auction · The Court Collective 2026</span>
+                    <span>{footer}</span>
                 </footer>
             </main>
         </div>

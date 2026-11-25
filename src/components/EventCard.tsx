@@ -2,6 +2,7 @@ import { CalendarDays, MapPin, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { getSportLabel } from '../utils/sports';
+import { VariantImg } from './VariantImg';
 
 const PHASE_LABEL: Record<string, string> = {
     PUBLISHED: 'Upcoming',
@@ -22,8 +23,9 @@ export function EventCard({ event }: { event: ApiEvent }) {
         >
             {event.posterUrl ? (
                 <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted">
-                    <img
+                    <VariantImg
                         src={event.posterUrl}
+                        size="md"
                         alt={event.title}
                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                         loading="lazy"

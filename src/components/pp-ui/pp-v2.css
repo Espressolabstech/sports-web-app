@@ -927,7 +927,8 @@ body.pp-console-page{background:var(--background)}
 .ccreg .auction-brand-title h1{font-size:32px;line-height:1.1;overflow-wrap:anywhere}
 .ccreg .auction-brand-title .section-kicker{margin-bottom:6px;font-size:10px;letter-spacing:0}
 .ccreg .auction-brand-header .header-right{gap:24px;flex-wrap:wrap;justify-content:flex-end}
-@media(max-width:800px){.ccreg .auction-brand-identity{gap:16px}.ccreg .auction-brand-title{padding-left:16px}.ccreg .auction-brand-title h1{font-size:24px}.ccreg .auction-brand-header .brand-logo{width:100px;height:auto}.ccreg .auction-main .auction-brand-header{flex-wrap:wrap;gap:18px;padding:20px 0}.ccreg .auction-brand-header .header-right{width:100%;justify-content:space-between;gap:16px}.ccreg .auction-brand-title .section-kicker{font-size:9px}.ccreg .auction-brand-header .powered-by{margin-left:auto}}
+/* Phones: logo and PlayPass share the first row; the page title gets its own full-width row below. */
+@media(max-width:800px){.ccreg .auction-main .auction-brand-header{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:18px 12px;padding:20px 0}.ccreg .auction-brand-identity{display:contents}.ccreg .auction-brand-header .wordmark{grid-column:1;grid-row:1;justify-self:start}.ccreg .auction-brand-header .header-right{grid-column:2;grid-row:1;width:auto;justify-content:flex-end;gap:12px}.ccreg .auction-brand-header .powered-by{margin-left:0}.ccreg .auction-brand-title{grid-column:1/-1;grid-row:2;border-left:0;padding-left:0}.ccreg .auction-brand-title h1{font-size:28px}.ccreg .auction-brand-title .section-kicker{font-size:10px}.ccreg .auction-brand-header .brand-logo{width:118px;height:auto}}
 
 /* Live player: identity above one combined sporting summary, with price separate. */
 .pp-console .auction-live-player{display:grid;grid-template-columns:minmax(0,1fr);justify-items:center;gap:32px 40px;min-height:0;padding:36px 0;text-align:center}

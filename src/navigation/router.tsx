@@ -1,4 +1,6 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
+import LeagueTeam from '../screens/events/league/LeagueTeam';
+import LeaguePublic from '../screens/events/league/LeaguePublic';
 import { path } from './commanPaths';
 import { AuthWrapper, ProtectedComponentWrapper } from '../utils/wrapper';
 import Login from '../screens/Login';
@@ -159,6 +161,10 @@ export const router = createBrowserRouter([
         element: <EventHostPreview />,
     },
     // Public auction pages: live screen (anyone) and team view (team users).
+    { path: '/events/:slug/league', element: <LeaguePublic /> },
+    { path: '/events/:slug/league/team', element: <LeagueTeam /> },
+    { path: '/league', element: <LeaguePublic slugOverride={COURT_COLLECTIVE_SLUG} /> },
+    { path: '/league/team', element: <LeagueTeam slugOverride={COURT_COLLECTIVE_SLUG} /> },
     { path: '/events/:slug/auction/live', element: <AuctionLive /> },
     { path: '/events/:slug/auction/team', element: <AuctionResults /> },
     { path: '/events/:slug/auction/squads', element: <AuctionSquads /> },
