@@ -21,7 +21,7 @@ export default function LeagueTeam({ slugOverride }: { slugOverride?: string }) 
     const qc = useQueryClient();
     const signedIn = !!leagueTeamToken(slug);
     setLeagueLinks({ '/team': slugOverride ? '/league/team' : `/events/${slug}/league/team`, '/results': slugOverride ? '/league' : `/events/${slug}/league` }, false, ({ title, actions, children }) => (
-        <AuctionShell slug={slug} title={title} right={actions} nav={false}>
+        <AuctionShell slug={slug} title={title} right={actions} nav={false} footer="Padel Master, SBR">
             {children}
         </AuctionShell>
     ));
@@ -37,13 +37,14 @@ export default function LeagueTeam({ slugOverride }: { slugOverride?: string }) 
         signOut: () => {
             setLeagueTeamToken(slug, null);
             void qc.invalidateQueries({ queryKey: ['league', 'team', slug] });
-            window.location.reload();
+            window.location.replace(window.location.pathname);
         },
     });
     const message = (e: unknown) => (e as { message?: string }).message || 'Something went wrong. Try again.';
     return (
         <>
             <TeamPage
+                signedIn={signedIn}
                 signIn={{
                     send: async (mobile) => {
                         try {
@@ -57,7 +58,7 @@ export default function LeagueTeam({ slugOverride }: { slugOverride?: string }) 
                         try {
                             const out = await leagueRequest<{ token: string }>(slug, 'POST', `/public/events/${slug}/league/team-verify`, { phone: mobile, otp });
                             setLeagueTeamToken(slug, out.token);
-                            window.location.reload();
+                            window.location.replace(window.location.pathname);
                             return null;
                         } catch (e) {
                             return message(e);

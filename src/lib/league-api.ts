@@ -27,7 +27,11 @@ export async function leagueRequest<T = unknown>(slug: string, method: 'GET' | '
         return (res.data as { data: T }).data;
     } catch (error) {
         const status = axios.isAxiosError(error) ? error.response?.status : undefined;
-        if (status === 401 && token) setLeagueTeamToken(slug, null);
+        if (status === 401 && token) {
+            // Expired sign-in: clear it and reopen the page on the sign-in form (instead of a loader that never ends).
+            setLeagueTeamToken(slug, null);
+            window.location.replace(window.location.pathname);
+        }
         throw { status, message: axios.isAxiosError(error) ? (error.response?.data as { message?: string })?.message || error.message : 'Something went wrong' };
     }
 }

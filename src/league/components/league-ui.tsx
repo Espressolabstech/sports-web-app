@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { AlertTriangle, Check, Clock, Info, Loader2, Lock, Pencil, Sparkles } from 'lucide-react';
+import { AlertTriangle, Check, Clock, Info, Loader2, Lock, Pencil, Sparkles, Wand2 } from 'lucide-react';
 import { Button } from '@league/ui/button';
 import { Input } from '@league/ui/input';
+import { TeamLogo } from '@league/components/auction-ui';
+import type { Team } from '@league/lib/auction';
 import { Popover, PopoverContent, PopoverTrigger } from '@league/ui/popover';
 import { PlayerPicker, PlayerLevels } from '@league/components/league-player-picker';
-import { canStillComplete, emptyLineup, filledCount, interRule, isComplete, SPOTS, unusedPlayers, validate, type LeaguePlayer, type Lineup, type Sport } from '@league/lib/lineup-rules';
+import { autoFill, canStillComplete, emptyLineup, filledCount, interRule, isComplete, SPOTS, unusedPlayers, validate, type LeaguePlayer, type Lineup, type Sport } from '@league/lib/lineup-rules';
 import { squadFor } from '@league/lib/league-squads';
 import { isLocked, isOpen, lineupOf, organiserSave, part1Of, replacePlayer, saveTeamLineup, type LeagueState, type LineupRec } from '@league/lib/league-store';
 import { teamCode, type Tie } from '@league/lib/tournament';
@@ -54,10 +56,26 @@ const STATE: Record<LineupState, [string, string]> = {
   closed: ['Opens when opponent is known', 'pp-status-neutral'], empty: ['Not started', 'pp-status-danger'], progress: ['In progress', 'pp-status-warning'],
   complete: ['Complete', 'pp-status-success'], confirmed: ['Confirmed', 'pp-status-success'], locked: ['Locked', 'pp-status-info'], auto: ['Auto-filled', 'pp-status-warning'], changed: ['Changed after lock', 'pp-status-danger'],
 };
-export function LineupChip({ state, team = false }: { state: LineupState; team?: boolean }) {
+export function LineupChip({ state, team = false, soft = false }: { state: LineupState; team?: boolean; soft?: boolean }) {
   const locked = ['locked', 'auto', 'changed'].includes(state);
   const [l, c] = team ? [locked ? 'Locked in' : state === 'confirmed' ? 'Confirmed' : 'To be locked in', locked || state === 'confirmed' ? 'pp-status-success' : 'pp-status-neutral'] : STATE[state];
-  return <span className={`pp-status ${c}`}>{l}</span>;
+  return <span className={`pp-status ${soft && state === 'empty' ? 'pp-status-neutral' : c}`}>{l}</span>;
+}
+
+/** Matchup board card: round, both teams facing off, and this team's squad status. */
+export function MatchBoardCard({ label, a, b, status, disabled = false, onClick }: {
+  label: string; a: { name: string; team: Team | null }; b: { name: string; team: Team | null };
+  status?: ReactNode; disabled?: boolean; onClick?: () => void;
+}) {
+  return <button type="button" className="lg-board-card" disabled={disabled} onClick={onClick}>
+    <p className="lg-board-kicker">{label}</p>
+    <div className="lg-board-teams">
+      <div><TeamLogo team={a.team} size={40} /><b>{a.name}</b></div>
+      <span className="lg-board-vs">VS</span>
+      <div><TeamLogo team={b.team} size={40} /><b>{b.name}</b></div>
+    </div>
+    {status && <span className="lg-board-foot">{status}</span>}
+  </button>;
 }
 
 const sportsInOrder = (p1: Sport): Sport[] => p1 === 'Pickleball' ? ['Pickleball', 'Padel'] : ['Padel', 'Pickleball'];
@@ -79,7 +97,7 @@ export function LineupSheet({ rec, slot, part1, compact }: { rec: LineupRec | un
  * Team picks are drafts until confirmed; confirmed squads require explicit editing.
  * Organiser mode edits a draft, shows rule warnings, and can save anyway (logged).
  */
-export function LineupBuilder({ s, tie, slot, mode, now }: { s: LeagueState; tie: Tie; slot: number; mode: 'team' | 'organiser'; now: number }) {
+export function LineupBuilder({ s, tie, slot, mode, now, head }: { s: LeagueState; tie: Tie; slot: number; mode: 'team' | 'organiser'; now: number; head?: ReactNode }) {
   const squad = useMemo(() => squadFor(teamCode(slot)), [slot]);
   const rec = lineupOf(s, tie.id, slot);
   const locked = isLocked(s, tie, now || Date.now());
@@ -92,6 +110,17 @@ export function LineupBuilder({ s, tie, slot, mode, now }: { s: LeagueState; tie
   const warnings = validate(l, squad);
   const unused = unusedPlayers(l, squad);
   const stuck = mode === 'team' && !readOnly && filledCount(l) > 0 && !canStillComplete(l, squad);
+  const [fillError, setFillError] = useState<string | null>(null);
+  /** Fill the empty spots; say why when the squad can't make a legal line-up (instead of doing nothing). */
+  const runAutoFill = () => {
+    const women = squad.filter(p => p.gender === 'F').length;
+    const why = squad.length === 0 ? 'This team has no players yet. Auto-fill works once the auction squad is in.'
+      : squad.length < 11 ? `This team has ${squad.length} of 11 players. Auto-fill needs the full squad.`
+      : women === 0 ? 'Auto-fill needs at least one woman in the squad for the Mixed matches.' : null;
+    const next = why ? null : autoFill(squad, l, null).lineup;
+    if (!next || !isComplete(next, squad)) { setFillError(why ?? "Auto-fill couldn't find a legal line-up for this squad. Pick the players yourself."); return; }
+    setFillError(null); setDraft(next);
+  };
   const change = (spotId: string, pid: string | null) => {
     const next = { ...l, [spotId]: pid };
     setDraft(next);
@@ -102,13 +131,20 @@ export function LineupBuilder({ s, tie, slot, mode, now }: { s: LeagueState; tie
   const firstSport = part1Of(s, tie.id);
   const [activeSport, setActiveSport] = useState<Sport>(firstSport);
   useEffect(() => { setActiveSport(firstSport); }, [tie.id, firstSport]);
+  const confirmBox = mode === 'team' && !locked ? <div className="lg-team-confirm is-head">
+      <Button variant={confirmed ? 'outline' : 'default'} className={!confirmed && !isComplete(draft, squad) ? 'is-filling' : undefined} style={{ ['--fill' as string]: `${(filledCount(l) / 13) * 100}%` }} disabled={busy || (!confirmed && !isComplete(draft, squad))} onClick={() => { if (confirmed) setEditing(true); else { setBusy(true); void saveTeamLineup(tie.id, slot, draft).finally(() => { setBusy(false); setEditing(false); }); } }}>{busy ? <Loader2 size={16} className="animate-spin" /> : confirmed ? <Pencil size={16} /> : <Check size={16} />} {busy ? 'Confirming…' : confirmed ? 'Edit squad' : rec?.confirmedAt ? 'Confirm changes' : 'Confirm squad'}{!confirmed && <span className="lg-confirm-count">{filledCount(l)}/13 filled</span>}</Button>
+      {!confirmed && !isComplete(l, squad) && <Button variant="ghost" size="sm" className="lg-autofill" onClick={runAutoFill}><Wand2 size={15} /> Auto-fill</Button>}
+      {fillError && !confirmed && <p className="lg-note lg-fill-error" role="alert" style={{ color: "#f87171", justifyContent: "center", textAlign: "center" }}><AlertTriangle size={14} /> {fillError}</p>}
+      {stuck && <div className="lg-stuck" role="alert"><AlertTriangle size={18} /><div><b>This line-up can't be completed</b><p>Each sport needs a woman for its Mixed match, and only 2 players can play both sports. Swap a pick, or let us fix it.</p><Button size="sm" variant="outline" onClick={runAutoFill}><Wand2 size={14} /> Auto-fill the rest</Button></div></div>}
+      <p className="lg-note" role="status">{confirmed ? <><Check size={14} /> Squad confirmed</> : teamDirty && rec?.confirmedAt ? <><AlertTriangle size={14} /> Unconfirmed changes</> : null}</p>
+    </div> : null;
   return <div className="lg-builder">
     {mode === 'organiser' && <div className="lg-builder-head">
       {mode === 'organiser' && <span><b>{filledCount(l)}</b>/13 spots · <b>{11 - unused.length}</b>/11 players used</span>}
       <div><LineupChip state={lineupState(s, tie, slot, now || Date.now())} /></div>
     </div>}
     {mode === 'organiser' && rec?.autoFilled && <p className="lg-note"><Sparkles size={14} /> Auto-filled at the lock ({rec.autoFilled.replace(/-/g, ' ')}).</p>}
-    {stuck && <p className="lg-note is-warn"><AlertTriangle size={14} /> These picks can't make a full line-up. Each sport needs a woman for its Mixed match, and only 2 players may play both sports.</p>}
+    {head ? <section className="lg-match-board">{head}{confirmBox}</section> : confirmBox}
     <div className={`lg-lineup-workspace${mode === 'team' ? ' is-team' : ''}`}>
       <div className="lg-lineup-matches">
         <div className="lx-sport-toolbar"><div className="auction-lot-tabs lx-sport-tabs" role="group" aria-label="Line-up sport">{sportsInOrder(firstSport).map(sport => {
@@ -119,8 +155,8 @@ export function LineupBuilder({ s, tie, slot, mode, now }: { s: LeagueState; tie
           {matchesOf(sport).map(d => { const ss = SPOTS.filter(x => x.discipline === d); const match = ss[0]; if (!match) return null;
             return <div key={d} className="lx-match">
               <div className="lx-match-head"><strong className="lx-code">{match.code}</strong><span>{match.match}</span><span className="pp-status pp-status-neutral">{match.points} pts</span></div>
-              {match.need === 'inter' && <p className="lx-match-rule">{interRule(sport)}</p>}
-              <div className="lx-match-spots">{ss.map(sp => <PlayerPicker key={sp.id} spot={sp} squad={squad} lineup={l} organiser={mode === 'organiser'} readOnly={readOnly} replace={mode === 'organiser' && locked && !!rec?.spots[sp.id]}
+              {match.need === 'inter' && <p className="lx-match-rule"><span className="lx-chip is-rule">{interRule(sport)}</span></p>}
+              <div className={`lx-match-spots${ss.length === 1 ? ' is-single' : ''}`}>{ss.map(sp => <PlayerPicker key={sp.id} spot={sp} squad={squad} lineup={l} organiser={mode === 'organiser'} readOnly={readOnly} replace={mode === 'organiser' && locked && !!rec?.spots[sp.id]}
                 onChange={pid => { if (mode === 'organiser' && locked && rec?.spots[sp.id] && pid) { replacePlayer(tie, slot, sp.id, pid); setDraft({ ...l, [sp.id]: pid }); } else change(sp.id, pid); }} />)}</div>
             </div>;
           })}
@@ -128,10 +164,6 @@ export function LineupBuilder({ s, tie, slot, mode, now }: { s: LeagueState; tie
         {!unused.length && <p className="lg-note"><Check size={14} /> Every player is used.</p>}
       </div>
     </div>
-    {mode === 'team' && !locked && <div className="lg-team-confirm">
-      <p className="lg-note" role="status">{confirmed ? <><Check size={14} /> Squad confirmed</> : teamDirty && rec?.confirmedAt ? <><AlertTriangle size={14} /> Unconfirmed changes</> : isComplete(draft, squad) ? 'Ready to confirm' : 'Fill every spot to confirm'}</p>
-      <Button variant={confirmed ? 'outline' : 'default'} disabled={busy || (!confirmed && !isComplete(draft, squad))} onClick={() => { if (confirmed) setEditing(true); else { setBusy(true); void saveTeamLineup(tie.id, slot, draft).finally(() => { setBusy(false); setEditing(false); }); } }}>{busy ? <Loader2 size={16} className="animate-spin" /> : confirmed ? <Pencil size={16} /> : <Check size={16} />} {busy ? 'Confirming…' : confirmed ? 'Edit squad' : rec?.confirmedAt ? 'Confirm changes' : 'Confirm squad'}</Button>
-    </div>}
     {mode === 'organiser' && <div className="lg-org-save">
       {warnings.length > 0 && <ul className="lg-warnings" aria-label="Rule warnings">{warnings.map(w => <li key={w.message}><AlertTriangle size={13} />{w.message}</li>)}</ul>}
       <div className="tn-sheet-actions"><Button variant="outline" disabled={!dirty} onClick={() => setDraft(rec?.spots ?? emptyLineup())}>Discard</Button>
@@ -141,7 +173,7 @@ export function LineupBuilder({ s, tie, slot, mode, now }: { s: LeagueState; tie
 }
 
 export function LockCountdown({ s, tie, now, lockAtMs }: { s: LeagueState; tie: Tie; now: number; lockAtMs: number }) {
-  if (!Number.isFinite(lockAtMs) && !isLocked(s, tie, now)) return <span className="lg-countdown"><Clock size={14} /> Lock-in time not set</span>;
+  if (!Number.isFinite(lockAtMs) && !isLocked(s, tie, now)) return <span className="lg-countdown is-tba"><Clock size={14} /> Deadline to be announced · confirm early</span>;
   if (!now) return <span className="lg-countdown"><Clock size={14} /> …</span>;
   const locked = isLocked(s, tie, now);
   const deadline = new Date(lockAtMs).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) + ' IST';

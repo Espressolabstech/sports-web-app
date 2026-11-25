@@ -15,7 +15,7 @@ export default function LeaguePublic({ slugOverride }: { slugOverride?: string }
     const params = useParams();
     const slug = slugOverride ?? params.slug ?? '';
     setLeagueLinks({ '/team': slugOverride ? '/league/team' : `/events/${slug}/league/team`, '/results': slugOverride ? '/league' : `/events/${slug}/league` }, false, ({ title, actions, children }) => (
-        <AuctionShell slug={slug} title={title} right={actions} nav={false}>
+        <AuctionShell slug={slug} title={title} right={actions} nav={false} footer="Padel Master, SBR">
             {children}
         </AuctionShell>
     ));

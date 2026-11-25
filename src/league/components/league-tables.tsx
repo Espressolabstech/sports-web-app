@@ -1,15 +1,31 @@
 import { TeamLogo } from '@league/components/auction-ui';
+import { Info } from 'lucide-react';
+import { Button } from '@league/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@league/ui/popover';
 import type { TournamentData } from '@league/hooks/use-tournament';
 import { teamCode } from '@league/lib/tournament';
 import type { ServerTable } from '@league/lib/server-types';
 
 function Table({ d, rows, title, highlight, top }: { d: TournamentData; rows: ServerTable[]; title: string; highlight?: number | undefined; top: number }) {
-  return <section className="lg-grid"><h2 className="section-kicker">{title}</h2>
+  return <section className="lg-grid"><div className="flex items-center justify-between gap-3"><h2 className="section-kicker">{title}</h2>
+    <Popover><PopoverTrigger asChild><Button variant="ghost" size="icon" aria-label={`${title} information`} title="Table information"><Info size={16} /></Button></PopoverTrigger>
+      <PopoverContent align="end" className="pp-console max-w-[calc(100vw-2rem)] text-sm">
+        <h3 className="mb-3 font-semibold">Table guide</h3>
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
+          <dt className="font-semibold">#</dt><dd>Position in the standings.</dd>
+          <dt className="font-semibold">P</dt><dd>Individual matches completed, not ties. Includes walkovers and retirements.</dd>
+          <dt className="font-semibold">W</dt><dd>Individual matches won.</dd>
+          <dt className="font-semibold">Pts</dt><dd>Match points including the 10-point tie-win bonus.</dd>
+          <dt className="font-semibold">NR</dt><dd>Net ratio: the average of the share of Padel games won and the share of Pickleball points won. Walkovers and retirements are excluded.</dd>
+        </dl>
+        <p className="mt-3 text-muted-foreground">Ranked by points, then match win ratio, head-to-head, net ratio and an organiser draw. The combined table’s top four reach the semi-finals.</p>
+      </PopoverContent></Popover>
+    </div>
     <ol className="tn-table">
       <li className="tn-table-head"><span>#</span><span>Team</span><span>P</span><span>W</span><span>Pts</span><span>NR</span></li>
       {rows.map((r, i) => <li key={r.slot} className={[i < top ? 'is-top' : '', r.slot === highlight ? 'is-me' : ''].join(' ').trim() || undefined}>
         <span className="tn-rank">{i + 1}</span><span className="tn-team"><TeamLogo team={d.slots[r.slot]} size={24} /><b className="lg-no">{teamCode(r.slot)}</b><span className="tn-team-name">{d.slots[r.slot]?.name ?? `Slot ${r.slot}`}</span></span>
-        <span>{r.played}</span><span>{r.won}</span><strong className="tn-pts">{r.points}</strong><span>{r.netRatio.toFixed(2)}{r.tied && <span className="pp-status pp-status-warning" title="Tied — organiser draw">Draw</span>}</span>
+        <span>{r.matches}</span><span>{r.won}</span><strong className="tn-pts">{r.points}</strong><span>{r.netRatio.toFixed(2)}{r.tied && <span className="pp-status pp-status-warning" title="Tied — organiser draw">Draw</span>}</span>
       </li>)}
     </ol></section>;
 }
