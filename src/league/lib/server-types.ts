@@ -33,6 +33,8 @@ export type LeagueView = {
         part1: string;
         pairingSource: string;
         lockedAt: string | null;
+        /** Team view only: an admin lock override for the signed-in team. */
+        myLock?: 'locked' | 'unlocked' | null;
         status: 'scheduled' | 'live' | 'done';
         complete: boolean;
         score: { a: number; b: number; winsA: number; winsB: number; winner: 'a' | 'b' | null };

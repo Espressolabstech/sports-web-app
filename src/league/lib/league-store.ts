@@ -11,7 +11,8 @@ import { defaultPart1, roundOf, ROUND_ORDER, teamCode, type RoundKey, type Tie }
 import type { LeagueView } from '@league/lib/server-types';
 
 export type TeamLogin = { name?: string; mobile: string };
-export type TieMeta = { part1?: 'Pickleball' | 'Padel'; lockedAt?: string };
+/** myLock: an admin override for the signed-in team only (team view). */
+export type TieMeta = { part1?: 'Pickleball' | 'Padel'; lockedAt?: string; myLock?: 'locked' | 'unlocked' };
 export type LineupRec = { spots: Lineup; updatedAt: string; autoFilled?: AutoFillSource; changedAfterLock?: boolean; replacedSpots?: string[]; confirmedAt?: string };
 export type LogEntry = { at: string; tie: number; slot: number; who: string; what: string[]; warnings: string[]; kind?: 'edit' | 'replacement' | 'auto' };
 export type Session = { role: 'organiser' | 'team'; mobile: string; slot?: number };
@@ -64,7 +65,7 @@ function derive(v: LeagueView | null): LeagueState {
     for (const t of v.teams ?? []) if (t.user) s.logins[t.slot] = { name: t.user.name, mobile: t.user.phone };
     for (const [slot, d] of Object.entries({ ...savedLogins, ...loginDrafts })) s.logins[Number(slot)] = d;
     for (const t of v.ties ?? []) {
-        s.ties[t.number] = { part1: t.part1 as 'Pickleball' | 'Padel', ...(t.lockedAt ? { lockedAt: t.lockedAt } : {}) };
+        s.ties[t.number] = { part1: t.part1 as 'Pickleball' | 'Padel', ...(t.lockedAt ? { lockedAt: t.lockedAt } : {}), ...(t.myLock ? { myLock: t.myLock } : {}) };
         for (const [slot, rec] of [
             [t.slotA, t.lineupA],
             [t.slotB, t.lineupB],
@@ -106,8 +107,17 @@ export const getLeague = () => state;
 export const lkey = (tie: number, slot: number) => `${tie}:${slot}`;
 export const part1Of = (s: LeagueState, tieId: number) => s.ties[tieId]?.part1 ?? defaultPart1(tieId);
 export const lockAt = (s: LeagueState, t: Tie) => new Date(s.roundLocks?.[roundOf(t.id)] ?? '');
-/** Locked once the server locked it, or the deadline passed (the lock job follows within a minute). */
-export const isLocked = (s: LeagueState, t: Tie, now = Date.now()) => !!s.ties[t.id]?.lockedAt || now >= lockAt(s, t).getTime();
+/**
+ * Locked once the server locked it, or the deadline passed (the lock job follows within a minute). In the team view an
+ * admin override for this team wins: 'unlocked' reopens it after the deadline, 'locked' closes it early.
+ */
+export const isLocked = (s: LeagueState, t: Tie, now = Date.now()) => {
+    const own = s.ties[t.id]?.myLock;
+    if (own) return own === 'locked';
+    return !!s.ties[t.id]?.lockedAt || now >= lockAt(s, t).getTime();
+};
+/** The team's line-up was reopened by the organisers after its deadline. */
+export const reopened = (s: LeagueState, t: Tie, now = Date.now()) => s.ties[t.id]?.myLock === 'unlocked' && (!!s.ties[t.id]?.lockedAt || now >= lockAt(s, t).getTime());
 export const isOpen = (t: Tie) => t.slot_a != null && t.slot_b != null;
 export const lineupOf = (s: LeagueState, tie: number, slot: number) => s.lineups[lkey(tie, slot)];
 export const canViewLineups = (s: LeagueState, t: Tie, _now = Date.now()) => t.slot_a != null && t.slot_b != null && !!s.ties[t.id]?.lockedAt;

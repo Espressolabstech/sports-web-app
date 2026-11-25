@@ -8,7 +8,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@league/ui/popover';
 import { PlayerPicker, PlayerLevels } from '@league/components/league-player-picker';
 import { autoFill, canStillComplete, emptyLineup, filledCount, interRule, isComplete, SPOTS, unusedPlayers, validate, type LeaguePlayer, type Lineup, type Sport } from '@league/lib/lineup-rules';
 import { squadFor } from '@league/lib/league-squads';
-import { isLocked, isOpen, lineupOf, organiserSave, part1Of, replacePlayer, saveTeamLineup, type LeagueState, type LineupRec } from '@league/lib/league-store';
+import { isLocked, isOpen, lineupOf, reopened, organiserSave, part1Of, replacePlayer, saveTeamLineup, type LeagueState, type LineupRec } from '@league/lib/league-store';
 import { teamCode, type Tie } from '@league/lib/tournament';
 
 /** Current time, ticking after hydration (0 during SSR to avoid mismatches). */
@@ -176,13 +176,15 @@ export function LockCountdown({ s, tie, now, lockAtMs }: { s: LeagueState; tie: 
   if (!Number.isFinite(lockAtMs) && !isLocked(s, tie, now)) return <span className="lg-countdown is-tba"><Clock size={14} /> Deadline to be announced · confirm early</span>;
   if (!now) return <span className="lg-countdown"><Clock size={14} /> …</span>;
   const locked = isLocked(s, tie, now);
+  if (!locked && reopened(s, tie, now)) return <span className="lg-countdown is-soon"><Clock size={14} /> Reopened by the organisers · confirm your changes</span>;
+  if (locked && s.ties[tie.id]?.myLock === 'locked' && !s.ties[tie.id]?.lockedAt) return <span className="lg-countdown is-locked"><Lock size={14} /> Locked by the organisers</span>;
   const deadline = new Date(lockAtMs).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true }) + ' IST';
   return <span className={`lg-countdown${locked ? ' is-locked' : lockAtMs - now < 3600_000 ? ' is-soon' : ''}`}>{locked ? <><Lock size={14} /> Locked</> : <><Clock size={14} /> Lock in by {deadline}</>}</span>;
 }
 
 /** Handoff §12: an unconfirmed line-up must be impossible to miss, next to the deadline. */
 export function NotConfirmed({ s, tie, slot, now }: { s: LeagueState; tie: Tie; slot: number; now: number }) {
-  if (!isOpen(tie) || isLocked(s, tie, now || Date.now()) || lineupOf(s, tie.id, slot)?.confirmedAt) return null;
+  if (!isOpen(tie) || isLocked(s, tie, now || Date.now()) || reopened(s, tie, now || Date.now()) || lineupOf(s, tie.id, slot)?.confirmedAt) return null;
   return <span className="pp-status pp-status-danger" role="status"><AlertTriangle size={12} /> Not confirmed: auto-filled at the lock</span>;
 }
 
