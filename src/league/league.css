@@ -832,3 +832,56 @@
    rotate properties. Both applied would move centred pop-ups twice (off to the left), so only the reference's applies. */
 [class*="translate-"],[class*="scale-"],[class*="rotate-"]{transform:none}
 
+
+/* Public standings: detailed table dialog with sticky teams and scrollable statistics. */
+.tn-table-actions{display:flex;align-items:center;gap:4px;flex:none}
+.pp-console .tn-full-table-trigger{height:36px;padding:0 10px;gap:6px;font-size:12px;white-space:nowrap}
+.pp-console.tn-full-table-dialog{display:flex;flex-direction:column;gap:14px;width:calc(100% - 24px);max-width:1000px;max-height:88dvh;padding:20px;border-radius:14px;overflow:hidden}
+.tn-full-table-dialog>div:first-child{flex:none;padding-right:28px;text-align:left}
+.tn-full-table-dialog h2{font-size:20px;line-height:1.3}
+.tn-full-table-dialog>button{width:36px;height:36px;display:grid;place-items:center;top:12px;right:12px}
+.tn-full-heading-short{display:none}
+.tn-full-table-scroll{min-height:0;overflow:auto;overscroll-behavior:contain;border:1px solid var(--border);border-radius:12px;background:var(--card);scrollbar-width:thin}
+.tn-full-table-scroll:focus-visible{outline:2px solid var(--ring);outline-offset:2px}
+.tn-full-standings{width:100%;min-width:900px;table-layout:fixed;border-collapse:separate;border-spacing:0;font-size:13px;font-variant-numeric:tabular-nums;text-align:center}
+.tn-full-standings th,.tn-full-standings td{height:58px;padding:10px 12px;border-bottom:1px solid var(--border);background:var(--card);white-space:nowrap}
+.tn-full-standings tr:last-child td{border-bottom:0}
+.tn-full-standings th{height:62px;background:var(--surface-raised);color:var(--ink-muted);font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+.tn-full-standings thead tr:first-child th{color:var(--ink)}
+.tn-full-standings thead tr:nth-child(2) th{height:38px;font-size:9px}
+.tn-full-standings tbody tr:hover td{background:var(--surface-hover)}
+.tn-full-standings tbody tr.is-top td{background:var(--surface)}
+.tn-full-standings tbody tr.is-me td{box-shadow:inset 0 1px var(--accent),inset 0 -1px var(--accent)}
+.tn-full-standings .tn-full-rank{position:sticky;left:0;z-index:2;width:52px;min-width:52px;padding-inline:8px}
+.tn-full-standings .tn-full-team{position:sticky;left:52px;z-index:2;width:240px;min-width:240px;max-width:240px;text-align:left;white-space:normal;box-shadow:1px 0 var(--border)}
+.tn-full-standings thead .tn-full-rank,.tn-full-standings thead .tn-full-team{z-index:4}
+.tn-full-standings .tn-team{overflow:visible}
+.tn-full-standings .tn-team>span{overflow:visible;text-overflow:clip;white-space:normal;line-height:1.3}
+.tn-full-standings .tn-full-bonus{font-weight:600;color:var(--ink)}
+.tn-full-standings .pp-status{display:inline-flex;margin-left:5px;padding:2px 5px;font-size:9px}
+.tn-full-table-note{margin:0;font-size:11px;line-height:1.5;color:var(--ink-muted)}
+@media(max-width:639px){
+ .pp-console.tn-full-table-dialog{width:calc(100% - 8px);max-height:92dvh;padding:10px;gap:10px}
+ .tn-full-table-dialog h2{font-size:16px}
+ .tn-full-table-dialog>div:first-child{padding-right:26px}
+ .tn-full-table-dialog>button{top:8px;right:8px}
+ .tn-full-table-scroll{overflow:auto;border:1px solid var(--border);border-radius:10px;padding:0}
+ .tn-full-standings{display:table;min-width:0;width:100%;font-size:11px}
+ .tn-full-standings th,.tn-full-standings td{height:50px;padding:6px 2px;border-right:1px solid var(--border)}
+ .tn-full-standings th:last-child,.tn-full-standings td:last-child{border-right:0}
+ .tn-full-standings thead tr:first-child th{position:sticky;top:0;z-index:5;height:28px;padding-block:4px;font-size:9px;letter-spacing:.03em}
+ .tn-full-standings thead tr:nth-child(2) th{position:sticky;top:28px;z-index:5;height:24px;padding-block:3px;font-size:9px}
+ .tn-full-heading-long{display:none}
+ .tn-full-heading-short{display:inline;font-size:9px;letter-spacing:0}
+ .tn-full-standings .tn-full-rank{position:static;width:24px;min-width:24px;padding-inline:2px}
+ .tn-full-standings .tn-full-team{position:static;width:96px;min-width:96px;max-width:96px;padding-inline:5px;box-shadow:none}
+ .tn-full-standings .tn-team{display:block;overflow:visible}
+ .tn-full-standings .tn-team>img,.tn-full-standings .tn-team>[aria-hidden="true"],.tn-full-standings .tn-team>.lg-no{display:none}
+ .tn-full-standings .tn-team>span{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-size:11px;line-height:1.25;font-weight:600;overflow-wrap:anywhere}
+ .tn-full-standings .tn-rank{width:20px;height:20px;font-size:10px}
+ .tn-full-standings .tn-pts{font-size:15px}
+ .tn-full-standings .pp-status{display:flex;width:max-content;margin:2px auto 0;padding:1px 3px;font-size:7px}
+ .tn-full-table-note{font-size:10px}
+ .pp-console .tn-full-table-trigger{height:34px;padding:0 9px}
+}
+@media(prefers-reduced-motion:no-preference){.tn-full-table-scroll{scroll-behavior:smooth}}
