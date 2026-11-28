@@ -48,7 +48,7 @@ export function Results() {
     {openTie ? <TieDetail d={d} t={openTie} back={() => set({ tab: 'fixtures' })} /> : <>
     {view.tab !== 'squads' && <div className="tn-public-workspace">
       {view.tab !== 'tables' && <div className="tn-round-toolbar"><RoundChips includeTable={false} value={round} onChange={r => setRound(r)} /></div>}
-      {view.tab === 'tables' ? <LeagueTables d={d} /> : <ul className="tn-tie-list">{d.ties.filter(t => round === 'all' || roundOf(t.id) === round).map(card)}</ul>}
+      {view.tab === 'tables' ? <LeagueTables d={d} expandable /> : <ul className="tn-tie-list">{d.ties.filter(t => round === 'all' || roundOf(t.id) === round).map(card)}</ul>}
       {!d.loaded && <p className="tn-empty" role="status">Loading matches…</p>}
     </div>}
     {view.tab === 'squads' && <section className="tn-public-squad" aria-label={`${name(d, squadTeam)} squad`}>

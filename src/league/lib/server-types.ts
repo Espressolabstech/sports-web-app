@@ -9,7 +9,7 @@ export type ServerLineup = {
     warnings?: string[];
 };
 export type ServerPlayer = { id: string; no: string; name: string; gender: 'M' | 'F'; padel?: 'Beginner' | 'Intermediate' | 'Advanced'; pickleball?: 'Beginner' | 'Intermediate' | 'Advanced'; photoUrl?: string | null; phone?: string | null };
-export type ServerTable = { slot: number; played: number; tiesWon: number; points: number; won: number; matches: number; winRatio: number; netRatio: number; tied: boolean };
+export type ServerTable = { slot: number; played: number; tiesWon: number; points: number; bonus?: number; won: number; matches: number; winRatio: number; netRatio: number; tied: boolean };
 export type StageInfo = { status: 'waiting' | 'needs-draw' | 'ready'; waitingFor?: string; draws?: { table: 'group1' | 'group2' | 'combined'; slots: number[] }[]; pairs?: [number, number][]; repair?: [number, number][]; source?: string };
 export type LeagueView = {
     setUp?: boolean;

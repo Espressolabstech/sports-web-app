@@ -13,7 +13,7 @@ import type { TournamentData } from '@league/hooks/use-tournament';
 /** One round-wide deadline editor shared by scoring and the line-up board. */
 export function ManageRound({ round, d }: { round: RoundKey; d: TournamentData }) {
   const [open, setOpen] = useState(false);
-  return <><Button variant="outline" size="sm" onClick={() => setOpen(true)}><Settings2 size={16} />Manage Round</Button>
+  return <><Button variant="outline" size="sm" onClick={() => setOpen(true)}><Settings2 size={16} />Manage Lock in Time</Button>
     <Dialog open={open} onOpenChange={setOpen}><DialogContent className="pp-console tn-round-dialog">
       <DialogHeader><DialogTitle>Manage {roundName(round)}</DialogTitle><DialogDescription>Squad lock-in for every matchup in this round.</DialogDescription></DialogHeader>
       {open && <RoundFields round={round} d={d} close={() => setOpen(false)} />}
